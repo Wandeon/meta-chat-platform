@@ -1,0 +1,23 @@
+{
+  "name": "@meta-chat/database",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "generate": "prisma generate",
+    "push": "prisma db push",
+    "migrate": "prisma migrate dev",
+    "studio": "prisma studio",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.11.0",
+    "pgvector": "^0.1.8"
+  },
+  "devDependencies": {
+    "prisma": "^5.11.0",
+    "typescript": "^5.4.0"
+  }
+}

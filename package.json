@@ -1,0 +1,32 @@
+{
+  "name": "meta-chat-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant WhatsApp, Messenger, and Web Chat platform with RAG-powered AI assistants",
+  "author": "Your Team",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "db:generate": "cd packages/database && npm run generate",
+    "db:push": "cd packages/database && npm run push",
+    "db:migrate": "cd packages/database && npm run migrate",
+    "db:studio": "cd packages/database && npm run studio",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^1.13.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
