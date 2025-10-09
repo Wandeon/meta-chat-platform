@@ -47,7 +47,7 @@ export class OllamaProvider extends BaseLLMProvider {
         throw new Error(`Ollama request failed with status ${response.status}`);
       }
 
-      const payload = await response.json();
+      const payload: any = await response.json();
       const completion: CompletionResponse = {
         id: payload.id ?? payload.created_at ?? `ollama-${Date.now()}`,
         created: payload.created_at ? Date.parse(payload.created_at) : Date.now(),
@@ -116,7 +116,7 @@ export class OllamaProvider extends BaseLLMProvider {
         throw new Error(`Ollama embedding request failed with status ${response.status}`);
       }
 
-      const payload = await response.json();
+      const payload: any = await response.json();
 
       if (Array.isArray(payload.embeddings)) {
         return payload.embeddings.map((entry: any) => entry.embedding ?? entry);

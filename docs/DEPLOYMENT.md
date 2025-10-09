@@ -621,6 +621,77 @@ LOG_LEVEL="info"
 - [ ] **Include storage directory** in backups
 - [ ] **Test restore procedure**
 
+#### PostgreSQL Backup Commands
+
+**Create Backup:**
+```bash
+# Create backup directory if it doesn't exist
+mkdir -p /home/deploy/backups/meta-chat
+
+# Create compressed backup with custom format (recommended)
+pg_dump -Fc -h localhost -U metachat -d metachat > /home/deploy/backups/meta-chat/backup-$(date +%Y%m%d-%H%M%S).dump
+
+# Or create plain SQL backup
+pg_dump -h localhost -U metachat -d metachat > /home/deploy/backups/meta-chat/backup-$(date +%Y%m%d-%H%M%S).sql
+
+# Backup with Docker
+docker exec meta-chat-postgres pg_dump -U metachat -d metachat -Fc > /home/deploy/backups/meta-chat/backup-$(date +%Y%m%d-%H%M%S).dump
+```
+
+**Restore Backup:**
+```bash
+# Restore from custom format backup
+pg_restore -h localhost -U metachat -d metachat -c /home/deploy/backups/meta-chat/backup-20250109-120000.dump
+
+# Restore from SQL backup
+psql -h localhost -U metachat -d metachat < /home/deploy/backups/meta-chat/backup-20250109-120000.sql
+
+# Restore with Docker
+docker exec -i meta-chat-postgres pg_restore -U metachat -d metachat -c < /home/deploy/backups/meta-chat/backup-20250109-120000.dump
+```
+
+**Automated Backup Script:**
+```bash
+#!/bin/bash
+# /home/deploy/scripts/backup-meta-chat.sh
+
+BACKUP_DIR="/home/deploy/backups/meta-chat"
+RETENTION_DAYS=7
+DATE=$(date +%Y%m%d-%H%M%S)
+
+# Create backup
+docker exec meta-chat-postgres pg_dump -U metachat -d metachat -Fc > "${BACKUP_DIR}/db-backup-${DATE}.dump"
+
+# Backup storage directory
+tar -czf "${BACKUP_DIR}/storage-backup-${DATE}.tar.gz" /home/deploy/meta-chat-platform/storage
+
+# Remove old backups
+find "${BACKUP_DIR}" -name "db-backup-*.dump" -mtime +${RETENTION_DAYS} -delete
+find "${BACKUP_DIR}" -name "storage-backup-*.tar.gz" -mtime +${RETENTION_DAYS} -delete
+
+echo "Backup completed: ${DATE}"
+```
+
+**Add to Crontab:**
+```bash
+# Edit crontab
+crontab -e
+
+# Add daily backup at 3 AM
+0 3 * * * /home/deploy/scripts/backup-meta-chat.sh >> /home/deploy/logs/backup.log 2>&1
+```
+
+**Verify Backup:**
+```bash
+# Check backup file size
+ls -lh /home/deploy/backups/meta-chat/
+
+# Test restore to temporary database
+createdb -h localhost -U metachat metachat_test
+pg_restore -h localhost -U metachat -d metachat_test /home/deploy/backups/meta-chat/backup-20250109-120000.dump
+dropdb -h localhost -U metachat metachat_test
+```
+
 ### Data Retention Policy
 
 - Default retention: **90 days for messages**, **30 days for API logs**

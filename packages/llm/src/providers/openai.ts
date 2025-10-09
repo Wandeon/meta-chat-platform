@@ -30,7 +30,7 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const response = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: params.messages.map((message) => this.mapMessage(message)),
+        messages: params.messages.map((message) => this.mapMessage(message)) as any,
         temperature: params.temperature,
         top_p: params.topP,
         max_tokens: params.maxTokens,
@@ -38,7 +38,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         function_call: this.mapFunctionCall(params.functionCall),
         tools: params.tools,
         tool_choice: params.toolChoice,
-        metadata: params.metadata,
+        metadata: params.metadata as any,
       });
 
       const choice = response.choices?.[0];
@@ -72,7 +72,7 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const stream = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: params.messages.map((message) => this.mapMessage(message)),
+        messages: params.messages.map((message) => this.mapMessage(message)) as any,
         temperature: params.temperature,
         top_p: params.topP,
         max_tokens: params.maxTokens,
@@ -80,7 +80,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         function_call: this.mapFunctionCall(params.functionCall),
         tools: params.tools,
         tool_choice: params.toolChoice,
-        metadata: params.metadata,
+        metadata: params.metadata as any,
         stream: true,
       });
 

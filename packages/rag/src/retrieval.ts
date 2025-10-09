@@ -76,7 +76,7 @@ export class RagRetriever {
       },
     });
 
-    return chunks.reduce<Record<string, { documentId: string; filename: string; mimeType: string }>>((acc, chunk) => {
+    return chunks.reduce((acc: Record<string, { documentId: string; filename: string; mimeType: string }>, chunk: any) => {
       if (chunk.document) {
         acc[chunk.id] = {
           documentId: chunk.document.id,
