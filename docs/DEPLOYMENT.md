@@ -159,6 +159,55 @@ Docker Network: meta-chat-network (bridge)
 - [ ] **5.6** Test OpenAI API integration
 - [ ] **5.7** Verify webhook endpoints are accessible
 
+---
+
+## 🔐 Operational API Key Rotation Procedures
+
+### Admin API Key Rotation
+
+1. **Identify key** — List admin keys from the database (`admin_api_keys`) filtered by `admin_id` and `active = true` to confirm the key that needs rotation (use Prisma Studio or `psql`).
+2. **Request rotation token** — From a trusted workstation run:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     https://chat.genai.hr/api/security/admin/users/<ADMIN_ID>/api-keys/<KEY_ID>/rotation
+   ```
+   The response includes `rotationToken` and `expiresAt` (defaults to 15 minutes).
+3. **Confirm rotation** — Within the validity window execute:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     -d '{"token":"<ROTATION_TOKEN_FROM_STEP_2>"}' \
+     https://chat.genai.hr/api/security/admin/users/<ADMIN_ID>/api-keys/<KEY_ID>/rotation/confirm
+   ```
+   The API returns the new plaintext key once. Store it in the password manager immediately.
+4. **Distribute update** — Update any automation, CLI configs, or secrets managers with the new key and revoke old credentials from dependent services.
+5. **Audit** — Verify the row in `admin_api_keys` now shows updated `prefix`, `lastFour`, and `rotatedAt`. Clear any cached copies of the previous key.
+
+### Tenant API Key Rotation
+
+1. **Request token** — Super admins initiate rotation for a tenant key:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     https://chat.genai.hr/api/security/tenants/<TENANT_ID>/api-keys/<KEY_ID>/rotation
+   ```
+   Share the resulting `rotationToken` (over a secure channel) with the tenant operator who will confirm the change.
+2. **Confirm rotation** — The operator sends the token back using:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     -d '{"token":"<ROTATION_TOKEN_FROM_STEP_1>"}' \
+     https://chat.genai.hr/api/security/tenants/<TENANT_ID>/api-keys/<KEY_ID>/rotation/confirm
+   ```
+   The API responds with the newly generated tenant key. Communicate it securely and prompt the tenant to update their integrations.
+3. **Validation** — Confirm successful authentication by calling a tenant-protected endpoint with the new key. Remove the old key from the tenant's systems immediately.
+4. **Incident fallback** — If the token expires before confirmation, repeat the process starting from step 1 to issue a fresh token.
+
 ### Phase 6: Monitoring & Backup
 
 - [ ] **6.1** Configure container restart policies

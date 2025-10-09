@@ -16,7 +16,6 @@ datasource db {
 model Tenant {
   id        String   @id @default(cuid())
   name      String
-  apiKey    String   @unique
   settings  Json     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -27,8 +26,8 @@ model Tenant {
   documents     Document[]
   webhooks      Webhook[]
   events        Event[]
+  apiKeys       TenantApiKey[]
 
-  @@index([apiKey])
   @@map("tenants")
 }
 
@@ -176,4 +175,77 @@ model ApiLog {
   @@index([tenantId, timestamp])
   @@index([timestamp])
   @@map("api_logs")
+}
+
+// ============= Authentication & Access Control =============
+
+model TenantApiKey {
+  id                 String   @id @default(cuid())
+  tenantId           String
+  label              String?
+  prefix             String
+  hash               String
+  salt               String
+  lastFour           String
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  lastUsedAt         DateTime?
+  expiresAt          DateTime?
+  rotatedAt          DateTime?
+  rotationTokenHash  String?
+  rotationTokenSalt  String?
+  rotationIssuedAt   DateTime?
+  rotationExpiresAt  DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, active])
+  @@index([prefix])
+  @@unique([tenantId, label])
+  @@map("tenant_api_keys")
+}
+
+model AdminUser {
+  id        String       @id @default(cuid())
+  email     String       @unique
+  name      String?
+  role      AdminRole    @default(STANDARD)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  apiKeys   AdminApiKey[]
+
+  @@map("admin_users")
+}
+
+model AdminApiKey {
+  id                 String   @id @default(cuid())
+  adminId            String
+  label              String?
+  prefix             String
+  hash               String
+  salt               String
+  lastFour           String
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  lastUsedAt         DateTime?
+  expiresAt          DateTime?
+  rotatedAt          DateTime?
+  rotationTokenHash  String?
+  rotationTokenSalt  String?
+  rotationIssuedAt   DateTime?
+  rotationExpiresAt  DateTime?
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, active])
+  @@index([prefix])
+  @@unique([adminId, label])
+  @@map("admin_api_keys")
+}
+
+enum AdminRole {
+  SUPER
+  STANDARD
 }
