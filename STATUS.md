@@ -18,12 +18,12 @@ We've successfully delivered the foundation, AI core, and channel integration la
 |--------|--------|
 | **Packages** | 10/10 building successfully (100%) |
 | **Unit Tests** | 31 passing |
-| **Integration Tests** | 3 passing (Node.js test runner) |
+| **Integration Tests** | 8 suites (3 orchestrator/RAG + 5 REST API CRUD) |
 | **Code Quality** | ESLint: 0 errors, TypeScript: strict mode |
 | **Security** | 7 vulnerabilities (down from 23, -70%) |
 | **PRs Merged** | 26 successful merges |
 | **Test Coverage** | All critical paths covered |
-| **Documentation** | Comprehensive (README, TODO, guides, API docs) |
+| **Documentation** | Comprehensive (README, TODO, guides, OpenAPI 3.0 spec) |
 
 ---
 
@@ -104,14 +104,20 @@ We've successfully delivered the foundation, AI core, and channel integration la
 ## 🔄 In Progress (Milestones 3-4)
 
 ### Milestone 3: Tenant Experience Platform
-**Status:** 🔄 In Progress (30% complete)
+**Status:** 🔄 In Progress (95% complete)
+
+**Completed:**
+- ✅ REST API routes for tenant/channel/document/conversation/webhook management
+- ✅ Rate limiting with express-rate-limit (120 req/min default)
+- ✅ Health & metrics endpoints (Prometheus format)
+- ✅ API authentication (tenant & admin API keys)
+- ✅ Request validation with Zod schemas
+- ✅ Integration tests for all CRUD endpoints (5 test suites, 50+ tests)
+- ✅ OpenAPI 3.0 specification
 
 **Remaining Tasks:**
-- REST API routes for tenant/channel/document/conversation management
-- Rate limiting with Redis
-- Health & metrics endpoints (Prometheus format)
-- Dashboard UI connected to REST API
-- End-to-end integration tests
+- Dashboard UI connected to REST API (frontend integration)
+- Enhanced per-tenant rate limiting (current is global only)
 
 ### Milestone 4: Deployment & Observability
 **Status:** 🔄 In Progress (60% complete)
@@ -199,7 +205,7 @@ We've successfully delivered the foundation, AI core, and channel integration la
 | **M0: Foundation** | All base packages complete | ✅ Done |
 | **M1: AI Core** | LLM/RAG/Orchestrator working | ✅ Done |
 | **M2: Channels** | 3 adapters + message flow | ✅ Done |
-| **M3: REST API** | Full CRUD + dashboard | 🔄 30% |
+| **M3: REST API** | Full CRUD + dashboard | 🔄 95% |
 | **M4: Deployment** | Production-ready stack | 🔄 60% |
 | **M5: Hardening** | Load tested + secure | ⏳ 0% |
 
@@ -271,7 +277,7 @@ We've successfully delivered the foundation, AI core, and channel integration la
 - **Documentation**: `docs/` directory
 - **Architecture**: `docs/ARCHITECTURE.md`
 - **Deployment**: `docs/DEPLOYMENT.md`
-- **API Reference**: Coming in M3
+- **API Reference**: `docs/openapi.yaml` (OpenAPI 3.0)
 
 ---
 
