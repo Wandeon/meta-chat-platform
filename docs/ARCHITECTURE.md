@@ -221,6 +221,34 @@ Document (1) ←→ (*) Chunk (with vector embedding)
    └─ RabbitMQ (if configured)
 ```
 
+## Logging & Observability
+
+- **Library:** Runtime services share a `createLogger` helper backed by [`pino`](https://getpino.io/) for newline-delimited JSON output that can be streamed to aggregators.
+- **Request context:** Wrap entrypoints with `withRequestContext` to establish an async-local scope that injects metadata (e.g., tenant, request ID) into every downstream log call.
+- **Correlation IDs:** Use `createCorrelationId`/`ensureCorrelationId` to generate UUID correlation IDs when clients do not supply one. The event bus propagates this identifier to webhook and RabbitMQ emitters automatically.
+- **Context enrichment:** Call `addToRequestContext` or supply extra fields to `withRequestContext` to make values such as `webhookUrl` or `routingKey` appear on each log line without manual repetition.
+- **Usage pattern:**
+  ```ts
+  import { createLogger, withRequestContext, ensureCorrelationId } from '@meta-chat/shared';
+
+  const logger = createLogger('ExampleHandler');
+
+  export async function handleRequest(req, res) {
+    const correlationId = req.headers['x-correlation-id'] ?? ensureCorrelationId();
+
+    return withRequestContext({
+      correlationId,
+      tenantId: req.tenant.id,
+      requestId: req.id,
+    }, async () => {
+      logger.info('Processing request');
+      // ...business logic...
+      logger.info('Request complete');
+    });
+  }
+  ```
+- **Downstream propagation:** Webhook deliveries and RabbitMQ publishers log with the originating correlation ID, easing traceability across services and eventual future apps.
+
 ### Document Indexing Flow
 
 ```

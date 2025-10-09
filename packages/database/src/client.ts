@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { Logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
 
-const logger = new Logger('Database');
+const logger = createLogger('Database');
 
 // Singleton Prisma client
 let prisma: PrismaClient;
