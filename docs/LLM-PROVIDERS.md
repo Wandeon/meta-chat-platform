@@ -215,7 +215,8 @@ packages/llm/
 │   │   ├── anthropic.ts      // Anthropic implementation
 │   │   └── ollama.ts         // Ollama implementation
 │   └── utils/
-│       ├── retry.ts          // Retry logic
+│       ├── retry.ts          // Capped retries with exponential backoff + jitter
+│       ├── circuitBreaker.ts // Circuit breaker to shed load on provider outages
 │       └── cost-tracker.ts   // Track API costs
 └── package.json
 ```
@@ -260,6 +261,16 @@ const response = await provider.complete({
   temperature: 0.7,
 });
 ```
+
+### Resilience Patterns (Retries, Backoff, Circuit Breaker)
+
+Provider calls are wrapped with layered resilience policies:
+
+- **Capped Retries:** Each completion call is retried up to 3 times (`retry.ts`) with configurable overrides per tenant. Retries are bounded to prevent runaway costs.
+- **Exponential Backoff + Jitter:** Backoff doubles per attempt (250ms → 500ms → 1s by default) and adds jitter to avoid thundering herds when multiple workers retry simultaneously.
+- **Circuit Breaker:** After 5 consecutive failures (configurable), the provider-specific breaker opens for 15s, instantly failing fast and giving upstream services time to recover. It transitions through a half-open state to probe service health before fully closing.
+
+The `BaseLLMProvider` class applies these policies automatically so that every concrete provider gets consistent failure handling without duplicating logic.
 
 ---
 

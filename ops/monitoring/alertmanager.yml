@@ -1,0 +1,34 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: slack-notifications
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: pagerduty-critical
+    - matchers:
+        - team="data"
+      receiver: data-oncall
+
+receivers:
+  - name: slack-notifications
+    slack_configs:
+      - api_url: ${SLACK_WEBHOOK_URL:?set SLACK_WEBHOOK_URL}
+        channel: ${SLACK_CHANNEL:-#meta-chat-alerts}
+        send_resolved: true
+        title: '{{ template "slack.title" . }}'
+        text: '{{ template "slack.text" . }}'
+
+  - name: pagerduty-critical
+    pagerduty_configs:
+      - routing_key: ${PAGERDUTY_ROUTING_KEY:?set PAGERDUTY_ROUTING_KEY}
+        severity: critical
+
+  - name: data-oncall
+    email_configs:
+      - to: ${DATA_TEAM_EMAIL:-data-team@example.com}
+        send_resolved: true
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
