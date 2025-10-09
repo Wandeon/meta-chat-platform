@@ -1,3 +1,4 @@
+import type { LogContext } from './logging';
 export type ChannelType = 'whatsapp' | 'messenger' | 'webchat';
 export type MessageDirection = 'inbound' | 'outbound';
 export type ConversationStatus = 'active' | 'assigned_human' | 'closed';
@@ -66,6 +67,16 @@ export interface TenantSettings {
         messagesPerHour: number;
         messagesPerDay: number;
     };
+    retention?: {
+        messages: {
+            retentionDays: number;
+            archive?: boolean;
+            archiveTable?: string;
+        };
+        apiLogs: {
+            retentionDays: number;
+        };
+    };
 }
 export interface DocumentChunk {
     id: string;
@@ -117,6 +128,8 @@ export interface Event {
     tenantId: string;
     timestamp: Date;
     data: any;
+    correlationId?: string;
+    context?: LogContext;
 }
 export interface WebhookPayload {
     event: EventType;
