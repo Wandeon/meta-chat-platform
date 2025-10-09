@@ -30,7 +30,7 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const response = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: params.messages.map((message) => this.mapMessage(message)),
+        messages: params.messages.map((message) => this.mapMessage(message)) as any,
         temperature: params.temperature,
         top_p: params.topP,
         max_tokens: params.maxTokens,
@@ -38,7 +38,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         function_call: this.mapFunctionCall(params.functionCall),
         tools: params.tools,
         tool_choice: params.toolChoice,
-        metadata: params.metadata,
+        metadata: params.metadata as any,
       });
 
       const choice = response.choices?.[0];
@@ -72,7 +72,7 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const stream = await this.client.chat.completions.create({
         model: this.config.model,
-        messages: params.messages.map((message) => this.mapMessage(message)),
+        messages: params.messages.map((message) => this.mapMessage(message)) as any,
         temperature: params.temperature,
         top_p: params.topP,
         max_tokens: params.maxTokens,
@@ -80,7 +80,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         function_call: this.mapFunctionCall(params.functionCall),
         tools: params.tools,
         tool_choice: params.toolChoice,
-        metadata: params.metadata,
+        metadata: params.metadata as any,
         stream: true,
       });
 
@@ -235,7 +235,10 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   private buildStreamIterator(stream: AsyncIterable<any>): AsyncIterable<CompletionChunk> {
-    const self = this;
+    const normalizeContent = this.normalizeContent.bind(this);
+    const mapFunctionCallMetadata = this.mapFunctionCallMetadata.bind(this);
+    const mapToolCalls = this.mapToolCalls.bind(this);
+    const mapUsage = this.mapUsage.bind(this);
     let lastId: string | undefined;
     let lastCreated = Date.now();
 
@@ -253,18 +256,18 @@ export class OpenAIProvider extends BaseLLMProvider {
         lastCreated = chunk.created;
 
         if (delta.content) {
-          chunk.delta.content = self.normalizeContent(delta.content);
+          chunk.delta.content = normalizeContent(delta.content);
         }
 
     if (delta.function_call) {
-      const fnCall = self.mapFunctionCallMetadata(delta.function_call);
+      const fnCall = mapFunctionCallMetadata(delta.function_call);
       if (fnCall) {
         chunk.delta.functionCall = fnCall;
       }
     }
 
     if (delta.tool_calls) {
-      const toolCalls = self.mapToolCalls(delta.tool_calls).filter(Boolean);
+      const toolCalls = mapToolCalls(delta.tool_calls).filter(Boolean);
       if (toolCalls.length > 0) {
         chunk.delta.toolCalls = toolCalls;
       }
@@ -275,7 +278,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         }
 
         if (part.usage) {
-          const usage = self.mapUsage(part.usage);
+          const usage = mapUsage(part.usage);
           if (usage) {
             chunk.delta.usage = usage;
           }

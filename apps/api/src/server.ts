@@ -313,11 +313,11 @@ async function createSocketServer(httpServer: HttpServer): Promise<SocketServer>
     const userId = socket.data.userId as string | undefined;
 
     if (tenantId) {
-      socket.join(tenantId);
+      void socket.join(tenantId);
     }
 
     if (tenantId && userId) {
-      socket.join(`${tenantId}:${userId}`);
+      void socket.join(`${tenantId}:${userId}`);
     }
 
     socketLogger.info('Socket client connected', {

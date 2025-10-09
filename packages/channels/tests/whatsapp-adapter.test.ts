@@ -94,7 +94,7 @@ describe('WhatsAppAdapter', () => {
 
   it('sends text messages via Graph API', async () => {
     const adapter = createAdapter();
-    const mockFetch = vi.spyOn(global, 'fetch').mockImplementation(async (url, init) => {
+    const mockFetch = vi.spyOn(global, 'fetch').mockImplementation(async (url, _init) => {
       if (typeof url === 'string' && url.includes('/messages')) {
         return new Response(JSON.stringify({ messages: [{ id: 'wamid.sent' }] }), {
           status: 200,
@@ -128,7 +128,7 @@ describe('WhatsAppAdapter', () => {
 
   it('uploads media before sending', async () => {
     const adapter = createAdapter();
-    const mockFetch = vi.spyOn(global, 'fetch').mockImplementation(async (url, init) => {
+    const mockFetch = vi.spyOn(global, 'fetch').mockImplementation(async (url, _init) => {
       if (typeof url === 'string' && url.startsWith('https://graph.facebook.com')) {
         if (url.includes('/media')) {
           return new Response(JSON.stringify({ id: 'uploaded-media-id' }), {

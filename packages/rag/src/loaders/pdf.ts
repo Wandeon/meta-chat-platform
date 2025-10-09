@@ -28,7 +28,8 @@ export class PdfLoader implements DocumentLoader {
   }
 
   private stripNullCharacters(text: string): string {
-    return text.replace(/\u0000/g, '');
+    // eslint-disable-next-line no-control-regex
+    return text.replace(/\x00/g, '');
   }
 }
 
