@@ -1,4 +1,5 @@
 // Core types shared across all packages
+import type { LogContext } from './logging';
 
 export type ChannelType = 'whatsapp' | 'messenger' | 'webchat';
 
@@ -78,6 +79,16 @@ export interface TenantSettings {
     messagesPerHour: number;
     messagesPerDay: number;
   };
+  retention?: {
+    messages: {
+      retentionDays: number;
+      archive?: boolean;
+      archiveTable?: string;
+    };
+    apiLogs: {
+      retentionDays: number;
+    };
+  };
 }
 
 // RAG types
@@ -138,6 +149,8 @@ export interface Event {
   tenantId: string;
   timestamp: Date;
   data: any;
+  correlationId?: string;
+  context?: LogContext;
 }
 
 // Webhook types

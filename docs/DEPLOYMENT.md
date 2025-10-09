@@ -107,6 +107,26 @@ Docker Network: meta-chat-network (bridge)
 └── dashboard (exposed to 127.0.0.1:3001)
 ```
 
+### High-Availability Topology
+
+**Data Layer:**
+- **PostgreSQL:** Two-node cluster managed by `bitnami/postgresql-repmgr` images with automatic failover via PgPool. Primary and hot-standby share WAL archiving to object storage. PgPool presents a single connection endpoint (`pgpool:5432`) and performs connection load balancing/health checks.
+- **Redis:** Managed Redis (e.g., AWS ElastiCache, Upstash, or Azure Cache) with Multi-AZ replication. All application services consume a single `REDIS_URL` stored in the environment.
+
+**Application Layer:**
+- API and Dashboard services run in Docker with health-check-driven `restart: always` policies. Each service publishes Prometheus `/metrics` for observability.
+- Optional workers (ingest, queue) should join the `core` network and reuse the same health-check configuration.
+
+**Monitoring & Alerting:**
+- Prometheus scrapes service metrics and exporters (PostgreSQL, Redis, synthetic probes).
+- Alertmanager fan-outs notifications to Slack, PagerDuty, and email using templates.
+- Grafana consumes Prometheus and Loki for dashboards and unified alerting.
+
+**Resilience Highlights:**
+- Health checks gate container restarts, preventing cascading failures from flapping services.
+- Replicated PostgreSQL provides RPO ≈ 0 via synchronous streaming; backups validate with `scripts/backup/verify_backups.sh`.
+- Managed Redis absorbs failover, while Redis exporter/Alertmanager ensure cache health is visible.
+
 ### SSL/TLS Setup
 
 - **Certbot:** Use existing Let's Encrypt setup
@@ -136,10 +156,11 @@ Docker Network: meta-chat-network (bridge)
 ### Phase 3: Service Deployment
 
 - [ ] **3.1** Start PostgreSQL and verify connection
-- [ ] **3.2** Enable pgvector extension
-- [ ] **3.3** Start Redis and verify connection
-- [ ] **3.4** Start API server and health check
+- [ ] **3.2** Enable pgvector extension on primary and confirm replication to standby
+- [ ] **3.3** Point services at managed Redis endpoint and verify TLS/auth
+- [ ] **3.4** Start API server and confirm `/api/health` returns 200
 - [ ] **3.5** Start Dashboard and verify access
+- [ ] **3.6** Confirm Prometheus, Alertmanager, and Grafana are scraping/alerting
 
 ### Phase 4: Reverse Proxy Configuration
 
@@ -158,6 +179,98 @@ Docker Network: meta-chat-network (bridge)
 - [ ] **5.5** Verify Redis connectivity
 - [ ] **5.6** Test OpenAI API integration
 - [ ] **5.7** Verify webhook endpoints are accessible
+- [ ] **5.8** Run `scripts/backup/verify_backups.sh` and archive the log
+- [ ] **5.9** Execute `scripts/backup/rollback.sh --dry-run` to rehearse restoration
+
+### Phase 6: Migration Path to High Availability
+
+1. **Preparation**
+   - Provision managed Redis with Multi-AZ replication and TLS enforced.
+   - Allocate two new VMs (or containers) for PostgreSQL primary/standby with shared storage (e.g., NFS or block volumes).
+   - Populate `.env.ha` with credentials for PgPool, replication, and Redis.
+2. **Seed Replicated PostgreSQL**
+   - Deploy the HA stack via `docker compose -f ops/docker-compose.ha.yml up -d pg-primary pg-standby pgpool`.
+   - Run migrations against PgPool (`DATABASE_URL=postgres://...@localhost:5432`).
+   - Validate replication lag via Prometheus (`pg_replication_lag` metric < 1s).
+3. **Cut Redis Over**
+   - Flush existing Redis data to ensure compatibility.
+   - Update application secrets to point to managed `REDIS_URL`; restart API/Dashboard containers.
+   - Monitor Redis exporter metrics and Alertmanager notifications.
+4. **Application Cutover**
+   - Update Nginx upstreams to target PgPool and the HA API container addresses.
+   - Drain legacy single-node PostgreSQL, take final backup, and keep as read-only fallback for 24 hours.
+   - Execute synthetic probes via Prometheus Blackbox to confirm end-to-end availability.
+5. **Post-Migration Hardening**
+   - Schedule `scripts/backup/verify_backups.sh` in cron (e.g., hourly) and ship logs to centralized storage.
+   - Enable automated rollback drill in CI using `scripts/backup/rollback.sh --dry-run`.
+   - Review Grafana dashboards and adjust Alertmanager receivers before declaring GA.
+
+### Automated Backups & Rollback
+
+- **Backup Verification:** `scripts/backup/verify_backups.sh` validates the most recent PostgreSQL `pg_basebackup` artifact and Redis snapshots (`redis-check-{rdb,aof}`), rotating logs after 30 days.
+- **Rollback Automation:** `scripts/backup/rollback.sh` orchestrates a controlled restore by stopping dependent services, reseeding primary/standby volumes, flushing managed Redis, and rerunning health checks with optional `--dry-run` support.
+- **Scheduling:** Add cron entries (example below) to automate verification and produce actionable logs:
+
+  ```cron
+  15 * * * * BACKUP_ROOT=/mnt/backups/meta-chat /home/deploy/meta-chat-platform/scripts/backup/verify_backups.sh
+  0 3 * * 0 BACKUP_ROOT=/mnt/backups/meta-chat /home/deploy/meta-chat-platform/scripts/backup/rollback.sh --dry-run
+  ```
+
+### Monitoring & Alerting Enhancements
+
+- **Prometheus:** Configured via `ops/monitoring/prometheus.yml` to scrape services, exporters, and synthetic HTTP probes.
+- **Alertmanager:** Routes alerts to Slack (`SLACK_WEBHOOK_URL`), PagerDuty (`PAGERDUTY_ROUTING_KEY`), and email. Templates live in `ops/monitoring/templates/`.
+- **Grafana/Loki:** Bundled dashboards and logs accessible on port `3002` with unified alerting toggled on by default.
+- **Health-Check Driven Restarts:** All critical containers rely on explicit health probes. Docker Compose restarts them only when checks fail, avoiding infinite crash loops on transient startup errors.
+
+---
+
+## 🔐 Operational API Key Rotation Procedures
+
+### Admin API Key Rotation
+
+1. **Identify key** — List admin keys from the database (`admin_api_keys`) filtered by `admin_id` and `active = true` to confirm the key that needs rotation (use Prisma Studio or `psql`).
+2. **Request rotation token** — From a trusted workstation run:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     https://chat.genai.hr/api/security/admin/users/<ADMIN_ID>/api-keys/<KEY_ID>/rotation
+   ```
+   The response includes `rotationToken` and `expiresAt` (defaults to 15 minutes).
+3. **Confirm rotation** — Within the validity window execute:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     -d '{"token":"<ROTATION_TOKEN_FROM_STEP_2>"}' \
+     https://chat.genai.hr/api/security/admin/users/<ADMIN_ID>/api-keys/<KEY_ID>/rotation/confirm
+   ```
+   The API returns the new plaintext key once. Store it in the password manager immediately.
+4. **Distribute update** — Update any automation, CLI configs, or secrets managers with the new key and revoke old credentials from dependent services.
+5. **Audit** — Verify the row in `admin_api_keys` now shows updated `prefix`, `lastFour`, and `rotatedAt`. Clear any cached copies of the previous key.
+
+### Tenant API Key Rotation
+
+1. **Request token** — Super admins initiate rotation for a tenant key:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     https://chat.genai.hr/api/security/tenants/<TENANT_ID>/api-keys/<KEY_ID>/rotation
+   ```
+   Share the resulting `rotationToken` (over a secure channel) with the tenant operator who will confirm the change.
+2. **Confirm rotation** — The operator sends the token back using:
+   ```bash
+   curl -X POST \
+     -H "x-admin-key: <SUPER_ADMIN_KEY>" \
+     -H "Content-Type: application/json" \
+     -d '{"token":"<ROTATION_TOKEN_FROM_STEP_1>"}' \
+     https://chat.genai.hr/api/security/tenants/<TENANT_ID>/api-keys/<KEY_ID>/rotation/confirm
+   ```
+   The API responds with the newly generated tenant key. Communicate it securely and prompt the tenant to update their integrations.
+3. **Validation** — Confirm successful authentication by calling a tenant-protected endpoint with the new key. Remove the old key from the tenant's systems immediately.
+4. **Incident fallback** — If the token expires before confirmation, repeat the process starting from step 1 to issue a fresh token.
 
 ### Phase 6: Monitoring & Backup
 
@@ -457,6 +570,13 @@ LOG_LEVEL="info"
 - [ ] **7-day retention** (similar to N8N backup)
 - [ ] **Include storage directory** in backups
 - [ ] **Test restore procedure**
+
+### Data Retention Policy
+
+- Default retention: **90 days for messages**, **30 days for API logs**
+- Jobs run via `scheduleDataRetentionJobs` nightly at 03:00 UTC (configurable cron)
+- Enable archival by specifying `archiveTable` (e.g., `messages_archive`) before deletion
+- Tenants can override defaults through `TenantSettings.retention`
 
 ---
 

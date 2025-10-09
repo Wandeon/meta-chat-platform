@@ -17,10 +17,23 @@ A production-grade conversational AI platform that synthesizes the best patterns
 - **Framework**: Express.js
 - **Database**: PostgreSQL 15+ with Prisma ORM + pgvector extension
 - **Cache**: Redis 7+
-- **Message Queue**: RabbitMQ (optional)
+- **Message Queue**: RabbitMQ (core event transport)
 - **Vector Store**: PostgreSQL with pgvector
 - **LLM**: OpenAI API (GPT-4o)
 - **Embeddings**: OpenAI text-embedding-3-small
+- **Authentication**: Custom HMAC API keys for HTTP + scoped JWT tokens for WebSocket (Passport **not** used)
+
+## 📅 Roadmap Snapshot
+
+| Milestone | Deadline | Owner | Highlights |
+|-----------|----------|-------|------------|
+| AI Core & Security Baseline | 2025-11-15 | Priya Sharma | Ship LLM/RAG services and harden API skeleton (keys, rate limits, secrets). |
+| Channel & Orchestration Launch | 2025-12-20 | Marco Díaz | Deliver WhatsApp/Messenger/WebChat adapters plus orchestrator pipeline. |
+| Tenant Experience Platform | 2026-01-31 | Tiana Lee | Expand REST APIs, release dashboard, and ship embeddable widget. |
+| Deployment & Observability | 2026-03-14 | Omar Nasser | Package Docker rollout, infrastructure automation, and monitoring stack. |
+| Production Hardening | 2026-04-25 | Riley Chen | Complete test matrix, load/security audits, and go-live playbook. |
+
+> See [`docs/TODO.md`](docs/TODO.md) for the full milestone backlog and task breakdown.
 
 ### Project Structure
 
@@ -33,7 +46,7 @@ meta-chat-platform/
 ├── packages/
 │   ├── shared/           # ✅ COMPLETE - Types, constants, utilities
 │   ├── database/         # ✅ COMPLETE - Prisma schema, vector search, client
-│   ├── events/           # ✅ COMPLETE - Event bus, webhook emitter, RabbitMQ
+│   ├── events/           # ✅ COMPLETE - Brokered event bus, webhook emitter, RabbitMQ
 │   ├── rag/              # 📦 TODO - Document processing, embeddings, retrieval
 │   ├── channels/         # 📦 TODO - WhatsApp, Messenger, WebChat adapters
 │   └── orchestrator/     # 📦 TODO - Message routing, LLM integration
@@ -63,17 +76,17 @@ meta-chat-platform/
 - **Client**: Singleton Prisma client with graceful shutdown
 
 ### 3. **Events Package** (`packages/events`)
-- **Event Bus**: Internal pub/sub using EventEmitter2
+- **Event Bus**: Broker-backed publisher that persists events, pushes to RabbitMQ, and optionally caches locally for fast reads
 - **Webhook Emitter**: Reliable webhook delivery with:
   - Exponential backoff retry logic
   - Per-tenant webhook configuration
   - Custom headers support
   - Parallel delivery to multiple webhooks
-- **RabbitMQ Emitter**: Topic-based event publishing with:
+- **RabbitMQ Broker**: Topic-based event publishing with:
   - Auto-reconnection on failure
   - Durable exchanges
   - Routing keys: `{tenantId}.{eventType}`
-- **Event Manager**: Unified interface coordinating all emitters
+- **Event Manager**: Unified interface coordinating broker publishing, local cache, and webhooks
 
 ---
 
@@ -139,6 +152,7 @@ Build the core message processing engine:
 ### 7. **API Server** (`apps/api`)
 Express server with:
 - **Authentication Middleware**: API key validation (global + per-tenant)
+- **Signature Verification**: HMAC digest check on management/webhook requests
 - **Rate Limiting**: Redis-backed rate limiter
 - **REST Routes**:
   - `/api/tenants` - CRUD operations
@@ -315,10 +329,10 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 - Hybrid search (keyword + vector) in one query
 - Can migrate to Pinecone/Weaviate later if needed
 
-### Why EventEmitter2 + RabbitMQ?
-- EventEmitter2: Fast in-process pub/sub
-- RabbitMQ: Durable, scalable cross-service communication
-- Start with EventEmitter2, add RabbitMQ when scaling
+### Why RabbitMQ-first events with local cache?
+- RabbitMQ guarantees delivery across services and instances
+- Local cache (opt-in) keeps hot history and low-latency fan-out without coupling to in-process emitters
+- Unified publishing path simplifies observability and failure handling
 
 ### Why OpenAI API vs self-hosted LLM?
 - Faster time to market
@@ -372,6 +386,12 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 ### Database Schema
 
 See `packages/database/prisma/schema.prisma` for the complete schema.
+
+### Data Retention & Partitioning
+
+- `messages` and `api_logs` are partitioned by month for faster pruning and queries
+- Background jobs archive/delete data based on tenant retention policies
+- Retention windows are configurable per tenant via the `TenantSettings.retention` object
 
 Key models:
 - **Tenant**: Multi-tenant isolation root
