@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { Logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
 
-const logger = new Logger('Database');
+const logger = createLogger('Database');
 
 function normalizeEmbeddingVector(vector: number[]): number[] {
   if (!Array.isArray(vector) || vector.length === 0) {
