@@ -14,11 +14,7 @@
     "sourceMap": true,
     "composite": true,
     "outDir": "./dist",
-    "rootDir": "./src",
-    "baseUrl": ".",
-    "paths": {
-      "@meta-chat/*": ["packages/*/src"]
-    }
+    "rootDir": "./src"
   },
   "exclude": ["node_modules", "dist"]
 }

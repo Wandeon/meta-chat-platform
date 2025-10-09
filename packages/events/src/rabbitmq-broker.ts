@@ -4,10 +4,15 @@ import { EventBroker } from './event-broker';
 
 const logger = createLogger('RabbitMQBroker');
 
+const EVENTS_EXCHANGE = process.env.RABBITMQ_EXCHANGE || 'metachat.events';
+
+function getEventRoutingKey(event: Event): string {
+  return `${event.tenantId}.${event.type}`;
+}
+
 export class RabbitMQBroker implements EventBroker {
   private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
-  private exchangeName: string = process.env.RABBITMQ_EXCHANGE || 'metachat.events';
   private reconnectDelay: number = Number(process.env.RABBITMQ_RECONNECT_DELAY_MS || 5000);
   private isConnecting: boolean = false;
   private url: string | null = null;
@@ -46,7 +51,7 @@ export class RabbitMQBroker implements EventBroker {
 
       this.channel = await connection.createChannel();
 
-      await this.channel.assertExchange(this.exchangeName, 'topic', {
+      await this.channel.assertExchange(EVENTS_EXCHANGE, 'topic', {
         durable: true,
         autoDelete: false,
       });
@@ -86,10 +91,10 @@ export class RabbitMQBroker implements EventBroker {
     }
 
     try {
-      const routingKey = `${event.tenantId}.${event.type.replace(/_/g, '.')}`;
+      const routingKey = getEventRoutingKey(event);
       const message = Buffer.from(JSON.stringify(event));
 
-      this.channel.publish(this.exchangeName, routingKey, message, {
+      this.channel.publish(EVENTS_EXCHANGE, routingKey, message, {
         persistent: true,
         contentType: 'application/json',
         timestamp: event.timestamp.getTime(),
