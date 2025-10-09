@@ -387,6 +387,12 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 
 See `packages/database/prisma/schema.prisma` for the complete schema.
 
+### Data Retention & Partitioning
+
+- `messages` and `api_logs` are partitioned by month for faster pruning and queries
+- Background jobs archive/delete data based on tenant retention policies
+- Retention windows are configurable per tenant via the `TenantSettings.retention` object
+
 Key models:
 - **Tenant**: Multi-tenant isolation root
 - **Channel**: Per-tenant channel configurations
