@@ -3,6 +3,7 @@ import { useAuth } from './routes/AuthProvider';
 import { DashboardLayout } from './components/DashboardLayout';
 import { LoginPage } from './pages/LoginPage';
 import { TenantsPage } from './pages/TenantsPage';
+import { TenantSettingsPage } from './pages/TenantSettingsPage';
 import { ChannelsPage } from './pages/ChannelsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { ConversationsPage } from './pages/ConversationsPage';
@@ -26,6 +27,7 @@ export function App() {
       <Route element={<DashboardLayout />}>
         <Route index element={<Navigate to="/tenants" replace />} />
         <Route path="/tenants" element={<TenantsPage />} />
+        <Route path="/tenants/:tenantId/settings" element={<TenantSettingsPage />} />
         <Route path="/channels" element={<ChannelsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/conversations" element={<ConversationsPage />} />

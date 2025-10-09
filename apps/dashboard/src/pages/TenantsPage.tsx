@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../api/client';
 import type { Tenant, CreateTenantRequest, CreateTenantResponse } from '../api/types';
 
 export function TenantsPage() {
   const api = useApi();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CreateTenantRequest>({ name: '', slug: '' });
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
@@ -25,6 +27,27 @@ export function TenantsPage() {
       setTimeout(() => setNewApiKey(null), 30000);
     },
   });
+
+  const deleteTenant = useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/api/tenants/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    },
+  });
+
+  const toggleTenantStatus = useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      api.patch<Tenant>(`/api/tenants/${id}`, { active }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    },
+  });
+
+  const handleDelete = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete tenant "${name}"?\n\nThis will also delete all associated channels, documents, conversations, and webhooks.`)) {
+      deleteTenant.mutate(id);
+    }
+  };
 
   return (
     <section className="dashboard-section">
@@ -103,35 +126,77 @@ export function TenantsPage() {
             <tr>
               <th>Name</th>
               <th>Slug</th>
-              <th>Active</th>
+              <th>Status</th>
               <th>Created</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {tenantsQuery.data.length === 0 ? (
               <tr>
-                <td colSpan={4} style={{ textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={5} style={{ textAlign: 'center', color: '#64748b' }}>
                   No tenants yet. Create one above.
                 </td>
               </tr>
             ) : (
               tenantsQuery.data.map((tenant) => (
                 <tr key={tenant.id}>
-                  <td>{tenant.name}</td>
+                  <td>
+                    <strong>{tenant.name}</strong>
+                  </td>
                   <td><code>{tenant.slug}</code></td>
                   <td>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      background: tenant.active ? '#d1fae5' : '#fee2e2',
-                      color: tenant.active ? '#065f46' : '#991b1b'
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
                     }}>
-                      {tenant.active ? 'Active' : 'Inactive'}
-                    </span>
+                      <input
+                        type="checkbox"
+                        checked={tenant.active}
+                        onChange={(e) =>
+                          toggleTenantStatus.mutate({ id: tenant.id, active: e.target.checked })
+                        }
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: tenant.active ? '#059669' : '#64748b',
+                      }}>
+                        {tenant.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </label>
                   </td>
-                  <td>{new Date(tenant.createdAt).toLocaleString()}</td>
+                  <td>{new Date(tenant.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => navigate(`/tenants/${tenant.id}/settings`)}
+                        className="secondary-button"
+                        style={{ fontSize: '13px', padding: '6px 12px' }}
+                      >
+                        ⚙️ Settings
+                      </button>
+                      <button
+                        onClick={() => handleDelete(tenant.id, tenant.name)}
+                        disabled={deleteTenant.isPending}
+                        style={{
+                          fontSize: '13px',
+                          padding: '6px 12px',
+                          background: '#fee2e2',
+                          border: '1px solid #ef4444',
+                          color: '#991b1b',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                        }}
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}

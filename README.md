@@ -182,7 +182,41 @@ meta-chat-platform/
 - **Error Handling**: Comprehensive error handling with logging and event emission
 - **Comprehensive Tests**: Unit tests for orchestrator and message pipeline (PR #21)
 
-### 11. **Testing & Quality Tooling** (PRs #24, #25, #26)
+### 11. **Admin Dashboard** (`apps/dashboard`)
+- **Complete CRUD Operations**: Full create, read, update, delete functionality for all resources
+- **Tenant Management**: Create tenants, configure AI settings, toggle active/inactive, delete tenants
+- **Tenant Settings UI**: Visual configuration for:
+  - AI model parameters (temperature, max tokens, top P)
+  - System prompts and guardrails
+  - Brand name, tone, and locale preferences
+  - Feature toggles (RAG, function calling, human handoff)
+  - Human handoff keywords
+  - RAG configuration (top K, similarity threshold, hybrid weights)
+- **Channel Management**: Add/edit/delete channels with type-specific credential forms:
+  - WhatsApp Business API configuration
+  - Facebook Messenger configuration
+  - Web Chat widget customization
+  - Toggle active/inactive per channel
+- **Document Management**: Upload/edit/delete knowledge base documents:
+  - File upload support (.txt, .md, .json, .csv, .html)
+  - Paste content directly
+  - Document status indicators (pending, processing, indexed, failed)
+  - Tenant selector dropdown
+- **Webhook Management**: Configure/test/edit/delete webhooks:
+  - Subscribe to multiple event types
+  - Custom headers support
+  - Webhook secret configuration
+  - Test webhook delivery
+  - Toggle active/inactive per webhook
+- **Shared Components**: Reusable tenant selector dropdown across all pages
+- **User Experience**:
+  - Collapsible create/edit forms
+  - Confirmation dialogs for destructive actions
+  - Real-time validation and error messages
+  - Loading states and success notifications
+- **Documentation**: Comprehensive user guide at `apps/dashboard/DASHBOARD-GUIDE.md`
+
+### 12. **Testing & Quality Tooling** (PRs #24, #25, #26)
 - **Unit Tests**: Vitest setup with 31 passing tests across all packages
 - **Integration Tests**: Node.js test runner for RAG pipeline end-to-end testing
 - **Code Quality**: ESLint with 0 errors (was 17), TypeScript strict mode
@@ -195,28 +229,29 @@ meta-chat-platform/
 
 ## 📦 What Needs to Be Built
 
-### 12. **API Server REST Routes** (`apps/api`)
-Currently has webhook routes (WhatsApp, Messenger), WebSocket server, and admin authentication. Needs complete REST API implementation:
-- **Tenant Management**: CRUD endpoints for tenants
-- **Channel Management**: Endpoints to add/edit/remove channels per tenant
-- **Document Management**: Upload/list/delete/reindex endpoints with multipart file handling
-- **Webhook Management**: CRUD for outgoing webhook configurations
-- **Conversation API**: List conversations, get messages, update status with pagination
-- **Health & Metrics**: Health check and Prometheus-format metrics endpoints
-- **Rate Limiting**: Redis-backed rate limiter per tenant/IP
-- **Request Logging**: Comprehensive request/response logging with correlation IDs
-- **Error Handling**: Global error handler with consistent error responses
+### 13. **API Server REST Routes** (`apps/api`)
+✅ **COMPLETE** - Full REST API implementation with admin authentication:
+- **Tenant Management**: Complete CRUD endpoints (GET, POST, PATCH, DELETE)
+- **Channel Management**: Full endpoints to add/edit/remove/toggle channels per tenant
+- **Document Management**: Upload/list/update/delete endpoints with metadata support
+- **Webhook Management**: Complete CRUD for outgoing webhook configurations
+- **Conversation API**: List conversations, get messages, update status
+- **Health & Metrics**: Health check endpoint showing database, Redis, and RabbitMQ status
+- **Admin Authentication**: API key-based authentication with audit logging
+- **Request Logging**: Request/response logging with correlation IDs
+- **Error Handling**: Global error handler with consistent JSON error responses
 
-### 13. **Production Deployment** (In Progress)
-- **Docker Compose**: Complete stack deployed with PostgreSQL, Redis, RabbitMQ, API, Dashboard, Widget
-- **Health Checks**: All services have health check endpoints
-- **Nginx Configuration**: Reverse proxy for `chat.genai.hr` and `chat-admin.genai.hr`
-- **SSL Certificates**: Certbot/Let's Encrypt SSL setup
-- **Environment Variables**: Production `.env` with secrets management
-- **Database Migrations**: All Prisma migrations applied
-- **Monitoring**: Netdata integration for system and service monitoring
-- **Backups**: Automated database and file backups with 7-day retention
-- **Log Rotation**: Configured log rotation for all services
+### 14. **Production Deployment** ✅ **COMPLETE**
+- **Docker Compose**: Complete stack running with PostgreSQL 16 + pgvector, Redis 7, RabbitMQ 3.13
+- **Health Checks**: All services monitored with health endpoints
+- **Nginx Configuration**: Reverse proxy configured for chat.genai.hr with SSL
+- **SSL Certificates**: Let's Encrypt certificates (valid until 2026-01-07) with auto-renewal
+- **Environment Variables**: Production `.env` with encrypted secrets
+- **Database Migrations**: All Prisma migrations applied, pgvector extension enabled
+- **PM2 Process Manager**: API running with auto-restart on system boot
+- **Application**: Running on HTTPS at https://chat.genai.hr
+- **Dashboard**: Fully deployed and accessible at https://chat.genai.hr
+- **Deployment Summary**: Complete documentation at `/home/deploy/meta-chat-platform/DEPLOYMENT-SUMMARY.md`
 
 ---
 
@@ -368,20 +403,22 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 
 ## 🎯 Current Status & Next Steps
 
-### ✅ Completed (Milestones 0-2 Complete!)
+### ✅ Completed (Milestones 0-3 Complete!)
 - ✅ Foundation: Monorepo, shared packages, database, events
 - ✅ AI Core: LLM providers (OpenAI, Anthropic, Ollama) with streaming and function calling
 - ✅ RAG Engine: Document loaders, chunking, embeddings, hybrid retrieval
 - ✅ Channel Adapters: WhatsApp, Messenger, WebChat with full test coverage
 - ✅ Orchestrator: Message pipeline with LLM integration, RAG retrieval, function calling
+- ✅ REST API: Complete CRUD operations for tenants, channels, documents, webhooks
+- ✅ Admin Dashboard: Full management UI with visual configuration for all features
+- ✅ Production Deployment: Running on HTTPS at chat.genai.hr with SSL and monitoring
 - ✅ Quality: 31 unit tests passing, ESLint clean, 70% security vulnerability reduction
-- ✅ Infrastructure: Docker Compose with health checks, deployment docs
+- ✅ Documentation: Comprehensive guides for deployment and dashboard usage
 
-### 🔄 In Progress (Milestone 3)
-1. **REST API Implementation** - Complete tenant/channel/document/conversation endpoints
-2. **Production Deployment** - Deploy to `chat.genai.hr` with SSL and monitoring
-3. **Dashboard Enhancement** - Connect UI to REST API for full management capabilities
-4. **End-to-End Testing** - Integration tests across full message flow
+### 🔄 In Progress (Milestone 4)
+1. **End-to-End Testing** - Integration tests across full message flow
+2. **Conversations UI** - Dashboard page to view and manage conversations
+3. **Widget Deployment** - Deploy embeddable web chat widget
 
 ### 📋 Upcoming Priorities
 1. **Rate Limiting** - Implement Redis-backed rate limiter for API protection
