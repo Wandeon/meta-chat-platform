@@ -1,40 +1,39 @@
-# Meta Chat Platform - TODO List
+# Meta Chat Platform - Milestone Roadmap
 
-**Comprehensive Task Tracking** | Last Updated: 2025-10-08
-
----
-
-## 📊 Progress Overview
-
-**Overall Progress:** ⬜⬜⬜⬛⬛⬛⬛⬛⬛⬛ 30%
-
-| Phase | Status | Progress |
-|-------|--------|----------|
-| Phase 1: Foundation | ✅ DONE | 100% |
-| Phase 2: AI & RAG | 🔄 IN PROGRESS | 0% |
-| Phase 3: Channels | ⏳ NOT STARTED | 0% |
-| Phase 4: Orchestration | ⏳ NOT STARTED | 0% |
-| Phase 5: API & Management | ⏳ NOT STARTED | 0% |
-| Phase 6: Deployment | ⏳ NOT STARTED | 0% |
-| Phase 7: Testing & Production | ⏳ NOT STARTED | 0% |
+**Milestone Tracking** | Last Updated: 2025-10-09
 
 ---
 
-## Phase 1: Foundation ✅ DONE
+## 🚀 Milestone Summary
 
-### 1.1 Project Structure
+| Milestone | Owner | Deadline | Status | Focus |
+|-----------|-------|----------|--------|-------|
+| 0. Foundation Complete | Dana Morgan (Foundations Guild) | 2025-09-30 | ✅ Done | Monorepo, shared packages, infrastructure analysis |
+| 1. AI Core & Security Baseline | Priya Sharma (AI Platform Lead) | 2025-11-15 | 🔄 In Progress | LLM/RAG services, secure API skeleton, secret management |
+| 2. Channel & Orchestration Launch | Marco Díaz (Channel Integrations Lead) | 2025-12-20 | ⏳ Not Started | WhatsApp/Messenger/WebChat adapters, orchestrator pipeline |
+| 3. Tenant Experience Platform | Tiana Lee (Product Platform Lead) | 2026-01-31 | ⏳ Not Started | REST APIs, dashboard, embeddable widget |
+| 4. Deployment & Observability | Omar Nasser (DevOps Lead) | 2026-03-14 | ⏳ Not Started | Docker delivery, infrastructure automation, monitoring |
+| 5. Production Hardening | Riley Chen (QA Lead) | 2026-04-25 | ⏳ Not Started | Testing matrix, load/security audits, go-live playbook |
+
+---
+
+## ✅ Milestone 0: Foundation Complete
+- **Owner:** Dana Morgan (Foundations Guild)
+- **Deadline:** 2025-09-30 (Completed)
+
+### 0.1 Project Structure
 - [x] Initialize monorepo with Turbo
 - [x] Set up TypeScript configuration
 - [x] Create workspace packages structure
 - [x] Add development scripts
 
-### 1.2 Shared Package (`packages/shared`)
+### 0.2 Shared Package (`packages/shared`)
 - [x] Define core TypeScript types
 - [x] Create constants (limits, error codes)
 - [x] Implement utilities (retry, logger, ID generation)
 - [x] Export all shared functionality
 
-### 1.3 Database Package (`packages/database`)
+### 0.3 Database Package (`packages/database`)
 - [x] Design Prisma schema (multi-tenant)
 - [x] Add pgvector extension support
 - [x] Create Tenant, Channel, Conversation models
@@ -45,7 +44,7 @@
 - [x] Create Prisma client singleton
 - [x] Add TypeScript types generation
 
-### 1.4 Events Package (`packages/events`)
+### 0.4 Events Package (`packages/events`)
 - [x] Set up EventEmitter2 for internal events
 - [x] Create webhook emitter with retry logic
 - [x] Implement RabbitMQ emitter
@@ -53,7 +52,7 @@
 - [x] Define event type constants
 - [x] Add event logging functionality
 
-### 1.5 Documentation
+### 0.5 Documentation Baseline
 - [x] Write main README.md
 - [x] Create ARCHITECTURE.md
 - [x] Create DEPLOYMENT.md (VPS-specific)
@@ -61,7 +60,7 @@
 - [x] Create PROJECT-OVERVIEW.md
 - [x] Create TODO.md (this file)
 
-### 1.6 System Analysis
+### 0.6 System Analysis
 - [x] Audit VPS resources (CPU, RAM, disk)
 - [x] Identify existing services and ports
 - [x] Plan port allocation
@@ -71,12 +70,11 @@
 
 ---
 
-## Phase 2: AI & RAG 🔄 IN PROGRESS
+## 🔄 Milestone 1: AI Core & Security Baseline
+- **Owner:** Priya Sharma (AI Platform Lead)
+- **Deadline:** 2025-11-15
 
-### 2.1 LLM Package (`packages/llm`) - NEW
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 2.1.1 Core Abstraction
+### 1.1 LLM Package (`packages/llm`)
 - [ ] Create `LLMProvider` interface
 - [ ] Define `LLMConfig` type
 - [ ] Create `LLMResponse` type
@@ -84,7 +82,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add streaming support interface
 - [ ] Create function calling types
 
-#### 2.1.2 OpenAI Provider
+#### 1.1.a OpenAI Provider
 - [ ] Install `openai` SDK
 - [ ] Implement OpenAI chat completions
 - [ ] Add streaming support
@@ -93,7 +91,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Handle rate limits and errors
 - [ ] Add retry logic with exponential backoff
 
-#### 2.1.3 Anthropic Provider
+#### 1.1.b Anthropic Provider
 - [ ] Install `@anthropic-ai/sdk`
 - [ ] Implement Claude chat completions
 - [ ] Add streaming support
@@ -102,7 +100,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Handle rate limits and errors
 - [ ] Add retry logic
 
-#### 2.1.4 Ollama Provider (Local)
+#### 1.1.c Ollama Provider (Local)
 - [ ] Install `ollama` client or use REST API
 - [ ] Implement chat completions
 - [ ] Add streaming support
@@ -111,7 +109,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add timeout configuration
 - [ ] Document performance considerations
 
-#### 2.1.5 Provider Manager
+#### 1.1.d Provider Manager
 - [ ] Create factory to instantiate providers
 - [ ] Add provider switching logic
 - [ ] Implement fallback mechanism
@@ -119,10 +117,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Cache provider instances
 - [ ] Add provider health checks
 
-### 2.2 RAG Package (`packages/rag`)
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 2.2.1 Document Loader
+### 1.2 RAG Package (`packages/rag`)
 - [ ] Install `pdf-parse` for PDF files
 - [ ] Install `mammoth` for DOCX files
 - [ ] Implement PDF text extraction
@@ -132,7 +127,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Handle encoding issues
 - [ ] Add progress tracking for large files
 
-#### 2.2.2 Text Chunker
+#### 1.2.a Text Chunker
 - [ ] Implement fixed-size chunking (512 tokens)
 - [ ] Add overlap configuration (50-100 tokens)
 - [ ] Implement semantic chunking (paragraph-based)
@@ -141,7 +136,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add chunk position tracking
 - [ ] Test with various document types
 
-#### 2.2.3 Embeddings Generator
+#### 1.2.b Embeddings Generator
 - [ ] Use OpenAI `text-embedding-3-small`
 - [ ] Implement batch processing (up to 2048 chunks)
 - [ ] Add retry logic for API failures
@@ -150,20 +145,16 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add progress tracking
 - [ ] Handle rate limits
 
-#### 2.2.4 Vector Search
+#### 1.2.c Retrieval Engines
 - [ ] Implement cosine similarity search
 - [ ] Add top-K retrieval
 - [ ] Add minimum similarity threshold
 - [ ] Optimize pgvector query performance
 - [ ] Add vector index creation helper
-
-#### 2.2.5 Keyword Search
 - [ ] Use PostgreSQL `tsvector`
 - [ ] Implement BM25-style ranking
-- [ ] Add top-K retrieval
+- [ ] Add top-K retrieval for keyword search
 - [ ] Create text search indexes
-
-#### 2.2.6 Hybrid Retrieval
 - [ ] Combine keyword + vector results
 - [ ] Implement weighted fusion (0.3 keyword, 0.7 vector)
 - [ ] Add re-ranking algorithm
@@ -171,14 +162,14 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Return top 5 chunks with scores
 - [ ] Add configurable weights
 
-#### 2.2.7 Function Definitions
+#### 1.2.d Function Definitions
 - [ ] Define `search_knowledge_base` function
 - [ ] Add function parameter validation
 - [ ] Implement function execution logic
 - [ ] Add function result formatting
 - [ ] Create function registry
 
-### 2.3 Integration
+### 1.3 AI Integration Tests
 - [ ] Connect RAG to database package
 - [ ] Connect LLM to RAG for embeddings
 - [ ] Test end-to-end document indexing
@@ -186,21 +177,45 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add unit tests
 - [ ] Add integration tests
 
+### 1.4 Security & Platform Guardrails
+- [ ] Initialize Express.js app in `apps/api`
+- [ ] Install dependencies (express, socket.io, etc.)
+- [ ] Set up TypeScript configuration
+- [ ] Create server entry point
+- [ ] Add environment variable loading
+- [ ] Set up graceful shutdown
+- [ ] Implement request logging
+- [ ] Add CORS configuration
+- [ ] Add body parsing (JSON, multipart)
+- [ ] Implement API key authentication (global + tenant)
+- [ ] Add API key hashing in database
+- [ ] Add rate limiting (Redis-backed)
+- [ ] Create async error handler wrapper
+- [ ] Add request ID generation
+- [ ] Encrypt sensitive channel configs
+- [ ] Copy `.env.example` to `.env`
+- [ ] Generate database password
+- [ ] Generate Redis password (optional)
+- [ ] Generate RabbitMQ credentials
+- [ ] Generate `GLOBAL_API_KEY`
+- [ ] Add OpenAI/Anthropic API keys
+- [ ] Configure Ollama URL (if using)
+- [ ] Set production values
+
 ---
 
-## Phase 3: Channels ⏳ NOT STARTED
+## ⏳ Milestone 2: Channel & Orchestration Launch
+- **Owner:** Marco Díaz (Channel Integrations Lead)
+- **Deadline:** 2025-12-20
 
-### 3.1 Channels Package (`packages/channels`)
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 3.1.1 Base Adapter
+### 2.1 Channels Package (`packages/channels`)
 - [ ] Create `ChannelAdapter` abstract class
 - [ ] Define `NormalizedMessage` type
 - [ ] Define adapter interface methods
 - [ ] Add error handling patterns
 - [ ] Create adapter factory
 
-#### 3.1.2 WhatsApp Adapter
+#### 2.1.a WhatsApp Adapter
 - [ ] Install WhatsApp Business SDK/API client
 - [ ] Implement webhook verification (GET)
 - [ ] Implement webhook receiver (POST)
@@ -214,7 +229,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Handle message status updates
 - [ ] Test with WhatsApp test numbers
 
-#### 3.1.3 Messenger Adapter
+#### 2.1.b Messenger Adapter
 - [ ] Install Messenger SDK
 - [ ] Implement webhook verification (GET)
 - [ ] Implement webhook receiver (POST)
@@ -227,7 +242,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Handle read receipts
 - [ ] Test with Facebook test accounts
 
-#### 3.1.4 WebChat Adapter
+#### 2.1.c WebChat Adapter
 - [ ] Install Socket.IO
 - [ ] Implement WebSocket server
 - [ ] Handle connection/disconnection
@@ -239,7 +254,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add connection recovery
 - [ ] Test with browser clients
 
-### 3.2 Channel Testing
+### 2.2 Channel Testing
 - [ ] Create mock webhook payloads
 - [ ] Test message normalization
 - [ ] Test message sending
@@ -247,48 +262,31 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add unit tests for each adapter
 - [ ] Add integration tests
 
----
-
-## Phase 4: Orchestration ⏳ NOT STARTED
-
-### 4.1 Orchestrator Package (`packages/orchestrator`)
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 4.1.1 Tenant Resolution
+### 2.3 Orchestrator Package (`packages/orchestrator`)
 - [ ] Implement tenant lookup from channel config
 - [ ] Cache tenant configurations
 - [ ] Handle tenant not found errors
 - [ ] Add tenant enablement check
-
-#### 4.1.2 Conversation Management
 - [ ] Implement conversation lookup
 - [ ] Create new conversation if not exists
 - [ ] Update conversation metadata
 - [ ] Update `lastMessageAt` timestamp
 - [ ] Handle conversation status transitions
-
-#### 4.1.3 Human Handoff Detection
 - [ ] Check for handoff keywords in settings
 - [ ] Match against message content
 - [ ] Update conversation status to "assigned_human"
 - [ ] Emit handoff event
 - [ ] Stop AI processing when handed off
-
-#### 4.1.4 Context Builder
 - [ ] Fetch conversation history from database
 - [ ] Format messages for LLM (system, user, assistant)
 - [ ] Add RAG context chunks to system message
 - [ ] Apply token limits (e.g., last 10 messages)
 - [ ] Add tenant-specific instructions
-
-#### 4.1.5 Message Router
 - [ ] Implement main processing pipeline
 - [ ] Coordinate all steps in order
 - [ ] Handle errors at each step
 - [ ] Add logging and tracing
 - [ ] Emit events at each stage
-
-#### 4.1.6 LLM Integration
 - [ ] Get LLM provider from tenant config
 - [ ] Build messages array with context
 - [ ] Add function definitions
@@ -298,22 +296,18 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Execute function handlers
 - [ ] Continue conversation if function called
 - [ ] Limit to 5 function call iterations
-
-#### 4.1.7 RAG Integration
 - [ ] Check if RAG enabled for tenant
 - [ ] Extract query from user message
 - [ ] Call hybrid retrieval
 - [ ] Format chunks for context
 - [ ] Add to system message
-
-#### 4.1.8 Response Sending
 - [ ] Format response for channel
 - [ ] Call channel adapter send method
 - [ ] Handle send failures with retry
 - [ ] Log sent message to database
 - [ ] Emit message sent event
 
-### 4.2 Testing
+### 2.4 Orchestration Testing & Guardrails
 - [ ] Create mock tenant configurations
 - [ ] Test full message flow end-to-end
 - [ ] Test with each LLM provider
@@ -322,39 +316,21 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Test human handoff
 - [ ] Add unit tests
 - [ ] Add integration tests
+- [ ] `GET /webhooks/whatsapp` - Verify webhook
+- [ ] `POST /webhooks/whatsapp` - Receive WhatsApp messages
+- [ ] `GET /webhooks/messenger` - Verify webhook
+- [ ] `POST /webhooks/messenger` - Receive Messenger messages
+- [ ] Validate webhook signatures
+- [ ] Return 200 OK immediately
+- [ ] Process messages asynchronously
 
 ---
 
-## Phase 5: API & Management ⏳ NOT STARTED
+## ⏳ Milestone 3: Tenant Experience Platform
+- **Owner:** Tiana Lee (Product Platform Lead)
+- **Deadline:** 2026-01-31
 
-### 5.1 API Server (`apps/api`)
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 5.1.1 Project Setup
-- [ ] Initialize Express.js app
-- [ ] Install dependencies (express, socket.io, etc.)
-- [ ] Set up TypeScript configuration
-- [ ] Create server entry point
-- [ ] Add environment variable loading
-- [ ] Set up graceful shutdown
-
-#### 5.1.2 Middleware
-- [ ] Implement request logging
-- [ ] Add CORS configuration
-- [ ] Add body parsing (JSON, multipart)
-- [ ] Implement API key authentication
-- [ ] Add rate limiting (Redis-backed)
-- [ ] Create async error handler wrapper
-- [ ] Add request ID generation
-
-#### 5.1.3 Authentication
-- [ ] Validate global API key for admin routes
-- [ ] Validate tenant API keys for tenant routes
-- [ ] Implement JWT for WebSocket connections
-- [ ] Add API key hashing in database
-- [ ] Handle authentication errors
-
-#### 5.1.4 REST API Routes - Tenants
+### 3.1 API Server Feature Expansion (`apps/api`)
 - [ ] `POST /api/tenants` - Create tenant
 - [ ] `GET /api/tenants/:id` - Get tenant
 - [ ] `PUT /api/tenants/:id` - Update tenant
@@ -362,16 +338,11 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] `GET /api/tenants` - List tenants (admin)
 - [ ] Add input validation
 - [ ] Add authorization checks
-
-#### 5.1.5 REST API Routes - Channels
 - [ ] `POST /api/tenants/:id/channels` - Add channel
 - [ ] `GET /api/tenants/:id/channels` - List channels
 - [ ] `GET /api/tenants/:id/channels/:channelId` - Get channel
 - [ ] `PUT /api/tenants/:id/channels/:channelId` - Update channel
 - [ ] `DELETE /api/tenants/:id/channels/:channelId` - Remove channel
-- [ ] Encrypt sensitive channel configs
-
-#### 5.1.6 REST API Routes - Documents
 - [ ] `POST /api/tenants/:id/documents` - Upload document
 - [ ] `GET /api/tenants/:id/documents` - List documents
 - [ ] `GET /api/tenants/:id/documents/:docId` - Get document
@@ -381,52 +352,33 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Validate file types and sizes
 - [ ] Store files to disk/S3
 - [ ] Trigger async document processing
-
-#### 5.1.7 REST API Routes - Conversations
 - [ ] `GET /api/tenants/:id/conversations` - List conversations
 - [ ] `GET /api/tenants/:id/conversations/:convId` - Get conversation
 - [ ] `GET /api/tenants/:id/conversations/:convId/messages` - Get messages
 - [ ] `PUT /api/tenants/:id/conversations/:convId` - Update status
 - [ ] Add pagination
 - [ ] Add filtering (by status, channel)
-
-#### 5.1.8 REST API Routes - Webhooks
 - [ ] `POST /api/tenants/:id/webhooks` - Add webhook
 - [ ] `GET /api/tenants/:id/webhooks` - List webhooks
 - [ ] `PUT /api/tenants/:id/webhooks/:webhookId` - Update webhook
 - [ ] `DELETE /api/tenants/:id/webhooks/:webhookId` - Delete webhook
 - [ ] Validate webhook URLs
 - [ ] Add webhook secret support
-
-#### 5.1.9 Webhook Receivers
-- [ ] `GET /webhooks/whatsapp` - Verify webhook
-- [ ] `POST /webhooks/whatsapp` - Receive WhatsApp messages
-- [ ] `GET /webhooks/messenger` - Verify webhook
-- [ ] `POST /webhooks/messenger` - Receive Messenger messages
-- [ ] Validate signatures
-- [ ] Return 200 OK immediately
-- [ ] Process messages asynchronously
-
-#### 5.1.10 WebSocket Server
 - [ ] Set up Socket.IO server
 - [ ] Implement connection handling
-- [ ] Add JWT authentication
+- [ ] Add JWT authentication for WebSocket
 - [ ] Handle `message` event
 - [ ] Handle `typing` event
 - [ ] Emit `message` to clients
 - [ ] Emit `typing` to clients
 - [ ] Handle disconnections
 - [ ] Add Redis adapter for scaling
-
-#### 5.1.11 Health & Monitoring
 - [ ] `GET /api/health` - Health check
 - [ ] Check PostgreSQL connection
 - [ ] Check Redis connection
 - [ ] Check RabbitMQ connection (optional)
 - [ ] Return service status
 - [ ] Add metrics endpoint (Prometheus format)
-
-#### 5.1.12 Error Handling
 - [ ] Implement global error handler
 - [ ] Format error responses consistently
 - [ ] Log errors with context
@@ -434,17 +386,12 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Handle database errors
 - [ ] Handle external API errors
 
-### 5.2 Web Widget (`apps/web-widget`)
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
-#### 5.2.1 Widget Core
+### 3.2 Web Widget (`apps/web-widget`)
 - [ ] Create vanilla JS/TS widget
 - [ ] Implement iframe-based injection
 - [ ] Create one-line embed script
 - [ ] Set up WebSocket client
 - [ ] Add reconnection logic
-
-#### 5.2.2 UI Components
 - [ ] Create chat bubble button
 - [ ] Create chat window
 - [ ] Implement message list
@@ -452,81 +399,58 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 - [ ] Add typing indicator
 - [ ] Add timestamp display
 - [ ] Make responsive (mobile/desktop)
-
-#### 5.2.3 Customization
 - [ ] Add brand color configuration
 - [ ] Add position configuration (left/right)
 - [ ] Add greeting message
 - [ ] Add avatar support
 - [ ] Add custom CSS option
-
-#### 5.2.4 Build & Deploy
 - [ ] Set up build pipeline
 - [ ] Minify and bundle
 - [ ] Host on CDN (or serve from API)
 - [ ] Create demo page
 
-### 5.3 Dashboard (`apps/dashboard`)
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
-#### 5.3.1 Project Setup
+### 3.3 Dashboard (`apps/dashboard`)
 - [ ] Choose framework (Alpine.js or React)
 - [ ] Set up build pipeline
 - [ ] Create layout structure
 - [ ] Add routing
-
-#### 5.3.2 Authentication
 - [ ] Create login page
 - [ ] Implement API key auth
 - [ ] Store session token
 - [ ] Add logout functionality
-
-#### 5.3.3 Tenant Management
 - [ ] Create tenants list page
 - [ ] Add create tenant form
 - [ ] Add edit tenant form
 - [ ] Add delete confirmation
 - [ ] Display tenant settings (JSON editor)
-
-#### 5.3.4 Channel Configuration
 - [ ] Create channels list page
 - [ ] Add WhatsApp configuration form
 - [ ] Add Messenger configuration form
 - [ ] Add WebChat configuration
 - [ ] Test channel connections
-
-#### 5.3.5 Document Management
 - [ ] Create documents list page
 - [ ] Add drag-drop upload
 - [ ] Show indexing progress
 - [ ] Display chunk count
 - [ ] Add delete functionality
 - [ ] Add reindex button
-
-#### 5.3.6 Conversation Viewer
 - [ ] Create conversations list
 - [ ] Add filtering (by status, channel, date)
 - [ ] Add search functionality
 - [ ] Display conversation messages
 - [ ] Show message metadata
 - [ ] Add pagination
-
-#### 5.3.7 Webhook Management
 - [ ] Create webhooks list
 - [ ] Add create webhook form
 - [ ] Display webhook delivery logs
 - [ ] Show success/failure stats
 - [ ] Add webhook testing tool
-
-#### 5.3.8 Health Dashboard
 - [ ] Display system status
 - [ ] Show database connection
 - [ ] Show Redis connection
 - [ ] Show RabbitMQ connection
 - [ ] Display API response times
 - [ ] Show error rates
-
-#### 5.3.9 Analytics (Future)
 - [ ] Message volume charts
 - [ ] Response time metrics
 - [ ] LLM cost tracking
@@ -534,19 +458,16 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 
 ---
 
-## Phase 6: Deployment ⏳ NOT STARTED
+## ⏳ Milestone 4: Deployment & Observability
+- **Owner:** Omar Nasser (DevOps Lead)
+- **Deadline:** 2026-03-14
 
-### 6.1 Docker Configuration
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 6.1.1 Dockerfiles
+### 4.1 Docker Configuration
 - [ ] Create `apps/api/Dockerfile`
 - [ ] Create `apps/dashboard/Dockerfile`
 - [ ] Optimize layer caching
 - [ ] Use multi-stage builds
 - [ ] Add health checks
-
-#### 6.1.2 Docker Compose
 - [ ] Create `docker-compose.yml`
 - [ ] Add PostgreSQL service (ankane/pgvector)
 - [ ] Add Redis service
@@ -558,40 +479,21 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Set up environment variables
 - [ ] Add restart policies
 
-#### 6.1.3 Environment Configuration
-- [ ] Copy `.env.example` to `.env`
-- [ ] Generate database password
-- [ ] Generate Redis password (optional)
-- [ ] Generate RabbitMQ credentials
-- [ ] Generate `GLOBAL_API_KEY`
-- [ ] Add OpenAI/Anthropic API keys
-- [ ] Configure Ollama URL (if using)
-- [ ] Set production values
-
-### 6.2 Infrastructure Setup
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 6.2.1 VPS Preparation
+### 4.2 Infrastructure Setup
 - [ ] Create project directory `/home/deploy/meta-chat-platform`
 - [ ] Clone repository
 - [ ] Set up `.env` file
 - [ ] Create storage directory
 - [ ] Set proper permissions
-
-#### 6.2.2 Docker Services
 - [ ] Start Docker Compose
 - [ ] Verify PostgreSQL running
 - [ ] Verify Redis running
 - [ ] Verify RabbitMQ running (optional)
 - [ ] Check container logs
-
-#### 6.2.3 Database Initialization
 - [ ] Run Prisma migrations (`npm run db:push`)
 - [ ] Enable pgvector extension
 - [ ] Verify tables created
 - [ ] Create initial admin tenant (optional)
-
-#### 6.2.4 Nginx Configuration
 - [ ] Create `/etc/nginx/sites-available/chat.genai.hr`
 - [ ] Configure API proxy (port 3000)
 - [ ] Configure Dashboard proxy (port 3001)
@@ -599,27 +501,18 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Test nginx config
 - [ ] Create symlink to sites-enabled
 - [ ] Reload nginx
-
-#### 6.2.5 SSL/TLS Setup
 - [ ] Run certbot for `chat.genai.hr`
 - [ ] Run certbot for `chat-admin.genai.hr`
 - [ ] Verify SSL certificates
 - [ ] Test HTTPS access
 - [ ] Set up auto-renewal
 
-### 6.3 Backup Configuration
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
+### 4.3 Backup & Monitoring Foundations
 - [ ] Create backup script for PostgreSQL
 - [ ] Create backup script for storage files
 - [ ] Add to cron (daily backups)
 - [ ] Set 7-day retention
 - [ ] Test backup restoration
-- [ ] Document backup procedures
-
-### 6.4 Monitoring Setup
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
 - [ ] Add services to Netdata
 - [ ] Configure log rotation
 - [ ] Set up error alerting (optional)
@@ -629,11 +522,11 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 
 ---
 
-## Phase 7: Testing & Production ⏳ NOT STARTED
+## ⏳ Milestone 5: Production Hardening
+- **Owner:** Riley Chen (QA Lead)
+- **Deadline:** 2026-04-25
 
-### 7.1 Unit Tests
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
+### 5.1 Unit Tests
 - [ ] Set up Jest/Vitest
 - [ ] Write tests for shared utilities
 - [ ] Write tests for database queries
@@ -644,9 +537,7 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 - [ ] Write tests for orchestrator
 - [ ] Achieve >80% code coverage
 
-### 7.2 Integration Tests
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
+### 5.2 Integration Tests
 - [ ] Set up test database
 - [ ] Test tenant CRUD operations
 - [ ] Test channel configuration
@@ -656,9 +547,7 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 - [ ] Test WebSocket connections
 - [ ] Test error scenarios
 
-### 7.3 Load Testing
-Priority: 🟢 LOW | Status: ⏳ NOT STARTED
-
+### 5.3 Load Testing
 - [ ] Set up k6 or Artillery
 - [ ] Test API endpoints under load
 - [ ] Test WebSocket connections at scale
@@ -668,9 +557,7 @@ Priority: 🟢 LOW | Status: ⏳ NOT STARTED
 - [ ] Identify bottlenecks
 - [ ] Optimize slow paths
 
-### 7.4 Security Audit
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
+### 5.4 Security Audit
 - [ ] Review authentication implementation
 - [ ] Check for SQL injection vulnerabilities
 - [ ] Verify input validation
@@ -682,10 +569,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Test rate limiting
 - [ ] Run security scanner (e.g., OWASP ZAP)
 
-### 7.5 Production Deployment
-Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
-
-#### 7.5.1 Pre-Deployment
+### 5.5 Production Deployment
 - [ ] Review all configuration
 - [ ] Verify environment variables
 - [ ] Run all tests
@@ -693,8 +577,6 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Verify SSL certificates
 - [ ] Review nginx config
 - [ ] Test backup/restore
-
-#### 7.5.2 Deployment
 - [ ] Build production images
 - [ ] Start Docker Compose
 - [ ] Run database migrations
@@ -703,8 +585,6 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Test API functionality
 - [ ] Test WebSocket connections
 - [ ] Test webhook receivers
-
-#### 7.5.3 Post-Deployment
 - [ ] Monitor logs for errors
 - [ ] Check resource usage
 - [ ] Test all critical paths
@@ -716,9 +596,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Verify webhooks deliver
 - [ ] Monitor for 24 hours
 
-### 7.6 Documentation Finalization
-Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
-
+### 5.6 Documentation Finalization
 - [ ] Update README with deployment status
 - [ ] Create API reference documentation
 - [ ] Write admin user guide
@@ -729,7 +607,7 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 
 ---
 
-## Optional Enhancements (Future)
+## 🌟 Optional Enhancements (Future)
 
 ### Voice Channels
 - [ ] Integrate Twilio for voice calls
@@ -752,7 +630,7 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 - [ ] Compare performance vs cloud APIs
 - [ ] Document local deployment
 
-### Scalability
+### Scalability Horizons
 - [ ] Kubernetes deployment
 - [ ] Horizontal API scaling
 - [ ] Redis cluster
@@ -761,48 +639,16 @@ Priority: 🟡 MEDIUM | Status: ⏳ NOT STARTED
 
 ---
 
-## Quick Reference: What to Do Next
+## 🔁 Operating Rhythm
 
-**Right Now:**
-1. ✅ Review PROJECT-OVERVIEW.md
-2. ✅ Review this TODO.md
-3. ⏳ Start Phase 2.1: Build LLM package
-4. ⏳ Start Phase 2.2: Build RAG package
+**Immediate Focus (Milestone 1):**
+1. Finalize LLM provider abstractions
+2. Build RAG ingestion and retrieval pipeline
+3. Stand up secured API skeleton with keys, rate limiting, and logging
 
-**This Week:**
-- Complete multi-LLM provider abstraction
-- Implement document processing
-- Test RAG retrieval end-to-end
+**This Month (Through Milestone 2):**
+- Deliver WhatsApp/Messenger/WebChat adapters with signature verification
+- Complete orchestrator flow with hybrid retrieval
+- Validate webhook + channel integrations end-to-end
 
-**This Month:**
-- Complete all core packages
-- Build API server
-- Build basic dashboard
-- Deploy to VPS
-
----
-
-## How to Use This TODO
-
-**Tracking Progress:**
-1. Find the task you're working on
-2. Change `- [ ]` to `- [x]` when complete
-3. Update progress percentages in overview
-4. Commit changes to git
-
-**Prioritization:**
-- 🔴 HIGH = Critical path, must complete
-- 🟡 MEDIUM = Important but not blocking
-- 🟢 LOW = Nice to have, can defer
-
-**Status Legend:**
-- ✅ DONE = Completed and tested
-- 🔄 IN PROGRESS = Currently working on
-- ⏳ NOT STARTED = Planned but not started
-- ⏸️ BLOCKED = Waiting on dependency
-- ❌ SKIPPED = Decided not to implement
-
----
-
-**Last Updated:** 2025-10-08
-**Next Review:** After completing Phase 2 (AI & RAG)
+**Next Review:** After completing Milestone 1 (AI Core & Security Baseline)
