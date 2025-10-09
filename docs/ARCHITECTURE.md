@@ -97,8 +97,15 @@ Meta Chat Platform is a production-grade, multi-tenant conversational AI platfor
 **Technology:**
 - Express.js
 - Socket.IO for WebSocket
-- Passport for authentication
+- Custom multi-tenant auth middleware (API keys + signed tokens)
 - Express-rate-limit
+
+**Authentication Strategy:**
+- **Management & Webhook Requests**: Each tenant receives a generated API key/secret pair. Incoming HTTP requests must provide an `x-tenant-id` header and an HMAC signature derived from the body + timestamp using the tenant secret. Middleware verifies signature freshness, calculates the digest, and loads the tenant context.
+- **WebSocket Connections**: Tenants mint short-lived signed tokens (JWT) scoped to a conversation or visitor session. The Socket.IO handshake validates the JWT, hydrates tenant/session context, and enforces per-tenant rate limits.
+- **Internal Services**: Service-to-service calls within the monorepo use signed service tokens managed through environment variables to avoid leaking tenant secrets.
+
+This approach keeps the authentication layer aligned with the platform's API-key-first model, avoids the session-focused overhead of Passport, and enables tighter control over tenant-level throttling and auditing.
 
 ### 2. Channel Adapters (`packages/channels`)
 **Responsibilities:**
