@@ -1,0 +1,72 @@
+# Prometheus Configuration for Meta Chat Platform
+#
+# Installation:
+#   1. Install Prometheus: apt-get install prometheus
+#   2. Copy this file: sudo cp infrastructure/monitoring/prometheus.yml /etc/prometheus/prometheus.yml
+#   3. Restart Prometheus: sudo systemctl restart prometheus
+#   4. Access UI: http://localhost:9090
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'metachat-production'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - 'localhost:9093'
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Meta Chat API metrics
+  - job_name: 'metachat-api'
+    static_configs:
+      - targets: ['localhost:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Node Exporter (system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+  # PostgreSQL Exporter
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['localhost:9187']
+    scrape_interval: 15s
+
+  # Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['localhost:9121']
+    scrape_interval: 15s
+
+  # RabbitMQ Exporter
+  - job_name: 'rabbitmq-exporter'
+    static_configs:
+      - targets: ['localhost:15692']
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+  # Nginx VTS Exporter (optional)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['localhost:9913']
+    scrape_interval: 15s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s

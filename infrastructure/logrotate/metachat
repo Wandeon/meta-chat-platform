@@ -1,0 +1,130 @@
+# Log rotation configuration for Meta Chat Platform
+#
+# Installation:
+#   sudo cp infrastructure/logrotate/metachat /etc/logrotate.d/metachat
+#   sudo chmod 644 /etc/logrotate.d/metachat
+#   sudo logrotate -d /etc/logrotate.d/metachat  # Test configuration
+#
+# Manual rotation:
+#   sudo logrotate -f /etc/logrotate.d/metachat
+
+# Application logs (Pino JSON logs)
+/var/log/metachat/app.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 deploy deploy
+    dateext
+    dateformat -%Y%m%d
+    maxage 90
+
+    postrotate
+        # Reload PM2 logs
+        su - deploy -c "pm2 reloadLogs" > /dev/null 2>&1 || true
+    endscript
+
+    # Keep uncompressed logs for last 2 days for easier debugging
+    maxsize 500M
+}
+
+# PM2 logs
+/var/log/metachat/pm2-*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 deploy deploy
+    dateext
+    dateformat -%Y%m%d
+    maxage 30
+    maxsize 100M
+
+    postrotate
+        su - deploy -c "pm2 reloadLogs" > /dev/null 2>&1 || true
+    endscript
+}
+
+# Nginx access logs
+/var/log/nginx/metachat-access.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 www-data adm
+    dateext
+    dateformat -%Y%m%d
+    maxage 90
+    maxsize 1G
+
+    sharedscripts
+    postrotate
+        [ -f /var/run/nginx.pid ] && kill -USR1 $(cat /var/run/nginx.pid) 2>/dev/null || true
+    endscript
+}
+
+# Nginx error logs
+/var/log/nginx/metachat-error.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 www-data adm
+    dateext
+    dateformat -%Y%m%d
+    maxage 90
+    maxsize 500M
+
+    sharedscripts
+    postrotate
+        [ -f /var/run/nginx.pid ] && kill -USR1 $(cat /var/run/nginx.pid) 2>/dev/null || true
+    endscript
+}
+
+# Database backup logs
+/var/log/metachat/backup.log {
+    weekly
+    rotate 12
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 deploy deploy
+    dateext
+    dateformat -%Y%m%d
+    maxage 90
+}
+
+# SSL renewal logs
+/var/log/metachat/ssl-renewal.log {
+    monthly
+    rotate 12
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    dateext
+    dateformat -%Y%m%d
+}
+
+# Cron logs
+/var/log/metachat/cron.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 deploy deploy
+    dateext
+    dateformat -%Y%m%d
+}
