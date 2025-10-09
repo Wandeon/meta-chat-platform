@@ -1,0 +1,166 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: meta-chat-postgres
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=vector
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-metachat}
+      POSTGRES_USER: ${POSTGRES_USER:-metachat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-metachat}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init-extensions.sql:/docker-entrypoint-initdb.d/00-init-extensions.sql:ro
+    ports:
+      - '127.0.0.1:5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d "$${POSTGRES_DB:-metachat}" -U "$${POSTGRES_USER:-metachat}"']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - core
+
+  redis:
+    image: redis:7-alpine
+    container_name: meta-chat-redis
+    command: ['redis-server', '--appendonly', 'yes', '--save', '60', '1000']
+    volumes:
+      - redis-data:/data
+    ports:
+      - '127.0.0.1:6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - core
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: meta-chat-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    ports:
+      - '127.0.0.1:5672:5672'
+      - '127.0.0.1:15672:15672'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - core
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+      target: runtime
+    container_name: meta-chat-api
+    env_file:
+      - ../apps/api/.env.production
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metachat:metachat@postgres:5432/metachat?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://rabbitmq:5672}
+      STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
+      PORT: 3000
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - storage:/app/storage
+    restart: unless-stopped
+    networks:
+      - core
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/dashboard.Dockerfile
+      target: runtime
+    container_name: meta-chat-dashboard
+    env_file:
+      - ../apps/dashboard/.env.production
+    environment:
+      PORT: 4173
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - '127.0.0.1:3001:4173'
+    restart: unless-stopped
+    networks:
+      - core
+
+  migrator:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+      target: migrations
+    container_name: meta-chat-migrator
+    command: ['npx', 'prisma', 'migrate', 'deploy', '--schema', 'packages/database/prisma/schema.prisma']
+    env_file:
+      - ../apps/api/.env.production
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metachat:metachat@postgres:5432/metachat?schema=public}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core
+    profiles: ['ops']
+    restart: 'no'
+
+  seed-admin:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+      target: runtime
+    container_name: meta-chat-seed-admin
+    entrypoint: ['node', 'ops/seed-admin.cjs']
+    command: []
+    env_file:
+      - ../apps/api/.env.production
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metachat:metachat@postgres:5432/metachat?schema=public}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - core
+    profiles: ['ops']
+    restart: 'no'
+
+networks:
+  core:
+    driver: bridge
+    name: meta-chat-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  storage:
