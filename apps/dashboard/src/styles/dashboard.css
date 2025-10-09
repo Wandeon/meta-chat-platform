@@ -66,6 +66,62 @@
   overflow-y: auto;
 }
 
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .dashboard-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    padding-bottom: 70px;
+  }
+
+  .dashboard-sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 12px 16px;
+    flex-direction: row;
+    gap: 0;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .dashboard-brand {
+    display: none;
+  }
+
+  .dashboard-sidebar nav {
+    flex: 1;
+    overflow-x: auto;
+  }
+
+  .dashboard-sidebar nav ul {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .dashboard-sidebar a {
+    padding: 8px 12px;
+    white-space: nowrap;
+    font-size: 0.875rem;
+  }
+
+  .dashboard-sidebar .logout {
+    margin-top: 0;
+    margin-left: 8px;
+    padding: 8px 14px;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .dashboard-content {
+    padding: 16px;
+  }
+}
+
 .dashboard-section {
   background: #fff;
   border-radius: 16px;
@@ -141,6 +197,46 @@ textarea {
   cursor: pointer;
 }
 
+/* Mobile responsive styles for tables and forms */
+@media (max-width: 768px) {
+  .dashboard-section {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .dashboard-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px;
+    font-size: 0.875rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .primary-button,
+  .secondary-button {
+    width: 100%;
+    padding: 12px 18px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -173,6 +269,16 @@ textarea {
   color: #1e293b;
   border-bottom: 2px solid #e5e7eb;
   padding-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .settings-section {
+    padding: 16px;
+  }
+
+  .settings-section h2 {
+    font-size: 1.25rem;
+  }
 }
 
 input[type="range"] {
@@ -215,4 +321,52 @@ small {
   margin-top: 4px;
   font-size: 13px;
   line-height: 1.4;
+}
+
+/* Responsive utility classes */
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .button-group {
+    flex-direction: column;
+  }
+
+  .button-group > * {
+    width: 100%;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-buttons > button,
+  .action-buttons > a {
+    width: 100%;
+  }
+}
+
+/* Make tables more mobile friendly with horizontal scroll */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -16px;
+  padding: 0 16px;
+}
+
+@media (min-width: 769px) {
+  .table-wrapper {
+    margin: 0;
+    padding: 0;
+  }
 }

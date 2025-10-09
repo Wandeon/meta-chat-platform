@@ -24,7 +24,7 @@ export function LoginPage() {
   };
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc' }}>
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc', padding: '16px' }}>
       <form
         onSubmit={handleSubmit}
         style={{
@@ -54,7 +54,7 @@ export function LoginPage() {
             autoComplete="off"
             style={{
               font: 'inherit',
-              fontSize: '14px',
+              fontSize: '16px',
               borderRadius: 8,
               border: '1px solid #cbd5e1',
               padding: '10px 12px',
