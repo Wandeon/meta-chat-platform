@@ -1,9 +1,9 @@
-import { Event, EventType, Logger } from '@meta-chat/shared';
+import { Event, EventType, createLogger } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
 import { EventBroker } from './event-broker';
 import { getRabbitMQBroker } from './rabbitmq-broker';
 
-const logger = new Logger('EventBus');
+const logger = createLogger('EventBus');
 
 type EventHandler = (event: Event) => void | Promise<void>;
 
@@ -208,7 +208,7 @@ export class EventBus {
         },
       });
     } catch (error) {
-      logger.error('Failed to persist event', error);
+      logger.error('Failed to persist event', error as Error);
     }
   }
 }

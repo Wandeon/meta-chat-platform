@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { Event, EventType, WebhookPayload, Logger, retry } from '@meta-chat/shared';
+import { Event, EventType, WebhookPayload, createLogger, retry } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
 
 type TenantWebhookRecord = {
@@ -8,7 +8,7 @@ type TenantWebhookRecord = {
   tenant: { id: string; name: string };
 };
 
-const logger = new Logger('WebhookEmitter');
+const logger = createLogger('WebhookEmitter');
 
 export class WebhookEmitter {
   private httpClient: AxiosInstance;
