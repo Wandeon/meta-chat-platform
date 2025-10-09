@@ -1,9 +1,9 @@
-import { Event, EventType, Logger } from '@meta-chat/shared';
+import { Event, EventType, createLogger, withRequestContext, createCorrelationId, generateId } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
 import { EventBroker } from './event-broker';
 import { getRabbitMQBroker } from './rabbitmq-broker';
 
-const logger = new Logger('EventBus');
+const logger = createLogger('EventBus');
 
 type EventHandler = (event: Event) => void | Promise<void>;
 
@@ -125,7 +125,7 @@ class LocalEventCache {
     handlers.forEach((handler) => {
       Promise.resolve()
         .then(() => handler(event))
-        .catch((error) => logger.error('Local event handler failed', error));
+        .catch((error) => logger.error('Local event handler failed', error as Error));
     });
   }
 }
@@ -144,17 +144,30 @@ export class EventBus {
   }
 
   async emit(event: Omit<Event, 'id'>): Promise<Event> {
+    const correlationId = event.correlationId ?? event.context?.correlationId ?? createCorrelationId();
+    const eventContext = { ...(event.context ?? {}), correlationId };
     const eventWithId: Event = {
       ...event,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      id: generateId(),
+      correlationId,
+      context: eventContext,
       timestamp: event.timestamp instanceof Date ? event.timestamp : new Date(event.timestamp),
     };
 
-    logger.debug(`Emitting event: ${eventWithId.type}`, { tenantId: eventWithId.tenantId });
+    await withRequestContext(
+      {
+        ...eventContext,
+        tenantId: event.tenantId,
+        eventType: event.type,
+      },
+      async () => {
+        logger.debug(`Emitting event: ${eventWithId.type}`, { tenantId: eventWithId.tenantId, eventId: eventWithId.id });
 
-    await this.persistEvent(eventWithId);
-    await this.broker.publish(eventWithId);
-    this.cache.record(eventWithId);
+        await this.persistEvent(eventWithId);
+        await this.broker.publish(eventWithId);
+        this.cache.record(eventWithId);
+      }
+    );
 
     return eventWithId;
   }
@@ -208,7 +221,7 @@ export class EventBus {
         },
       });
     } catch (error) {
-      logger.error('Failed to persist event', error);
+      logger.error('Failed to persist event', error as Error);
     }
   }
 }

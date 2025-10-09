@@ -22,6 +22,18 @@ A production-grade conversational AI platform that synthesizes the best patterns
 - **LLM**: OpenAI API (GPT-4o)
 - **Embeddings**: OpenAI text-embedding-3-small
 
+## 📅 Roadmap Snapshot
+
+| Milestone | Deadline | Owner | Highlights |
+|-----------|----------|-------|------------|
+| AI Core & Security Baseline | 2025-11-15 | Priya Sharma | Ship LLM/RAG services and harden API skeleton (keys, rate limits, secrets). |
+| Channel & Orchestration Launch | 2025-12-20 | Marco Díaz | Deliver WhatsApp/Messenger/WebChat adapters plus orchestrator pipeline. |
+| Tenant Experience Platform | 2026-01-31 | Tiana Lee | Expand REST APIs, release dashboard, and ship embeddable widget. |
+| Deployment & Observability | 2026-03-14 | Omar Nasser | Package Docker rollout, infrastructure automation, and monitoring stack. |
+| Production Hardening | 2026-04-25 | Riley Chen | Complete test matrix, load/security audits, and go-live playbook. |
+
+> See [`docs/TODO.md`](docs/TODO.md) for the full milestone backlog and task breakdown.
+
 ### Project Structure
 
 ```

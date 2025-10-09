@@ -1,8 +1,8 @@
-import { Event, EventType, Logger } from '@meta-chat/shared';
+import { Event, EventType, createLogger } from '@meta-chat/shared';
 import { getEventBus } from './event-bus';
 import { getWebhookEmitter } from './webhook-emitter';
 
-const logger = new Logger('EventManager');
+const logger = createLogger('EventManager');
 
 export class EventManager {
   private eventBus = getEventBus();

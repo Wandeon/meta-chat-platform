@@ -1,8 +1,8 @@
 import { Channel, ChannelModel, connect } from 'amqplib';
-import { Event, Logger } from '@meta-chat/shared';
+import { Event, createLogger, withRequestContext } from '@meta-chat/shared';
 import { EventBroker } from './event-broker';
 
-const logger = new Logger('RabbitMQBroker');
+const logger = createLogger('RabbitMQBroker');
 
 export class RabbitMQBroker implements EventBroker {
   private connection: ChannelModel | null = null;
@@ -34,7 +34,7 @@ export class RabbitMQBroker implements EventBroker {
       const connection: ChannelModel = await connect(url);
       this.connection = connection;
 
-      connection.on('error', (err) => {
+      connection.on('error', (err: Error) => {
         logger.error('RabbitMQ connection error', err);
         this.handleDisconnect();
       });
@@ -53,7 +53,7 @@ export class RabbitMQBroker implements EventBroker {
 
       logger.info('RabbitMQ connected successfully');
     } catch (error) {
-      logger.error('Failed to connect to RabbitMQ', error);
+      logger.error('Failed to connect to RabbitMQ', error as Error);
       this.handleDisconnect();
     } finally {
       this.isConnecting = false;
@@ -85,20 +85,25 @@ export class RabbitMQBroker implements EventBroker {
       return;
     }
 
-    try {
-      const routingKey = `${event.tenantId}.${event.type.replace(/_/g, '.')}`;
-      const message = Buffer.from(JSON.stringify(event));
+    const routingKey = `${event.tenantId}.${event.type.replace(/_/g, '.')}`;
 
-      this.channel.publish(this.exchangeName, routingKey, message, {
-        persistent: true,
-        contentType: 'application/json',
-        timestamp: event.timestamp.getTime(),
-      });
+    await withRequestContext({ routingKey }, async () => {
+      try {
+        const message = Buffer.from(JSON.stringify(event));
 
-      logger.debug(`Published to RabbitMQ: ${routingKey}`);
-    } catch (error) {
-      logger.error('Failed to publish event to RabbitMQ', error);
-    }
+        this.channel!.publish(this.exchangeName, routingKey, message, {
+          persistent: true,
+          contentType: 'application/json',
+          timestamp: event.timestamp.getTime(),
+        });
+
+        logger.debug(`Published to RabbitMQ: ${routingKey}`, {
+          eventId: event.id,
+        });
+      } catch (error) {
+        logger.error('Failed to publish event to RabbitMQ', error as Error);
+      }
+    });
   }
 
   async close(): Promise<void> {
