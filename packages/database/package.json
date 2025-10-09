@@ -13,7 +13,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@meta-chat/shared": "workspace:*",
     "@prisma/client": "^5.11.0",
+    "node-cron": "^3.0.3",
     "pgvector": "^0.1.8"
   },
   "devDependencies": {
