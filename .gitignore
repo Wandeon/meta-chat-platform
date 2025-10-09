@@ -46,6 +46,10 @@ uploads/
 
 # Turbo
 .turbo/
+**/.turbo/
+
+# TypeScript
+*.tsbuildinfo
 
 # Temporary files
 tmp/
