@@ -1,0 +1,261 @@
+version: "3.9"
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 30s
+
+services:
+  pg-primary:
+    image: bitnami/postgresql-repmgr:15
+    container_name: meta-chat-pg-primary
+    restart: always
+    environment:
+      POSTGRESQL_POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRESQL_USERNAME: ${POSTGRES_APP_USER:-metachat}
+      POSTGRESQL_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRES_DB:-metachat}
+      REPMGR_PASSWORD: ${REPMGR_PASSWORD:?set REPMGR_PASSWORD}
+      REPMGR_PRIMARY_HOST: pg-primary
+      REPMGR_PARTNER_NODES: pg-primary,pg-standby
+      REPMGR_NODE_NAME: pg-primary
+      REPMGR_NODE_NETWORK_NAME: pg-primary
+    volumes:
+      - ./volumes/postgres/primary:/bitnami/postgresql
+    networks:
+      - core
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_APP_USER:-metachat} -d ${POSTGRES_DB:-metachat}"]
+      <<: *healthcheck-defaults
+
+  pg-standby:
+    image: bitnami/postgresql-repmgr:15
+    container_name: meta-chat-pg-standby
+    restart: always
+    depends_on:
+      pg-primary:
+        condition: service_healthy
+    environment:
+      POSTGRESQL_POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRESQL_USERNAME: ${POSTGRES_APP_USER:-metachat}
+      POSTGRESQL_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+      POSTGRESQL_DATABASE: ${POSTGRES_DB:-metachat}
+      REPMGR_PASSWORD: ${REPMGR_PASSWORD:?set REPMGR_PASSWORD}
+      REPMGR_PRIMARY_HOST: pg-primary
+      REPMGR_PARTNER_NODES: pg-primary,pg-standby
+      REPMGR_NODE_NAME: pg-standby
+      REPMGR_NODE_NETWORK_NAME: pg-standby
+      REPMGR_PRIMARY_ROLE_WAIT: "90"
+    volumes:
+      - ./volumes/postgres/standby:/bitnami/postgresql
+    networks:
+      - core
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_APP_USER:-metachat} -d ${POSTGRES_DB:-metachat}"]
+      <<: *healthcheck-defaults
+
+  pgpool:
+    image: bitnami/pgpool:4
+    container_name: meta-chat-pgpool
+    restart: always
+    depends_on:
+      pg-primary:
+        condition: service_healthy
+      pg-standby:
+        condition: service_healthy
+    environment:
+      PGPOOL_POSTGRES_USERNAME: ${POSTGRES_APP_USER:-metachat}
+      PGPOOL_POSTGRES_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+      PGPOOL_POSTGRES_DB: ${POSTGRES_DB:-metachat}
+      PGPOOL_SR_CHECK_USER: ${POSTGRES_APP_USER:-metachat}
+      PGPOOL_SR_CHECK_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+      PGPOOL_ENABLE_LDAP: "no"
+      REPMGR_PASSWORD: ${REPMGR_PASSWORD:?set REPMGR_PASSWORD}
+    ports:
+      - "5432:5432"
+    networks:
+      - core
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U ${POSTGRES_APP_USER:-metachat}"]
+      <<: *healthcheck-defaults
+
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    restart: always
+    environment:
+      DATA_SOURCE_URI: pgpool:5432/${POSTGRES_DB:-metachat}?sslmode=disable
+      DATA_SOURCE_USER: ${POSTGRES_APP_USER:-metachat}
+      DATA_SOURCE_PASS: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}
+      PG_EXPORTER_AUTO_DISCOVER_DATABASES: "true"
+    depends_on:
+      pgpool:
+        condition: service_healthy
+    networks:
+      - monitoring
+      - core
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9187/metrics > /dev/null"]
+      <<: *healthcheck-defaults
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    restart: always
+    environment:
+      REDIS_ADDR: ${REDIS_URL:?set REDIS_URL for managed Redis endpoint}
+      REDIS_USER: ${REDIS_USERNAME:-default}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD for managed Redis endpoint}
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9121/metrics > /dev/null"]
+      <<: *healthcheck-defaults
+
+  api:
+    image: ghcr.io/meta-chat/api:latest
+    restart: always
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_APP_USER:-metachat}:${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD}@pgpool:5432/${POSTGRES_DB:-metachat}
+      REDIS_URL: ${REDIS_URL:?set REDIS_URL for managed Redis endpoint}
+    depends_on:
+      pgpool:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/api/health || exit 1"]
+      <<: *healthcheck-defaults
+    ports:
+      - "3000:3000"
+    networks:
+      - core
+      - edge
+
+  dashboard:
+    image: ghcr.io/meta-chat/dashboard:latest
+    restart: always
+    env_file:
+      - ../.env
+    environment:
+      API_URL: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:4173/health || exit 1"]
+      <<: *healthcheck-defaults
+    ports:
+      - "3001:4173"
+    networks:
+      - edge
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    restart: always
+    volumes:
+      - ./monitoring/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - monitoring
+      - edge
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9115/-/healthy > /dev/null"]
+      <<: *healthcheck-defaults
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    restart: always
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules.yml:/etc/prometheus/rules/rules.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    depends_on:
+      api:
+        condition: service_healthy
+      pgpool:
+        condition: service_healthy
+      blackbox:
+        condition: service_healthy
+      postgres-exporter:
+        condition: service_started
+      redis-exporter:
+        condition: service_started
+    networks:
+      - monitoring
+      - core
+    ports:
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/ready > /dev/null"]
+      <<: *healthcheck-defaults
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    restart: always
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/templates:/etc/alertmanager/templates:ro
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--config.expand-env"
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - monitoring
+    ports:
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/ready > /dev/null"]
+      <<: *healthcheck-defaults
+
+  loki:
+    image: grafana/loki:2.9.4
+    restart: always
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - loki-data:/loki
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready > /dev/null"]
+      <<: *healthcheck-defaults
+
+  grafana:
+    image: grafana/grafana:10.4.5
+    restart: always
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_ALERTING_ENABLED: "true"
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_healthy
+      alertmanager:
+        condition: service_started
+    networks:
+      - monitoring
+      - edge
+    ports:
+      - "3002:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health > /dev/null"]
+      <<: *healthcheck-defaults
+
+volumes:
+  grafana-data:
+  loki-data:
+
+networks:
+  core:
+    driver: bridge
+  edge:
+    driver: bridge
+  monitoring:
+    driver: bridge
