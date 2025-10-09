@@ -61,19 +61,27 @@ meta-chat-platform/
 ### 1. **Shared Package** (`packages/shared`)
 - **Types**: Comprehensive TypeScript types for messages, channels, events, RAG
 - **Constants**: System limits, error codes, default configurations
-- **Utils**: Retry logic, logger, ID generation, JSON parsing
+- **Utils**: Retry logic, ID generation (RFC 4122 UUID), JSON parsing, deep merge
+- **Logging**: Structured logging with Pino, async context storage, correlation IDs
+- **Security**: API key generation/hashing with scrypt, timing-safe comparisons
+- **Secrets**: AES-256-GCM encryption/decryption for sensitive data, buffer scrubbing
 
 ### 2. **Database Package** (`packages/database`)
 - **Prisma Schema**: Multi-tenant model with:
-  - Tenants with API keys and settings
-  - Channels (WhatsApp, Messenger, WebChat configs)
-  - Conversations and Messages
+  - Tenants with settings and relations
+  - Channels (WhatsApp, Messenger, WebChat configs) with encrypted secrets
+  - Conversations and Messages (partitioned by month)
   - Documents and Chunks with pgvector embeddings
   - Webhooks and Events
-  - API logs
-- **Vector Search**: Built-in cosine similarity search using pgvector
+  - API logs (partitioned by month)
+  - TenantApiKey and AdminApiKey with rotation support
+  - TenantSecret and ChannelSecret for encrypted storage
+- **Vector Search**: IVFFlat-indexed cosine similarity search with normalization
 - **Keyword Search**: Full-text search with PostgreSQL tsvector
 - **Client**: Singleton Prisma client with graceful shutdown
+- **Partitioning**: Monthly partitions for messages and api_logs tables
+- **Data Retention**: Automated archival and deletion jobs with configurable policies
+- **Row Level Security**: Tenant isolation enforced at database level
 
 ### 3. **Events Package** (`packages/events`)
 - **Event Bus**: Broker-backed publisher that persists events, pushes to RabbitMQ, and optionally caches locally for fast reads
