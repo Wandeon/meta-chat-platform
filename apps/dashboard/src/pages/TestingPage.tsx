@@ -152,7 +152,7 @@ export function TestingPage() {
       </div>
 
       {selectedTenantId && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24 }}>
+        <div className="testing-layout">
           {/* Chat Area */}
           <div style={{
             display: 'flex',
