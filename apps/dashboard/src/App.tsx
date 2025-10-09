@@ -9,6 +9,7 @@ import { DocumentsPage } from './pages/DocumentsPage';
 import { ConversationsPage } from './pages/ConversationsPage';
 import { WebhooksPage } from './pages/WebhooksPage';
 import { HealthPage } from './pages/HealthPage';
+import { TestingPage } from './pages/TestingPage';
 
 export function App() {
   const { apiKey } = useAuth();
@@ -32,6 +33,7 @@ export function App() {
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/conversations" element={<ConversationsPage />} />
         <Route path="/webhooks" element={<WebhooksPage />} />
+        <Route path="/testing" element={<TestingPage />} />
         <Route path="/health" element={<HealthPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/tenants" replace />} />
