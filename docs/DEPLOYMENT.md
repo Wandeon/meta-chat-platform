@@ -113,6 +113,22 @@ Docker Network: meta-chat-network (bridge)
 - **Domains:** Register `chat.genai.hr` and `chat-admin.genai.hr`
 - **Nginx:** Reverse proxy with WebSocket support
 
+### Admin Authentication & Key Management
+
+1. **Set Environment Variables:** Populate the new admin auth settings in `.env`:
+   - `ADMIN_JWT_SECRET` – randomly generated 64+ char string stored only in the secret manager.
+   - `ADMIN_JWT_TTL_SECONDS` – keep at 900 seconds (15 minutes) unless SSO proxy shortens it.
+   - `ADMIN_JWT_AUDIENCE`, `ADMIN_JWT_ISSUER`, `ADMIN_JWT_DEFAULT_SCOPE` – align with dashboard/API clients.
+   - `ADMIN_KEY_PEPPER` – optional server-side pepper kept outside the database backups.
+2. **Generate Initial Admin Key:** After building the project run a one-off Node script:
+   ```bash
+   node -e "(async () => { const { AdminAuthService } = await import('./apps/api/dist'); const service = new AdminAuthService(); const result = await service.createKey('prod-admin', { actorId: 'deploy', actorType: 'system' }); console.log(result.token); })();"
+   ```
+   Store the printed token (format: `adm_<id>.<secret>`) in a password manager; it is shown only once.
+3. **Rotation Policy:** Schedule rotation every 60-90 days using `service.rotateKey(keyId, { actorId: 'scheduler' })`. The service returns a new token while preserving audit history.
+4. **Revocation Procedure:** If a key is compromised, call `service.revokeKey(keyId, { reason: 'compromised', actorId: 'security' })`. Tokens issued from revoked keys become invalid immediately.
+5. **Audit Logging:** All create/rotate/revoke operations automatically persist to the `admin_audit_logs` table. Forward these logs to your SIEM during production hardening.
+
 ---
 
 ## 📋 Deployment Checklist
@@ -132,6 +148,7 @@ Docker Network: meta-chat-network (bridge)
 - [ ] **2.3** Generate Prisma client (`npm run db:generate`)
 - [ ] **2.4** Run database migrations (`npm run db:push`)
 - [ ] **2.5** Verify build artifacts
+- [ ] **2.6** Generate initial admin key and store in vault
 
 ### Phase 3: Service Deployment
 
@@ -158,6 +175,7 @@ Docker Network: meta-chat-network (bridge)
 - [ ] **5.5** Verify Redis connectivity
 - [ ] **5.6** Test OpenAI API integration
 - [ ] **5.7** Verify webhook endpoints are accessible
+- [ ] **5.8** Rotate admin key in staging and confirm new JWT issuance
 
 ### Phase 6: Monitoring & Backup
 
@@ -166,6 +184,7 @@ Docker Network: meta-chat-network (bridge)
 - [ ] **6.3** Add to Netdata monitoring
 - [ ] **6.4** Configure log rotation
 - [ ] **6.5** Test disaster recovery
+- [ ] **6.6** Export `admin_audit_logs` to centralized logging
 
 ---
 

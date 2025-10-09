@@ -5,8 +5,8 @@
     "rootDir": "./src"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
   "references": [
-    { "path": "../shared" }
+    { "path": "../../packages/database" },
+    { "path": "../../packages/shared" }
   ]
 }

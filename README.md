@@ -57,6 +57,8 @@ meta-chat-platform/
   - Conversations and Messages
   - Documents and Chunks with pgvector embeddings
   - Webhooks and Events
+  - Admin keys with hashed secrets, rotation metadata, and lifecycle status
+  - Admin audit logs for privileged actions
   - API logs
 - **Vector Search**: Built-in cosine similarity search using pgvector
 - **Keyword Search**: Full-text search with PostgreSQL tsvector
@@ -74,6 +76,13 @@ meta-chat-platform/
   - Durable exchanges
   - Routing keys: `{tenantId}.{eventType}`
 - **Event Manager**: Unified interface coordinating all emitters
+
+### 🔐 **Admin Authentication Module** (`apps/api`)
+- **Short-lived Admin Sessions**: Issues JWTs (default 15 minutes) for validated admin keys.
+- **Hashed Admin Keys**: Secrets are generated server-side, stored using salted + peppered scrypt hashes, and returned only once.
+- **Key Lifecycle Management**: Helpers to create, rotate, and revoke admin keys while preserving rotation metadata.
+- **Audit Logging**: Every authentication attempt and key lifecycle change is persisted to `admin_audit_logs` for traceability.
+- **Extensible Logging API**: Service exposes a `logAction` helper so other modules can record privileged activity with contextual metadata.
 
 ---
 
@@ -139,6 +148,7 @@ Build the core message processing engine:
 ### 7. **API Server** (`apps/api`)
 Express server with:
 - **Authentication Middleware**: API key validation (global + per-tenant)
+- **Admin Authentication**: Integrate the reusable admin key + JWT module for console and automation access, including rotation/revocation flows.
 - **Rate Limiting**: Redis-backed rate limiter
 - **REST Routes**:
   - `/api/tenants` - CRUD operations

@@ -161,6 +161,56 @@ model Event {
 
 // ============= Analytics & Logs =============
 
+enum AdminKeyStatus {
+  active
+  disabled
+  revoked
+}
+
+model AdminKey {
+  id             String          @id @default(cuid())
+  name           String
+  hashedSecret   String
+  status         AdminKeyStatus  @default(active)
+  metadata       Json?
+  expiresAt      DateTime?
+  lastUsedAt     DateTime?
+  rotatedAt      DateTime?
+  rotatedBy      String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  createdBy      String?
+  revokedAt      DateTime?
+  revokedBy      String?
+
+  auditLogs AdminAuditLog[]
+
+  @@unique([name])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("admin_keys")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminKeyId  String?
+  actorId     String?
+  actorType   String
+  action      String
+  target      String?
+  description String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  adminKey AdminKey? @relation(fields: [adminKeyId], references: [id], onDelete: SetNull)
+
+  @@index([adminKeyId, createdAt])
+  @@index([action, createdAt])
+  @@map("admin_audit_logs")
+}
+
 model ApiLog {
   id         String   @id @default(cuid())
   tenantId   String?
