@@ -1,5 +1,5 @@
 import { EventEmitter2 } from 'eventemitter2';
-import { Event, EventType, createLogger, withRequestContext, createCorrelationId } from '@meta-chat/shared';
+import { Event, EventType, createLogger, withRequestContext, createCorrelationId, generateId } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
 
 const logger = createLogger('EventBus');
@@ -20,7 +20,7 @@ export class EventBus {
     const eventContext = { ...(event.context ?? {}), correlationId };
     const eventWithId: Event = {
       ...event,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateId(),
       correlationId,
       context: eventContext,
     };
