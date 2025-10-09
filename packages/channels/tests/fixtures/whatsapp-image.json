@@ -1,0 +1,37 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "WHATSAPP_BUSINESS_ACCOUNT_ID",
+      "changes": [
+        {
+          "field": "messages",
+          "value": {
+            "metadata": {
+              "display_phone_number": "15551234567",
+              "phone_number_id": "123456789"
+            },
+            "contacts": [
+              {
+                "wa_id": "16315551212",
+                "profile": { "name": "Jane Smith" }
+              }
+            ],
+            "messages": [
+              {
+                "from": "16315551212",
+                "id": "wamid.HBgLImageId",
+                "timestamp": "1700000500",
+                "type": "image",
+                "image": {
+                  "id": "MEDIA_IMAGE_ID",
+                  "caption": "Check this out"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

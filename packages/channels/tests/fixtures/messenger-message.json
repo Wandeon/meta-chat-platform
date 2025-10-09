@@ -1,0 +1,29 @@
+{
+  "object": "page",
+  "entry": [
+    {
+      "id": "PAGE_ID",
+      "messaging": [
+        {
+          "sender": { "id": "USER_PSID" },
+          "recipient": { "id": "PAGE_ID" },
+          "timestamp": 1700000000000,
+          "message": {
+            "mid": "m_mid.12345",
+            "text": "Hello from Messenger",
+            "attachments": [
+              {
+                "type": "image",
+                "payload": {
+                  "url": "https://cdn.example.com/image.jpg",
+                  "mime_type": "image/jpeg",
+                  "name": "image.jpg"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
