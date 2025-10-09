@@ -1,12 +1,12 @@
-import amqp, { Channel, Connection, Options } from 'amqplib';
-import { ChannelType, Logger, MessageDirection } from '@meta-chat/shared';
+import amqp, { Channel, ChannelModel, Options } from 'amqplib';
+import { ChannelType, createLogger, MessageDirection } from '@meta-chat/shared';
 import {
   ORCHESTRATOR_EXCHANGE,
   ensureChannelTopology,
   getChannelRoutingKey,
 } from '@meta-chat/events';
 
-const logger = new Logger('TenantQueuePublisher');
+const logger = createLogger('TenantQueuePublisher');
 
 export interface QueuePublishOptions {
   tenantId: string;
@@ -17,7 +17,7 @@ export interface QueuePublishOptions {
 }
 
 export class TenantQueuePublisher {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private ensuredKeys = new Set<string>();
 

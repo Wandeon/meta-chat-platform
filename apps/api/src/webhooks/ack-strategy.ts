@@ -1,13 +1,13 @@
-import amqp, { Channel, Connection, Options } from 'amqplib';
+import amqp, { Channel, ChannelModel, Options } from 'amqplib';
 import { Response } from 'express';
-import { ChannelType, Logger } from '@meta-chat/shared';
+import { ChannelType, createLogger } from '@meta-chat/shared';
 import {
   ORCHESTRATOR_EXCHANGE,
   ensureWebhookAckTopology,
   getWebhookAckRoutingKey,
 } from '@meta-chat/events';
 
-const logger = new Logger('WebhookAckStrategy');
+const logger = createLogger('WebhookAckStrategy');
 
 export interface WebhookAckPayload {
   webhookId?: string;
@@ -23,7 +23,7 @@ export interface WebhookAckOptions {
 }
 
 export class WebhookAckStrategy {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private readonly ensuredQueues = new Set<string>();
 
