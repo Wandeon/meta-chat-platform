@@ -514,8 +514,8 @@
 - **Deadline:** 2026-03-14
 
 ### 4.1 Docker Configuration
-- [ ] Create `apps/api/Dockerfile`
-- [ ] Create `apps/dashboard/Dockerfile`
+- [ ] Create `docker/api.Dockerfile`
+- [ ] Create `docker/dashboard.Dockerfile`
 - [ ] Optimize layer caching
 - [ ] Use multi-stage builds
 - [ ] Add health checks
