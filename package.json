@@ -51,5 +51,8 @@
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
-  "packageManager": "npm@10.0.0"
+  "packageManager": "npm@10.0.0",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  }
 }
