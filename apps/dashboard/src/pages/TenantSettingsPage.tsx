@@ -24,6 +24,8 @@ interface TenantSettings {
   llm?: {
     provider?: string;
     model?: string;
+    apiKey?: string;
+    baseUrl?: string;
     temperature?: number;
     topP?: number;
     maxTokens?: number;
@@ -242,15 +244,23 @@ export function TenantSettingsPage() {
                 }
               >
                 <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="deepseek">DeepSeek (Cost-Effective)</option>
+                <option value="ollama">Ollama (Local/Free)</option>
                 <option value="azure-openai">Azure OpenAI</option>
               </select>
+              <small style={{ color: '#64748b' }}>
+                {settings.llm?.provider === 'deepseek' && 'DeepSeek: ~17x cheaper than OpenAI GPT-4'}
+                {settings.llm?.provider === 'ollama' && 'Ollama: Free local models (requires installation)'}
+                {settings.llm?.provider === 'openai' && 'OpenAI: Best function calling, reliable'}
+                {settings.llm?.provider === 'anthropic' && 'Claude: Excellent reasoning, 200K context'}
+                {settings.llm?.provider === 'azure-openai' && 'Azure OpenAI: Enterprise grade'}
+              </small>
             </label>
 
             <label>
               Model
-              <input
-                type="text"
+              <select
                 value={settings.llm?.model || ''}
                 onChange={(e) =>
                   setSettings({
@@ -258,12 +268,118 @@ export function TenantSettingsPage() {
                     llm: { ...settings.llm, model: e.target.value },
                   })
                 }
-                placeholder="gpt-4o, claude-3-5-sonnet-latest"
-              />
+              >
+                {/* OpenAI Models */}
+                {settings.llm?.provider === 'openai' && (
+                  <>
+                    <option value="gpt-4o">GPT-4o (Best, $2.50/1M tokens)</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini (Fast, $0.15/1M tokens)</option>
+                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheap)</option>
+                  </>
+                )}
+
+                {/* Anthropic Models */}
+                {settings.llm?.provider === 'anthropic' && (
+                  <>
+                    <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet (Best)</option>
+                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (20241022)</option>
+                    <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fast & Cheap)</option>
+                    <option value="claude-3-opus-latest">Claude 3 Opus (Most Capable)</option>
+                  </>
+                )}
+
+                {/* DeepSeek Models */}
+                {settings.llm?.provider === 'deepseek' && (
+                  <>
+                    <option value="deepseek-chat">DeepSeek Chat (General, $0.14/1M tokens)</option>
+                    <option value="deepseek-coder">DeepSeek Coder (For Code)</option>
+                  </>
+                )}
+
+                {/* Ollama Models */}
+                {settings.llm?.provider === 'ollama' && (
+                  <>
+                    <option value="llama3.1:8b">Llama 3.1 8B (Recommended)</option>
+                    <option value="llama3.1:70b">Llama 3.1 70B (Best Quality)</option>
+                    <option value="llama3.2:3b">Llama 3.2 3B (Fast)</option>
+                    <option value="mistral:7b">Mistral 7B</option>
+                    <option value="phi3:3.8b">Phi 3 3.8B (Small)</option>
+                    <option value="gemma2:9b">Gemma 2 9B</option>
+                    <option value="qwen2.5:7b">Qwen 2.5 7B</option>
+                    <option value="codellama:7b">CodeLlama 7B (For Code)</option>
+                  </>
+                )}
+
+                {/* Azure OpenAI */}
+                {settings.llm?.provider === 'azure-openai' && (
+                  <>
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4">GPT-4</option>
+                    <option value="gpt-35-turbo">GPT-3.5 Turbo</option>
+                  </>
+                )}
+              </select>
               <small style={{ color: '#64748b' }}>
-                Model name (e.g., gpt-4o, gpt-4o-mini, claude-3-5-sonnet-latest)
+                Select the AI model to use for this tenant
               </small>
             </label>
+
+            {/* API Key field - show for providers that need it */}
+            {(settings.llm?.provider === 'openai' ||
+              settings.llm?.provider === 'anthropic' ||
+              settings.llm?.provider === 'deepseek' ||
+              settings.llm?.provider === 'azure-openai') && (
+              <label>
+                API Key {settings.llm?.provider === 'deepseek' && '(Get it from platform.deepseek.com)'}
+                <input
+                  type="password"
+                  value={settings.llm?.apiKey || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      llm: { ...settings.llm, apiKey: e.target.value },
+                    })
+                  }
+                  placeholder={
+                    settings.llm?.provider === 'openai' ? 'sk-proj-...' :
+                    settings.llm?.provider === 'anthropic' ? 'sk-ant-...' :
+                    settings.llm?.provider === 'deepseek' ? 'sk-...' :
+                    'Enter API key'
+                  }
+                />
+                <small style={{ color: '#64748b' }}>
+                  {settings.llm?.provider === 'deepseek' && 'Optional: Leave empty to use system default. Get your key at platform.deepseek.com'}
+                  {settings.llm?.provider !== 'deepseek' && 'Optional: Leave empty to use system default API key'}
+                </small>
+              </label>
+            )}
+
+            {/* Base URL field - show for DeepSeek and Ollama */}
+            {(settings.llm?.provider === 'deepseek' || settings.llm?.provider === 'ollama') && (
+              <label>
+                Base URL
+                <input
+                  type="text"
+                  value={settings.llm?.baseUrl || ''}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      llm: { ...settings.llm, baseUrl: e.target.value },
+                    })
+                  }
+                  placeholder={
+                    settings.llm?.provider === 'deepseek' ? 'https://api.deepseek.com/v1' :
+                    settings.llm?.provider === 'ollama' ? 'http://ArtemiPC:11434' :
+                    ''
+                  }
+                />
+                <small style={{ color: '#64748b' }}>
+                  {settings.llm?.provider === 'deepseek' && 'DeepSeek API endpoint (default: https://api.deepseek.com/v1)'}
+                  {settings.llm?.provider === 'ollama' && 'Ollama server URL (e.g., http://ArtemiPC:11434 or http://localhost:11434)'}
+                </small>
+              </label>
+            )}
 
             <label>
               Temperature: {settings.llm?.temperature || 0.7}
