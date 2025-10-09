@@ -10,42 +10,42 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 
 interface AuthContextValue {
-  token: string | null;
-  login: (token: string) => void;
+  apiKey: string | null;
+  login: (apiKey: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const STORAGE_KEY = 'meta-chat/admin-token';
+const STORAGE_KEY = 'meta-chat/admin-api-key';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
+  const [apiKey, setApiKey] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!token) {
+    if (!apiKey) {
       localStorage.removeItem(STORAGE_KEY);
     } else {
-      localStorage.setItem(STORAGE_KEY, token);
+      localStorage.setItem(STORAGE_KEY, apiKey);
     }
-  }, [token]);
+  }, [apiKey]);
 
   const login = useCallback(
-    (nextToken: string) => {
-      setToken(nextToken);
+    (nextApiKey: string) => {
+      setApiKey(nextApiKey);
       navigate(location.state?.from?.pathname ?? '/tenants', { replace: true });
     },
     [location.state, navigate],
   );
 
   const logout = useCallback(() => {
-    setToken(null);
+    setApiKey(null);
     navigate('/login', { replace: true });
   }, [navigate]);
 
-  const value = useMemo<AuthContextValue>(() => ({ token, login, logout }), [login, logout, token]);
+  const value = useMemo<AuthContextValue>(() => ({ apiKey, login, logout }), [login, logout, apiKey]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

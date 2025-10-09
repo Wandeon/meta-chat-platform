@@ -10,9 +10,9 @@ import { WebhooksPage } from './pages/WebhooksPage';
 import { HealthPage } from './pages/HealthPage';
 
 export function App() {
-  const { token } = useAuth();
+  const { apiKey } = useAuth();
 
-  if (!token) {
+  if (!apiKey) {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
