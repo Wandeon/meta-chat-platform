@@ -1,4 +1,5 @@
 // Core types shared across all packages
+import type { LogContext } from './logging';
 
 export type ChannelType = 'whatsapp' | 'messenger' | 'webchat';
 
@@ -138,6 +139,8 @@ export interface Event {
   tenantId: string;
   timestamp: Date;
   data: any;
+  correlationId?: string;
+  context?: LogContext;
 }
 
 // Webhook types
