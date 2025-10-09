@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateTenant } from '../middleware/auth';
+import { authenticateAdmin } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -19,13 +19,14 @@ const createWebhookSchema = z.object({
 
 const updateWebhookSchema = createWebhookSchema.partial();
 
-router.use(authenticateTenant);
+router.use(authenticateAdmin);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    const { tenantId } = req.query;
     const webhooks = await prisma.webhook.findMany({
-      where: { tenantId: req.tenant!.id },
+      where: tenantId ? { tenantId: String(tenantId) } : undefined,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -36,11 +37,11 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createWebhookSchema, req.body);
+    const payload = parseWithSchema(createWebhookSchema.extend({ tenantId: z.string() }), req.body);
 
     const webhook = await prisma.webhook.create({
       data: {
-        tenantId: req.tenant!.id,
+        tenantId: payload.tenantId,
         url: payload.url,
         events: payload.events,
         headers: payload.headers ?? {},
@@ -56,11 +57,8 @@ router.get(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
-    const webhook = await prisma.webhook.findFirst({
-      where: {
-        id: webhookId,
-        tenantId: req.tenant!.id,
-      },
+    const webhook = await prisma.webhook.findUnique({
+      where: { id: webhookId },
     });
 
     if (!webhook) {
@@ -77,11 +75,8 @@ router.put(
     const { webhookId } = req.params;
     const payload = parseWithSchema(updateWebhookSchema, req.body);
 
-    const existing = await prisma.webhook.findFirst({
-      where: {
-        id: webhookId,
-        tenantId: req.tenant!.id,
-      },
+    const existing = await prisma.webhook.findUnique({
+      where: { id: webhookId },
     });
 
     if (!existing) {
@@ -107,11 +102,8 @@ router.delete(
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
 
-    const existing = await prisma.webhook.findFirst({
-      where: {
-        id: webhookId,
-        tenantId: req.tenant!.id,
-      },
+    const existing = await prisma.webhook.findUnique({
+      where: { id: webhookId },
     });
 
     if (!existing) {

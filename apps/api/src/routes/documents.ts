@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateTenant } from '../middleware/auth';
+import { authenticateAdmin } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -34,15 +34,16 @@ const updateDocumentSchema = z
   })
   .strict();
 
-router.use(authenticateTenant);
+router.use(authenticateAdmin);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
     const query = parseWithSchema(listQuerySchema, req.query);
+    const { tenantId } = req.query;
     const documents = await prisma.document.findMany({
       where: {
-        tenantId: req.tenant!.id,
+        ...(tenantId ? { tenantId: String(tenantId) } : {}),
         ...(query.status ? { status: query.status } : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -55,11 +56,11 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createDocumentSchema, req.body);
+    const payload = parseWithSchema(createDocumentSchema.extend({ tenantId: z.string() }), req.body);
 
     const document = await prisma.document.create({
       data: {
-        tenantId: req.tenant!.id,
+        tenantId: payload.tenantId,
         filename: payload.filename,
         mimeType: payload.mimeType,
         size: payload.size,
@@ -78,11 +79,8 @@ router.get(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
-    const document = await prisma.document.findFirst({
-      where: {
-        id: documentId,
-        tenantId: req.tenant!.id,
-      },
+    const document = await prisma.document.findUnique({
+      where: { id: documentId },
     });
 
     if (!document) {
@@ -99,11 +97,8 @@ router.put(
     const { documentId } = req.params;
     const payload = parseWithSchema(updateDocumentSchema, req.body);
 
-    const existing = await prisma.document.findFirst({
-      where: {
-        id: documentId,
-        tenantId: req.tenant!.id,
-      },
+    const existing = await prisma.document.findUnique({
+      where: { id: documentId },
     });
 
     if (!existing) {
@@ -130,11 +125,8 @@ router.delete(
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
 
-    const existing = await prisma.document.findFirst({
-      where: {
-        id: documentId,
-        tenantId: req.tenant!.id,
-      },
+    const existing = await prisma.document.findUnique({
+      where: { id: documentId },
     });
 
     if (!existing) {
