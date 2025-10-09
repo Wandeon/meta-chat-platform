@@ -34,7 +34,7 @@ export class RagRetriever {
 
     const keywordResults = await keywordSearch(tenantId, query, topK);
 
-    const keywordMaxRank = keywordResults.reduce((max, item: any) => Math.max(max, Number(item.rank ?? 0)), 0);
+    const keywordMaxRank = keywordResults.reduce((max: number, item: any) => Math.max(max, Number(item.rank ?? 0)), 0);
     const weights = {
       keyword: hybridWeights?.keyword ?? 0.3,
       vector: hybridWeights?.vector ?? 0.7,
@@ -71,7 +71,7 @@ export class RagRetriever {
           documentId: String(data.documentId),
           content: String(data.content ?? ''),
           embedding: [],
-          metadata: this.parseMetadata(data.metadata),
+          metadata: { ...this.parseMetadata(data.metadata), source: String(data.documentId) },
         },
         score,
         type:
