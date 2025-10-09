@@ -370,3 +370,16 @@ small {
     padding: 0;
   }
 }
+
+/* Testing page responsive layout */
+.testing-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .testing-layout {
+    grid-template-columns: 1fr 320px;
+  }
+}
