@@ -171,6 +171,8 @@ Tenant (1) ←→ (*) Document
 Tenant (1) ←→ (*) Webhook
 Conversation (1) ←→ (*) Message
 Document (1) ←→ (*) Chunk (with vector embedding)
+Tenant (1) ←→ (*) TenantSecret (per-provider credentials)
+Channel (1) ←→ (1) ChannelSecret (adapter credentials)
 ```
 
 **Key Features:**
@@ -179,6 +181,24 @@ Document (1) ←→ (*) Chunk (with vector embedding)
 - Full-text search with tsvector
 - Cascade deletes for tenant cleanup
 - Indexed queries for performance
+
+### 7. Secrets & Key Management
+
+**Dedicated Tables:**
+- `tenant_secrets`: keyed by `tenantId` + logical `name`, storing ciphertext, IV, auth tag, and encryption key identifier for tenant-level credentials (e.g., LLM providers).
+- `channel_secrets`: keyed by `channelId`, storing the encrypted payload for channel adapter credentials.
+
+Both tables only persist Base64-encoded ciphertext, IV, and AES-GCM authentication tag alongside the key identifier. Plaintext secrets never touch the database.
+
+**Encryption Service (`packages/shared/src/secrets.ts`):**
+- Uses AES-256-GCM via Node's `crypto` module.
+- Requires `SECRET_KEY_ID` and a Base64-encoded 32-byte `SECRET_ENCRYPTION_KEY` environment variable for the active key material.
+- Exposes `SecretService` helpers to store and retrieve secrets through repository interfaces, ensuring callers work with callback-based access (`withTenantSecret` / `withChannelSecret`) so decrypted values remain in memory briefly.
+- Scrubs intermediate buffers after use and never logs decrypted data; downstream callers must also avoid logging and invoke scrub routines immediately after use.
+
+**Usage Guidance:**
+- Channel and LLM adapters must call into `SecretService` rather than writing raw JSON credentials. The adapters should provide repository implementations that read/write the new tables and use the callback helpers to avoid leaking plaintext values.
+- Rotate keys by introducing a new environment-provided key identifier and material, then re-encrypt affected secrets using the helper before decommissioning the old key.
 
 ## Data Flow
 
