@@ -17,7 +17,7 @@ A production-grade conversational AI platform that synthesizes the best patterns
 - **Framework**: Express.js
 - **Database**: PostgreSQL 15+ with Prisma ORM + pgvector extension
 - **Cache**: Redis 7+
-- **Message Queue**: RabbitMQ (optional)
+- **Message Queue**: RabbitMQ (core event transport)
 - **Vector Store**: PostgreSQL with pgvector
 - **LLM**: OpenAI API (GPT-4o)
 - **Embeddings**: OpenAI text-embedding-3-small
@@ -33,7 +33,7 @@ meta-chat-platform/
 ├── packages/
 │   ├── shared/           # ✅ COMPLETE - Types, constants, utilities
 │   ├── database/         # ✅ COMPLETE - Prisma schema, vector search, client
-│   ├── events/           # ✅ COMPLETE - Event bus, webhook emitter, RabbitMQ
+│   ├── events/           # ✅ COMPLETE - Brokered event bus, webhook emitter, RabbitMQ
 │   ├── rag/              # 📦 TODO - Document processing, embeddings, retrieval
 │   ├── channels/         # 📦 TODO - WhatsApp, Messenger, WebChat adapters
 │   └── orchestrator/     # 📦 TODO - Message routing, LLM integration
@@ -63,17 +63,17 @@ meta-chat-platform/
 - **Client**: Singleton Prisma client with graceful shutdown
 
 ### 3. **Events Package** (`packages/events`)
-- **Event Bus**: Internal pub/sub using EventEmitter2
+- **Event Bus**: Broker-backed publisher that persists events, pushes to RabbitMQ, and optionally caches locally for fast reads
 - **Webhook Emitter**: Reliable webhook delivery with:
   - Exponential backoff retry logic
   - Per-tenant webhook configuration
   - Custom headers support
   - Parallel delivery to multiple webhooks
-- **RabbitMQ Emitter**: Topic-based event publishing with:
+- **RabbitMQ Broker**: Topic-based event publishing with:
   - Auto-reconnection on failure
   - Durable exchanges
   - Routing keys: `{tenantId}.{eventType}`
-- **Event Manager**: Unified interface coordinating all emitters
+- **Event Manager**: Unified interface coordinating broker publishing, local cache, and webhooks
 
 ---
 
@@ -315,10 +315,10 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 - Hybrid search (keyword + vector) in one query
 - Can migrate to Pinecone/Weaviate later if needed
 
-### Why EventEmitter2 + RabbitMQ?
-- EventEmitter2: Fast in-process pub/sub
-- RabbitMQ: Durable, scalable cross-service communication
-- Start with EventEmitter2, add RabbitMQ when scaling
+### Why RabbitMQ-first events with local cache?
+- RabbitMQ guarantees delivery across services and instances
+- Local cache (opt-in) keeps hot history and low-latency fan-out without coupling to in-process emitters
+- Unified publishing path simplifies observability and failure handling
 
 ### Why OpenAI API vs self-hosted LLM?
 - Faster time to market
