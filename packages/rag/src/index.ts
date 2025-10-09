@@ -2,3 +2,8 @@ export * from './upload-pipeline';
 export * from './integrity-checker';
 export * from './storage';
 export * from './utils';
+export * from './loaders';
+export * from './chunker';
+export * from './embeddings';
+export * from './retriever';
+export * from './functions';
