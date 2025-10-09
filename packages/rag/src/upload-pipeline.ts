@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
-import { PrismaClient, Document as DocumentRecord } from '@meta-chat/database';
-import { Logger } from '@meta-chat/shared';
+import { PrismaClient, Document as DocumentRecord, Prisma } from '@meta-chat/database';
+import { createLogger } from '@meta-chat/shared';
 import type { StorageProvider } from './storage';
 import { StorageProviderRegistry } from './storage';
 import { mergeMetadata } from './utils';
@@ -17,7 +17,7 @@ export interface DocumentUploadInput {
 }
 
 export class DocumentUploadPipeline {
-  private readonly logger = new Logger('DocumentUploadPipeline');
+  private readonly logger = createLogger('DocumentUploadPipeline');
 
   constructor(
     private readonly prisma: PrismaClient,
@@ -29,7 +29,7 @@ export class DocumentUploadPipeline {
     const checksum = this.computeChecksum(input.buffer);
     const size = input.size ?? input.buffer.length;
 
-    return this.prisma.$transaction(async tx => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       let existing: DocumentRecord | null = null;
       let version = 1;
 

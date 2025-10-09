@@ -1,5 +1,5 @@
 import { PrismaClient, Document as DocumentRecord } from '@meta-chat/database';
-import { Logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
 import { StorageProviderRegistry } from './storage';
 import { DocumentUploadPipeline } from './upload-pipeline';
 import { mergeMetadata } from './utils';
@@ -25,7 +25,7 @@ export interface IntegrityRemediationContext {
 }
 
 export class DocumentIntegrityChecker {
-  private readonly logger = new Logger('DocumentIntegrityChecker');
+  private readonly logger = createLogger('DocumentIntegrityChecker');
 
   constructor(
     private readonly prisma: PrismaClient,
