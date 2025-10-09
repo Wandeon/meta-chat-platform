@@ -35,6 +35,16 @@ A production-grade conversational AI platform that synthesizes the best patterns
 
 > See [`docs/TODO.md`](docs/TODO.md) for the full milestone backlog and task breakdown.
 
+### New Frontend Apps
+
+- [`apps/web-widget`](apps/web-widget/README.md) – Embeddable customer chat widget built with Vite + React.
+- [`apps/dashboard`](apps/dashboard/README.md) – Admin console for tenants, channels, documents, conversations, and webhooks.
+
+Additional onboarding docs:
+
+- [`docs/widget-embedding.md`](docs/widget-embedding.md) – Step-by-step widget embedding guide.
+- [`docs/admin-onboarding.md`](docs/admin-onboarding.md) – Admin dashboard onboarding.
+
 ### Project Structure
 
 ```
