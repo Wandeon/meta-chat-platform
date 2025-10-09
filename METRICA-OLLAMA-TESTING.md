@@ -8,14 +8,22 @@
 
 The **Metrica** tenant has been successfully configured to use:
 
-- **Provider:** Ollama (free, local models)
-- **Model:** llama3.1:8b (recommended for production)
-- **Base URL:** http://ArtemiPC:11434
+- **Provider:** Ollama (free, local models with GPU acceleration)
+- **Model:** llama3:latest (8B parameters)
+- **Base URL:** http://gpu-01.taildb94e1.ts.net:11434
+- **Server:** gpu-01.taildb94e1.ts.net (100.100.47.43 via Tailscale)
 - **Temperature:** 0.7 (balanced creativity)
 - **Max Tokens:** 2000
 - **System Prompt:** Professional AI assistant style
 
 **Tenant ID:** `cmgjuow6q0000g5jwvwyopzk6`
+
+### Available Models on Your Server
+- **llama3:latest** (8B) - Currently configured ✅
+- **llama3:70b** - More capable, slower
+- **phi3:latest** (3.8B) - Faster, smaller
+- **DeepSeek-R1-0528-Qwen3-8B** - Reasoning model
+- **mxbai-embed-large** - Embeddings model
 
 ---
 
@@ -122,49 +130,59 @@ curl -X POST https://chat.genai.hr/api/chat \
 
 ### Slow Responses (>30 seconds)
 **Possible Causes:**
-- ArtemiPC is under heavy load
-- Ollama isn't running on ArtemiPC
-- Network latency between servers
+- gpu-01 is under heavy load
+- Ollama isn't running on gpu-01
+- Network latency between servers (Tailscale connection)
 
 **Check:**
 ```bash
 # From the API server, test Ollama connectivity
-curl -s http://ArtemiPC:11434/api/tags | head -20
+curl -s http://gpu-01.taildb94e1.ts.net:11434/api/tags | head -20
 ```
 
 **Fix:**
-- Restart Ollama on ArtemiPC: `systemctl restart ollama`
-- Check ArtemiPC CPU/memory usage
-- Try a smaller model: `llama3.2:3b`
+- Restart Ollama on gpu-01: `systemctl restart ollama`
+- Check gpu-01 GPU/CPU/memory usage
+- Try a smaller model: `phi3:latest` (3.8B)
+- Check Tailscale connection: `ping gpu-01.taildb94e1.ts.net`
 
 ### Connection Errors
 **Error:** "Failed to connect to Ollama"
 
 **Check:**
 ```bash
-# Can the API server reach ArtemiPC?
-ping -c 3 ArtemiPC
+# Can the API server reach gpu-01?
+ping -c 3 gpu-01.taildb94e1.ts.net
 
 # Is Ollama responding?
-curl http://ArtemiPC:11434/api/version
+curl http://gpu-01.taildb94e1.ts.net:11434/api/version
 ```
 
 **Fix:**
-- Ensure ArtemiPC is online
-- Check firewall allows port 11434
-- Verify hostname resolution (add to /etc/hosts if needed)
+- Ensure gpu-01 is online and connected to Tailscale
+- Check Tailscale status on both servers: `tailscale status`
+- Verify firewall allows port 11434
+- Test direct IP connection: `curl http://100.100.47.43:11434/api/tags`
 
 ### Model Not Found
-**Error:** "Model llama3.1:8b not found"
+**Error:** "Model not found"
 
-**Fix on ArtemiPC:**
+**Check available models on gpu-01:**
 ```bash
-# Pull the model
-ollama pull llama3.1:8b
-
-# Verify it's installed
+# SSH to gpu-01 or run locally
 ollama list
+
+# Expected output shows:
+# - llama3:latest ✅ (currently configured)
+# - llama3:70b (larger, better quality)
+# - phi3:latest (smaller, faster)
+# - DeepSeek-R1-0528-Qwen3-8B
 ```
+
+**To use a different model:**
+1. Go to dashboard → Tenants → Metrica → Settings
+2. Change Model dropdown to your preferred model
+3. Save settings
 
 ### Poor Response Quality
 **Issue:** Responses are incoherent or repetitive
@@ -204,21 +222,34 @@ You can modify this to:
 
 ## 📊 Performance Benchmarks
 
-### Expected Performance (Llama 3.1 8B)
+### Actual Performance (llama3:latest 8B on gpu-01)
 
-**On CPU (typical VPS):**
-- First token: 2-5 seconds
-- Token generation: 5-10 tokens/second
-- Total response time: 10-30 seconds
+**Test Result (verified):**
+- Model load time: ~4.2 seconds
+- Prompt evaluation: ~13 seconds
+- Token generation: ~6.8 seconds
+- **Total response time: ~24 seconds** for simple prompt
 
-**On GPU (NVIDIA RTX 3060+):**
-- First token: 0.5-1 second
-- Token generation: 30-50 tokens/second
-- Total response time: 2-5 seconds
+**Your GPU Setup:**
+- Server: gpu-01.taildb94e1.ts.net (via Tailscale)
+- Model: llama3:latest (8B parameters)
+- Network latency: ~30-60ms (Tailscale)
+
+**Performance varies by:**
+- GPU load and temperature
+- Prompt complexity and length
+- Response length
+- Concurrent requests
+- Network conditions
+
+**Typical Range:**
+- Simple queries: 10-20 seconds
+- Complex queries: 20-40 seconds
+- Long responses: 30-60 seconds
 
 **Memory Usage:**
 - Model size: ~4.7GB
-- RAM requirement: 8GB+ recommended
+- GPU VRAM: 6GB+ recommended
 
 ---
 
