@@ -72,7 +72,7 @@ model Conversation {
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id             String   @default(cuid())
   conversationId String
   externalId     String? // Platform-specific message ID (wamid, mid)
   direction      String // inbound, outbound
@@ -85,6 +85,8 @@ model Message {
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
+  @@id([id, timestamp])
+  @@index([id])
   @@index([conversationId, timestamp])
   @@index([externalId])
   @@map("messages")
@@ -161,7 +163,7 @@ model Event {
 // ============= Analytics & Logs =============
 
 model ApiLog {
-  id         String   @id @default(cuid())
+  id         String   @default(cuid())
   tenantId   String?
   method     String
   path       String
@@ -172,6 +174,8 @@ model ApiLog {
   error      String?
   timestamp  DateTime @default(now())
 
+  @@id([id, timestamp])
+  @@index([id])
   @@index([tenantId, timestamp])
   @@index([timestamp])
   @@map("api_logs")
