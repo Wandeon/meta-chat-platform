@@ -315,7 +315,7 @@ export class MessagePipeline {
     const calls = raw.tool_calls ?? raw.toolCalls ?? [];
     for (const call of calls) {
       const id = call.id ?? call.index ?? String(toolStates.size);
-      const state = toolStates.get(id) ?? { id, arguments: '' };
+      const state: ToolCallState = toolStates.get(id) ?? { id, name: '', arguments: '' };
       state.name = call.function?.name ?? call.name ?? state.name;
       const argsDelta = call.function?.arguments ?? call.arguments ?? '';
       state.arguments += argsDelta;
