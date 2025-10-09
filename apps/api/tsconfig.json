@@ -3,7 +3,18 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": "./",
+    "paths": {
+      "@meta-chat/shared": ["../../packages/shared/src"],
+      "@meta-chat/shared/*": ["../../packages/shared/src/*"],
+      "@meta-chat/database": ["../../packages/database/src"],
+      "@meta-chat/database/*": ["../../packages/database/src/*"],
+      "@meta-chat/events": ["../../packages/events/src"],
+      "@meta-chat/events/*": ["../../packages/events/src/*"],
+      "@meta-chat/orchestrator": ["../../packages/orchestrator/src"],
+      "@meta-chat/orchestrator/*": ["../../packages/orchestrator/src/*"]
+    }
   },
   "include": ["src/**/*"],
   "references": [
