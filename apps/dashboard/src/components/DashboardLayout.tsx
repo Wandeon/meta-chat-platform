@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { to: '/documents', label: 'Documents' },
   { to: '/conversations', label: 'Conversations' },
   { to: '/webhooks', label: 'Webhooks' },
+  { to: '/testing', label: 'Testing' },
   { to: '/health', label: 'System Health' },
 ];
 
