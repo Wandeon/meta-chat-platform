@@ -1,0 +1,51 @@
+groups:
+  - name: meta-chat-availability
+    rules:
+      - alert: ServiceDown
+        expr: up{job=~"api|dashboard|postgres|redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "{{ $labels.job }} service is down"
+          description: "Instance {{ $labels.instance }} for job {{ $labels.job }} has failed health checks for more than 2 minutes."
+
+      - alert: BlackboxProbeFailure
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 1m
+        labels:
+          severity: high
+          team: platform
+        annotations:
+          summary: "Synthetic probe failed for {{ $labels.instance }}"
+          description: "HTTP probe against {{ $labels.instance }} is failing. Investigate ingress and origin health."
+
+      - alert: PostgresReplicationDelay
+        expr: pg_replication_lag{application_name="pg-standby"} > 30
+        for: 5m
+        labels:
+          severity: high
+          team: data
+        annotations:
+          summary: "PostgreSQL replication lag exceeds 30 seconds"
+          description: "Standby replica {{ $labels.application_name }} is {{ $value }} seconds behind primary."
+
+      - alert: RedisCacheErrors
+        expr: increase(redis_commands_failed_total[5m]) > 0
+        labels:
+          severity: medium
+          team: platform
+        annotations:
+          summary: "Redis command failures detected"
+          description: "Redis exporter is reporting failing commands over the last 5 minutes."
+
+      - alert: APISlowResponses
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="api"}[5m])) by (le)) > 0.5
+        for: 10m
+        labels:
+          severity: medium
+          team: platform
+        annotations:
+          summary: "API p95 latency exceeded 500ms"
+          description: "Latency for API service has been above threshold for at least 10 minutes."
