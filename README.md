@@ -76,6 +76,8 @@ meta-chat-platform/
   - API logs (partitioned by month)
   - TenantApiKey and AdminApiKey with rotation support
   - TenantSecret and ChannelSecret for encrypted storage
+  - Admin keys with hashed secrets, rotation metadata, and lifecycle status
+  - Admin audit logs for privileged actions
 - **Vector Search**: IVFFlat-indexed cosine similarity search with normalization
 - **Keyword Search**: Full-text search with PostgreSQL tsvector
 - **Client**: Singleton Prisma client with graceful shutdown
@@ -95,6 +97,13 @@ meta-chat-platform/
   - Durable exchanges
   - Routing keys: `{tenantId}.{eventType}`
 - **Event Manager**: Unified interface coordinating broker publishing, local cache, and webhooks
+
+### 🔐 **Admin Authentication Module** (`apps/api`)
+- **Short-lived Admin Sessions**: Issues JWTs (default 15 minutes) for validated admin keys.
+- **Hashed Admin Keys**: Secrets are generated server-side, stored using salted + peppered scrypt hashes, and returned only once.
+- **Key Lifecycle Management**: Helpers to create, rotate, and revoke admin keys while preserving rotation metadata.
+- **Audit Logging**: Every authentication attempt and key lifecycle change is persisted to `admin_audit_logs` for traceability.
+- **Extensible Logging API**: Service exposes a `logAction` helper so other modules can record privileged activity with contextual metadata.
 
 ---
 
@@ -161,6 +170,7 @@ Build the core message processing engine:
 Express server with:
 - **Authentication Middleware**: API key validation (global + per-tenant)
 - **Signature Verification**: HMAC digest check on management/webhook requests
+- **Admin Authentication**: Integrate the reusable admin key + JWT module for console and automation access, including rotation/revocation flows.
 - **Rate Limiting**: Redis-backed rate limiter
 - **REST Routes**:
   - `/api/tenants` - CRUD operations
