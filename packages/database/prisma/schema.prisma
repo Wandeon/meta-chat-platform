@@ -100,7 +100,10 @@ model Document {
   mimeType  String
   size      Int
   path      String // Storage path
-  status    String   @default("pending") // pending, processing, ready, failed
+  checksum  String // SHA-256 checksum of the stored file
+  storageProvider String @default("local") // Storage backend identifier
+  version   Int      @default(1) // Incremented on every re-upload
+  status    String   @default("pending") // pending, processing, ready, failed, stale
   metadata  Json     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -109,6 +112,7 @@ model Document {
   chunks Chunk[]
 
   @@index([tenantId, status])
+  @@index([tenantId, checksum])
   @@map("documents")
 }
 
