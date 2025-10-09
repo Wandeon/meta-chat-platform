@@ -124,6 +124,8 @@ model Chunk {
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+  // Backed by an IVFFlat index created via SQL migration for pgvector performance
+  @@index([embedding], map: "chunks_embedding_ivfflat_idx")
   @@map("chunks")
 }
 
