@@ -1,10 +1,10 @@
-import amqp, { Channel, Connection } from 'amqplib';
-import { Event, Logger } from '@meta-chat/shared';
+import { connect as connectToRabbitMQ, Channel, ChannelModel } from 'amqplib';
+import { Event, createLogger, withRequestContext } from '@meta-chat/shared';
 
-const logger = new Logger('RabbitMQEmitter');
+const logger = createLogger('RabbitMQEmitter');
 
 export class RabbitMQEmitter {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private exchangeName: string = 'metachat.events';
   private reconnectDelay: number = 5000;
@@ -26,21 +26,23 @@ export class RabbitMQEmitter {
     this.isConnecting = true;
 
     try {
-      this.connection = await amqp.connect(url);
+      const connection = await connectToRabbitMQ(url);
+      this.connection = connection;
 
-      this.connection.on('error', (err) => {
+      connection.on('error', (err: Error) => {
         logger.error('RabbitMQ connection error', err);
         this.handleDisconnect();
       });
 
-      this.connection.on('close', () => {
+      connection.on('close', () => {
         logger.warn('RabbitMQ connection closed');
         this.handleDisconnect();
       });
 
-      this.channel = await this.connection.createChannel();
+      const channel = await connection.createChannel();
+      this.channel = channel;
 
-      await this.channel.assertExchange(this.exchangeName, 'topic', {
+      await channel.assertExchange(this.exchangeName, 'topic', {
         durable: true,
         autoDelete: false,
       });
@@ -48,7 +50,7 @@ export class RabbitMQEmitter {
       logger.info('RabbitMQ connected successfully');
       this.isConnecting = false;
     } catch (error) {
-      logger.error('Failed to connect to RabbitMQ', error);
+      logger.error('Failed to connect to RabbitMQ', error as Error);
       this.isConnecting = false;
       this.handleDisconnect();
     }
@@ -68,25 +70,32 @@ export class RabbitMQEmitter {
   }
 
   async emit(event: Event): Promise<void> {
-    if (!this.channel) {
+    const channel = this.channel;
+
+    if (!channel) {
       logger.warn('RabbitMQ not connected, skipping event emission');
       return;
     }
 
-    try {
-      const routingKey = `${event.tenantId}.${event.type.replace(/_/g, '.')}`;
-      const message = Buffer.from(JSON.stringify(event));
+    const routingKey = `${event.tenantId}.${event.type.replace(/_/g, '.')}`;
 
-      this.channel.publish(this.exchangeName, routingKey, message, {
-        persistent: true,
-        contentType: 'application/json',
-        timestamp: event.timestamp.getTime(),
-      });
+    await withRequestContext({ routingKey }, async () => {
+      try {
+        const message = Buffer.from(JSON.stringify(event));
 
-      logger.debug(`Published to RabbitMQ: ${routingKey}`);
-    } catch (error) {
-      logger.error('Failed to publish event to RabbitMQ', error);
-    }
+        channel.publish(this.exchangeName, routingKey, message, {
+          persistent: true,
+          contentType: 'application/json',
+          timestamp: event.timestamp.getTime(),
+        });
+
+        logger.debug(`Published to RabbitMQ: ${routingKey}`, {
+          eventId: event.id,
+        });
+      } catch (error) {
+        logger.error('Failed to publish event to RabbitMQ', error as Error);
+      }
+    });
   }
 
   async close(): Promise<void> {
