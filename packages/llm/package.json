@@ -7,7 +7,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "test": "vitest run"
+    "test": "vitest --config vitest.config.ts --run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.22.0",

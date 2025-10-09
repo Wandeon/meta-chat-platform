@@ -80,7 +80,7 @@ export class RabbitMQBroker implements EventBroker {
 
     setTimeout(() => {
       logger.info('Attempting to reconnect to RabbitMQ');
-      this.connect(this.url!);
+      void this.connect(this.url!);
     }, this.reconnectDelay);
   }
 

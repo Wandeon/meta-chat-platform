@@ -10,7 +10,8 @@
     "push": "prisma db push",
     "migrate": "prisma migrate dev",
     "studio": "prisma studio",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest --config vitest.config.ts --run --coverage"
   },
   "dependencies": {
     "@meta-chat/shared": "*",
