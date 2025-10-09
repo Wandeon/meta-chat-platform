@@ -45,6 +45,7 @@ export async function vectorSearch(
     FROM chunks c
     INNER JOIN documents d ON c."documentId" = d.id
     WHERE d."tenantId" = ${tenantId}
+      AND c."tenantId" = ${tenantId}
       AND d.status = 'ready'
       AND c.embedding IS NOT NULL
     ORDER BY c.embedding <=> ${`[${embedding.join(',')}]`}::vector
@@ -74,6 +75,7 @@ export async function keywordSearch(
     FROM chunks c
     INNER JOIN documents d ON c."documentId" = d.id
     WHERE d."tenantId" = ${tenantId}
+      AND c."tenantId" = ${tenantId}
       AND d.status = 'ready'
       AND to_tsvector('english', c.content) @@ plainto_tsquery('english', ${query})
     ORDER BY rank DESC
