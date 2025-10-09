@@ -1,15 +1,25 @@
+require('dotenv').config({ path: './apps/api/.env.production' });
+
 module.exports = {
   apps: [
     {
       name: 'meta-chat-api',
-      script: 'apps/api/dist/index.js',
+      script: 'apps/api/dist/server.js',
       cwd: '/home/deploy/meta-chat-platform',
-      instances: 2,
-      exec_mode: 'cluster',
-      env_file: './apps/api/.env.production',
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
+        DATABASE_URL: process.env.DATABASE_URL || 'postgresql://metachat:QDpBLzzgyRbp_tU*^-RM6%GcctYoCFKe@localhost:5432/metachat?schema=public',
+        REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379/0',
+        RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://metachat:vxY%25prw5pBLEAL%3D%26F%23wqvXHN@localhost:5672',
+        ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET || 'D367r7UT+BcitB5rxohtp1zuYIEgUPbXMIF0OL9gePjw5ZjRG14OXFVUs1pOJTQbOOl9qLSGM75Fqu0/M+b8WA==',
+        ADMIN_KEY_PEPPER: process.env.ADMIN_KEY_PEPPER || 'bc0a3de5561410209482fd9e04c36b8a45f9f645e7ce5c6ec56a4f9aebbb567c',
+        ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'dB860O4xb/SRO7iZ6PTJVEZSb49c1zZCXi8vmfIqBr8=',
+        API_URL: 'https://chat.genai.hr',
+        STORAGE_PATH: './storage',
+        LOG_LEVEL: 'info',
       },
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
@@ -19,8 +29,6 @@ module.exports = {
       max_restarts: 10,
       min_uptime: '10s',
       max_memory_restart: '500M',
-      wait_ready: true,
-      listen_timeout: 10000,
       kill_timeout: 5000,
     },
   ],
