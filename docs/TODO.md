@@ -343,6 +343,7 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Add CORS configuration
 - [ ] Add body parsing (JSON, multipart)
 - [ ] Implement API key authentication
+- [ ] Verify HMAC signatures with timestamp drift checks
 - [ ] Add rate limiting (Redis-backed)
 - [ ] Create async error handler wrapper
 - [ ] Add request ID generation
@@ -351,6 +352,9 @@ Priority: 🔴 HIGH | Status: ⏳ NOT STARTED
 - [ ] Validate global API key for admin routes
 - [ ] Validate tenant API keys for tenant routes
 - [ ] Implement JWT for WebSocket connections
+- [ ] Create tenant secret rotation workflow
+- [ ] Issue service-to-service tokens for internal jobs
+- [ ] Document signing process and required headers
 - [ ] Add API key hashing in database
 - [ ] Handle authentication errors
 

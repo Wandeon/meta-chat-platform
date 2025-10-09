@@ -21,6 +21,7 @@ A production-grade conversational AI platform that synthesizes the best patterns
 - **Vector Store**: PostgreSQL with pgvector
 - **LLM**: OpenAI API (GPT-4o)
 - **Embeddings**: OpenAI text-embedding-3-small
+- **Authentication**: Custom HMAC API keys for HTTP + scoped JWT tokens for WebSocket (Passport **not** used)
 
 ### Project Structure
 
@@ -139,6 +140,7 @@ Build the core message processing engine:
 ### 7. **API Server** (`apps/api`)
 Express server with:
 - **Authentication Middleware**: API key validation (global + per-tenant)
+- **Signature Verification**: HMAC digest check on management/webhook requests
 - **Rate Limiting**: Redis-backed rate limiter
 - **REST Routes**:
   - `/api/tenants` - CRUD operations
