@@ -1,10 +1,10 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 import { Prisma, AdminAuditLog, AdminKey, AdminKeyStatus } from '@prisma/client';
 import { getPrismaClient } from './client';
-import { Logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
 
 const prisma = getPrismaClient();
-const logger = new Logger('AdminKeys');
+const logger = createLogger('AdminKeys');
 
 const ADMIN_KEY_SECRET_BYTES = 32;
 const ADMIN_KEY_HASH_BYTES = 64;
