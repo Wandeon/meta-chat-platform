@@ -86,4 +86,28 @@ router.put(
   }),
 );
 
+router.patch(
+  '/:tenantId',
+  asyncHandler(async (req, res) => {
+    const { tenantId } = req.params;
+    const payload = parseWithSchema(updateTenantSchema, req.body);
+
+    const existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!existing) {
+      throw createHttpError(404, 'Tenant not found');
+    }
+
+    const tenant = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        name: payload.name ?? existing.name,
+        settings: payload.settings ?? existing.settings,
+        enabled: payload.enabled ?? existing.enabled,
+      },
+    });
+
+    respondSuccess(res, tenant);
+  }),
+);
+
 export default router;
