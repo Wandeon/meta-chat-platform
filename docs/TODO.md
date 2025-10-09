@@ -331,6 +331,13 @@
 - **Deadline:** 2026-01-31
 
 ### 3.1 API Server Feature Expansion (`apps/api`)
+#### Authentication & Middleware Hardening
+- [ ] Verify HMAC signatures with timestamp drift checks
+- [ ] Create tenant secret rotation workflow
+- [ ] Issue service-to-service tokens for internal jobs
+- [ ] Document signing process and required headers
+
+#### REST API Routes - Tenants
 - [ ] `POST /api/tenants` - Create tenant
 - [ ] `GET /api/tenants/:id` - Get tenant
 - [ ] `PUT /api/tenants/:id` - Update tenant
