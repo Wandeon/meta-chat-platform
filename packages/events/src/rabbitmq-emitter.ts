@@ -1,12 +1,12 @@
 import amqp, { Channel, Connection } from 'amqplib';
 import { Event, Logger } from '@meta-chat/shared';
+import { EVENTS_EXCHANGE, getEventRoutingKey } from './queue-topics';
 
 const logger = new Logger('RabbitMQEmitter');
 
 export class RabbitMQEmitter {
   private connection: Connection | null = null;
   private channel: Channel | null = null;
-  private exchangeName: string = 'metachat.events';
   private reconnectDelay: number = 5000;
   private isConnecting: boolean = false;
 
@@ -40,7 +40,7 @@ export class RabbitMQEmitter {
 
       this.channel = await this.connection.createChannel();
 
-      await this.channel.assertExchange(this.exchangeName, 'topic', {
+      await this.channel.assertExchange(EVENTS_EXCHANGE, 'topic', {
         durable: true,
         autoDelete: false,
       });
@@ -74,10 +74,10 @@ export class RabbitMQEmitter {
     }
 
     try {
-      const routingKey = `${event.tenantId}.${event.type.replace(/_/g, '.')}`;
+      const routingKey = getEventRoutingKey(event);
       const message = Buffer.from(JSON.stringify(event));
 
-      this.channel.publish(this.exchangeName, routingKey, message, {
+      this.channel.publish(EVENTS_EXCHANGE, routingKey, message, {
         persistent: true,
         contentType: 'application/json',
         timestamp: event.timestamp.getTime(),
