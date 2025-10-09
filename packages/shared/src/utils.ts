@@ -11,8 +11,8 @@ export function generateId(): string {
       ? ((globalThis.crypto ||
           // Node.js compatibility: global crypto may be exposed under webcrypto
           ((typeof require !== 'undefined' &&
-            (require('crypto').webcrypto as Crypto | undefined)) ||
-            undefined)) as Crypto | undefined)
+            require('crypto').webcrypto) ||
+            undefined)) as any)
       : undefined;
 
   if (globalCrypto?.randomUUID) {
@@ -94,7 +94,7 @@ export function deepMerge<T extends Record<string, any>>(target: T, source: Part
     const targetValue = result[key];
 
     if (isObject(sourceValue) && isObject(targetValue)) {
-      result[key] = deepMerge(targetValue, sourceValue);
+      result[key] = deepMerge(targetValue as any, sourceValue as any);
     } else if (sourceValue !== undefined) {
       result[key] = sourceValue as any;
     }
