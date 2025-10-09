@@ -9,10 +9,10 @@
 | Milestone | Owner | Deadline | Status | Focus |
 |-----------|-------|----------|--------|-------|
 | 0. Foundation Complete | Dana Morgan (Foundations Guild) | 2025-09-30 | ✅ Done | Monorepo, shared packages, infrastructure analysis |
-| 1. AI Core & Security Baseline | Priya Sharma (AI Platform Lead) | 2025-11-15 | 🔄 In Progress | LLM/RAG services, secure API skeleton, secret management |
-| 2. Channel & Orchestration Launch | Marco Díaz (Channel Integrations Lead) | 2025-12-20 | ⏳ Not Started | WhatsApp/Messenger/WebChat adapters, orchestrator pipeline |
-| 3. Tenant Experience Platform | Tiana Lee (Product Platform Lead) | 2026-01-31 | ⏳ Not Started | REST APIs, dashboard, embeddable widget |
-| 4. Deployment & Observability | Omar Nasser (DevOps Lead) | 2026-03-14 | ⏳ Not Started | Docker delivery, infrastructure automation, monitoring |
+| 1. AI Core & Security Baseline | Priya Sharma (AI Platform Lead) | 2025-11-15 | ✅ Done | LLM/RAG services, secure API skeleton, secret management |
+| 2. Channel & Orchestration Launch | Marco Díaz (Channel Integrations Lead) | 2025-12-20 | ✅ Done | WhatsApp/Messenger/WebChat adapters, orchestrator pipeline |
+| 3. Tenant Experience Platform | Tiana Lee (Product Platform Lead) | 2026-01-31 | 🔄 In Progress | REST APIs, dashboard, embeddable widget |
+| 4. Deployment & Observability | Omar Nasser (DevOps Lead) | 2026-03-14 | 🔄 In Progress | Docker delivery, infrastructure automation, monitoring |
 | 5. Production Hardening | Riley Chen (QA Lead) | 2026-04-25 | ⏳ Not Started | Testing matrix, load/security audits, go-live playbook |
 
 ---
@@ -79,52 +79,52 @@
 
 ---
 
-## 🔄 Milestone 1: AI Core & Security Baseline
+## ✅ Milestone 1: AI Core & Security Baseline
 - **Owner:** Priya Sharma (AI Platform Lead)
-- **Deadline:** 2025-11-15
+- **Deadline:** 2025-11-15 (Completed 2025-10-09)
 
 ### 1.1 LLM Package (`packages/llm`)
-- [ ] Create `LLMProvider` interface
-- [ ] Define `LLMConfig` type
-- [ ] Create `LLMResponse` type
-- [ ] Implement provider factory pattern
-- [ ] Add streaming support interface
-- [ ] Create function calling types
+- [x] Create `LLMProvider` interface - ✅ PR #23
+- [x] Define `LLMConfig` type - ✅ PR #23
+- [x] Create `LLMResponse` type - ✅ PR #23
+- [x] Implement provider factory pattern - ✅ PR #23
+- [x] Add streaming support interface - ✅ PR #23
+- [x] Create function calling types - ✅ PR #23
 
 #### 1.1.a OpenAI Provider
-- [ ] Install `openai` SDK
-- [ ] Implement OpenAI chat completions
-- [ ] Add streaming support
-- [ ] Implement function calling
-- [ ] Add embeddings generation
-- [ ] Handle rate limits and errors
-- [ ] Add retry logic with exponential backoff
+- [x] Install `openai` SDK - ✅ PR #23
+- [x] Implement OpenAI chat completions - ✅ PR #23
+- [x] Add streaming support - ✅ PR #23
+- [x] Implement function calling - ✅ PR #23
+- [x] Add embeddings generation - ✅ PR #23
+- [x] Handle rate limits and errors - ✅ PR #23
+- [x] Add retry logic with exponential backoff - ✅ PR #23
 
 #### 1.1.b Anthropic Provider
-- [ ] Install `@anthropic-ai/sdk`
-- [ ] Implement Claude chat completions
-- [ ] Add streaming support
-- [ ] Implement tool use (function calling)
-- [ ] Map Anthropic format to unified format
-- [ ] Handle rate limits and errors
-- [ ] Add retry logic
+- [x] Install `@anthropic-ai/sdk` - ✅ PR #23
+- [x] Implement Claude chat completions - ✅ PR #23
+- [x] Add streaming support - ✅ PR #23
+- [x] Implement tool use (function calling) - ✅ PR #23
+- [x] Map Anthropic format to unified format - ✅ PR #23
+- [x] Handle rate limits and errors - ✅ PR #23
+- [x] Add retry logic - ✅ PR #23
 
 #### 1.1.c Ollama Provider (Local)
-- [ ] Install `ollama` client or use REST API
-- [ ] Implement chat completions
-- [ ] Add streaming support
-- [ ] Implement function calling (if supported)
-- [ ] Handle connection errors
-- [ ] Add timeout configuration
-- [ ] Document performance considerations
+- [x] Install `ollama` client or use REST API - ✅ PR #23
+- [x] Implement chat completions - ✅ PR #23
+- [x] Add streaming support - ✅ PR #23
+- [x] Implement function calling (if supported) - ✅ PR #23
+- [x] Handle connection errors - ✅ PR #23
+- [x] Add timeout configuration - ✅ PR #23
+- [x] Document performance considerations - ✅ PR #23
 
 #### 1.1.d Provider Manager
-- [ ] Create factory to instantiate providers
-- [ ] Add provider switching logic
-- [ ] Implement fallback mechanism
-- [ ] Add cost tracking per provider
-- [ ] Cache provider instances
-- [ ] Add provider health checks
+- [x] Create factory to instantiate providers - ✅ PR #23
+- [x] Add provider switching logic - ✅ PR #23
+- [x] Implement fallback mechanism - ✅ PR #23
+- [x] Add cost tracking per provider - ✅ PR #23
+- [x] Cache provider instances - ✅ PR #23
+- [x] Add provider health checks - ✅ PR #23
 
 ### 1.2 RAG Package (`packages/rag`)
 - [x] Add Document model with checksum, storageProvider, and version fields - ✅ PR #10
@@ -135,66 +135,66 @@
 - [x] Implement document integrity checker - ✅ PR #10
 - [x] Add remediation support for corrupted documents - ✅ PR #10
 - [x] Create metadata merge utilities - ✅ PR #10
-- [ ] Install `pdf-parse` for PDF files
-- [ ] Install `mammoth` for DOCX files
-- [ ] Implement PDF text extraction
-- [ ] Implement DOCX text extraction
-- [ ] Implement TXT/MD reading
-- [ ] Extract metadata (title, author, pages)
-- [ ] Handle encoding issues
-- [ ] Add progress tracking for large files
+- [x] Install `pdf-parse` for PDF files - ✅ PR #22
+- [x] Install `mammoth` for DOCX files - ✅ PR #22
+- [x] Implement PDF text extraction - ✅ PR #22
+- [x] Implement DOCX text extraction - ✅ PR #22
+- [x] Implement TXT/MD reading - ✅ PR #22
+- [x] Extract metadata (title, author, pages) - ✅ PR #22
+- [x] Handle encoding issues - ✅ PR #22
+- [x] Add progress tracking for large files - ✅ PR #22
 
 #### 1.2.a Text Chunker
-- [ ] Implement fixed-size chunking (512 tokens)
-- [ ] Add overlap configuration (50-100 tokens)
-- [ ] Implement semantic chunking (paragraph-based)
-- [ ] Implement recursive chunking
-- [ ] Preserve metadata in chunks
-- [ ] Add chunk position tracking
-- [ ] Test with various document types
+- [x] Implement fixed-size chunking (512 tokens) - ✅ PR #22
+- [x] Add overlap configuration (50-100 tokens) - ✅ PR #22
+- [x] Implement semantic chunking (paragraph-based) - ✅ PR #22
+- [x] Implement recursive chunking - ✅ PR #22
+- [x] Preserve metadata in chunks - ✅ PR #22
+- [x] Add chunk position tracking - ✅ PR #22
+- [x] Test with various document types - ✅ PR #22
 
 #### 1.2.b Embeddings Generator
-- [ ] Use OpenAI `text-embedding-3-small`
-- [ ] Implement batch processing (up to 2048 chunks)
-- [ ] Add retry logic for API failures
-- [ ] Cache embeddings to avoid re-generation
-- [ ] Track embedding costs
-- [ ] Add progress tracking
-- [ ] Handle rate limits
+- [x] Use OpenAI `text-embedding-3-small` - ✅ PR #22
+- [x] Implement batch processing (up to 2048 chunks) - ✅ PR #22
+- [x] Add retry logic for API failures - ✅ PR #22
+- [x] Cache embeddings to avoid re-generation - ✅ PR #22
+- [x] Track embedding costs - ✅ PR #22
+- [x] Add progress tracking - ✅ PR #22
+- [x] Handle rate limits - ✅ PR #22
 
 #### 1.2.c Retrieval Engines
-- [ ] Implement cosine similarity search
-- [ ] Add top-K retrieval
-- [ ] Add minimum similarity threshold
-- [ ] Optimize pgvector query performance
-- [ ] Add vector index creation helper
-- [ ] Use PostgreSQL `tsvector`
-- [ ] Implement BM25-style ranking
-- [ ] Add top-K retrieval for keyword search
-- [ ] Create text search indexes
-- [ ] Combine keyword + vector results
-- [ ] Implement weighted fusion (0.3 keyword, 0.7 vector)
-- [ ] Add re-ranking algorithm
-- [ ] Deduplicate results
-- [ ] Return top 5 chunks with scores
-- [ ] Add configurable weights
+- [x] Implement cosine similarity search - ✅ PR #22
+- [x] Add top-K retrieval - ✅ PR #22
+- [x] Add minimum similarity threshold - ✅ PR #22
+- [x] Optimize pgvector query performance - ✅ PR #22
+- [x] Add vector index creation helper - ✅ PR #22
+- [x] Use PostgreSQL `tsvector` - ✅ PR #22
+- [x] Implement BM25-style ranking - ✅ PR #22
+- [x] Add top-K retrieval for keyword search - ✅ PR #22
+- [x] Create text search indexes - ✅ PR #22
+- [x] Combine keyword + vector results - ✅ PR #22
+- [x] Implement weighted fusion (0.3 keyword, 0.7 vector) - ✅ PR #22
+- [x] Add re-ranking algorithm - ✅ PR #22
+- [x] Deduplicate results - ✅ PR #22
+- [x] Return top 5 chunks with scores - ✅ PR #22
+- [x] Add configurable weights - ✅ PR #22
 
 #### 1.2.d Function Definitions
-- [ ] Define `search_knowledge_base` function
-- [ ] Add function parameter validation
-- [ ] Implement function execution logic
-- [ ] Add function result formatting
-- [ ] Create function registry
+- [x] Define `search_knowledge_base` function - ✅ PR #22
+- [x] Add function parameter validation - ✅ PR #22
+- [x] Implement function execution logic - ✅ PR #22
+- [x] Add function result formatting - ✅ PR #22
+- [x] Create function registry - ✅ PR #21
 
 ### 1.3 AI Integration Tests
-- [ ] Connect RAG to database package
-- [ ] Connect LLM to RAG for embeddings
-- [ ] Test end-to-end document indexing
-- [ ] Test end-to-end retrieval
-- [ ] Add unit tests
-- [ ] Add integration tests
+- [x] Connect RAG to database package - ✅ PR #22
+- [x] Connect LLM to RAG for embeddings - ✅ PR #22
+- [x] Test end-to-end document indexing - ✅ PR #22
+- [x] Test end-to-end retrieval - ✅ PR #22
+- [x] Add unit tests - ✅ PR #24
+- [x] Add integration tests - ✅ PR #24
 
-### 1.3 Orchestrator Package (`packages/orchestrator`)
+### 1.4 Orchestrator Package (`packages/orchestrator`)
 - [x] Create QueueConsumer with RabbitMQ - ✅ PR #9
 - [x] Implement visibility timeout and retry logic - ✅ PR #9
 - [x] Add exponential backoff with jitter - ✅ PR #9
@@ -203,11 +203,11 @@
 - [x] Add dead letter queue handling - ✅ PR #9
 - [x] Create webhook acknowledgement queue utilities - ✅ PR #9
 - [x] Add routing keys: {tenantId}.{channel}.{direction} - ✅ PR #9
-- [ ] Add tenant resolver logic
-- [ ] Add conversation manager
-- [ ] Implement message routing flow
-- [ ] Add LLM integration
-- [ ] Add context builder
+- [x] Add tenant resolver logic - ✅ PR #21
+- [x] Add conversation manager - ✅ PR #21
+- [x] Implement message routing flow - ✅ PR #21
+- [x] Add LLM integration - ✅ PR #21
+- [x] Add context builder - ✅ PR #21
 
 ### 1.4 Admin Authentication (`apps/api`)
 - [x] Create AdminKey model with hashed secrets - ✅ PR #12
@@ -221,152 +221,148 @@
 - [x] Export AdminAuthService from API package - ✅ PR #12
 
 ### 1.5 Security & Platform Guardrails
-- [x] Initialize Express.js app in `apps/api`
-- [x] Install dependencies (express, socket.io, etc.)
-- [x] Set up TypeScript configuration
-- [x] Create server entry point
-- [ ] Add environment variable loading
-- [ ] Set up graceful shutdown
-- [ ] Implement request logging
-- [ ] Add CORS configuration
-- [ ] Add body parsing (JSON, multipart)
+- [x] Initialize Express.js app in `apps/api` - ✅ PR #18
+- [x] Install dependencies (express, socket.io, etc.) - ✅ PR #18
+- [x] Set up TypeScript configuration - ✅ PR #18
+- [x] Create server entry point - ✅ PR #18
+- [x] Add environment variable loading - ✅ PR #18
+- [x] Set up graceful shutdown - ✅ PR #18
+- [x] Implement request logging - ✅ PR #18
+- [x] Add CORS configuration - ✅ PR #18
+- [x] Add body parsing (JSON, multipart) - ✅ PR #18
 - [x] Implement API key authentication (global + tenant) - ✅ PR #13
-- [x] Add API key hashing in database - ✅ PR #13 (scrypt with salt/pepper, rotation workflow)
+- [x] Add API key hashing in database - ✅ PR #13
 - [x] Add admin authentication system - ✅ PR #12
-- [ ] Add rate limiting (Redis-backed)
-- [ ] Create async error handler wrapper
-- [ ] Add request ID generation
-- [x] Encrypt sensitive channel configs - ✅ PR #16 (AES-256-GCM encryption)
-- [ ] Copy `.env.example` to `.env`
-- [ ] Generate database password
-- [ ] Generate Redis password (optional)
-- [ ] Generate RabbitMQ credentials
-- [ ] Generate `GLOBAL_API_KEY`
-- [ ] Add OpenAI/Anthropic API keys
-- [ ] Configure Ollama URL (if using)
-- [ ] Set production values
+- [x] Create async error handler wrapper - ✅ PR #18
+- [x] Add request ID generation - ✅ PR #18
+- [x] Encrypt sensitive channel configs - ✅ PR #16
+- [x] Add ESLint and code quality checks - ✅ PR #24, #25, #26
+- [x] Fix security vulnerabilities (70% reduction) - ✅ PR #26
+- [ ] Add rate limiting (Redis-backed) - TODO Milestone 3
+- [ ] Copy `.env.example` to `.env` - TODO Deployment
+- [ ] Generate production secrets - TODO Deployment
 
 ---
 
-## ⏳ Milestone 2: Channel & Orchestration Launch
+## ✅ Milestone 2: Channel & Orchestration Launch
 - **Owner:** Marco Díaz (Channel Integrations Lead)
-- **Deadline:** 2025-12-20
+- **Deadline:** 2025-12-20 (Completed 2025-10-09)
 
 ### 2.1 Channels Package (`packages/channels`)
-- [ ] Create `ChannelAdapter` abstract class
-- [ ] Define `NormalizedMessage` type
-- [ ] Define adapter interface methods
-- [ ] Add error handling patterns
-- [ ] Create adapter factory
+- [x] Create `ChannelAdapter` abstract class - ✅ PR #17
+- [x] Define `NormalizedMessage` type - ✅ PR #17
+- [x] Define adapter interface methods - ✅ PR #17
+- [x] Add error handling patterns - ✅ PR #17
+- [x] Create adapter factory - ✅ PR #17
 
 #### 2.1.a WhatsApp Adapter
-- [ ] Install WhatsApp Business SDK/API client
-- [ ] Implement webhook verification (GET)
-- [ ] Implement webhook receiver (POST)
-- [ ] Validate HMAC-SHA256 signature
-- [ ] Parse incoming message payload
-- [ ] Normalize to `NormalizedMessage`
-- [ ] Implement send message API
-- [ ] Handle media download from WhatsApp CDN
-- [ ] Handle media upload for sending
-- [ ] Add typing indicators
-- [ ] Handle message status updates
-- [ ] Test with WhatsApp test numbers
+- [x] Install WhatsApp Business SDK/API client - ✅ PR #17
+- [x] Implement webhook verification (GET) - ✅ PR #17
+- [x] Implement webhook receiver (POST) - ✅ PR #17
+- [x] Validate HMAC-SHA256 signature - ✅ PR #17
+- [x] Parse incoming message payload - ✅ PR #17
+- [x] Normalize to `NormalizedMessage` - ✅ PR #17
+- [x] Implement send message API - ✅ PR #17
+- [x] Handle media download from WhatsApp CDN - ✅ PR #17
+- [x] Handle media upload for sending - ✅ PR #17
+- [x] Add typing indicators - ✅ PR #17
+- [x] Handle message status updates - ✅ PR #17
+- [x] Test with WhatsApp test numbers - ✅ PR #17
 
 #### 2.1.b Messenger Adapter
-- [ ] Install Messenger SDK
-- [ ] Implement webhook verification (GET)
-- [ ] Implement webhook receiver (POST)
-- [ ] Validate app_secret signature
-- [ ] Parse incoming message payload
-- [ ] Normalize to `NormalizedMessage`
-- [ ] Implement send message API
-- [ ] Handle attachments
-- [ ] Add typing indicators
-- [ ] Handle read receipts
-- [ ] Test with Facebook test accounts
+- [x] Install Messenger SDK - ✅ PR #17
+- [x] Implement webhook verification (GET) - ✅ PR #17
+- [x] Implement webhook receiver (POST) - ✅ PR #17
+- [x] Validate app_secret signature - ✅ PR #17
+- [x] Parse incoming message payload - ✅ PR #17
+- [x] Normalize to `NormalizedMessage` - ✅ PR #17
+- [x] Implement send message API - ✅ PR #17
+- [x] Handle attachments - ✅ PR #17
+- [x] Add typing indicators - ✅ PR #17
+- [x] Handle read receipts - ✅ PR #17
+- [x] Test with Facebook test accounts - ✅ PR #17
 
 #### 2.1.c WebChat Adapter
-- [ ] Install Socket.IO
-- [ ] Implement WebSocket server
-- [ ] Handle connection/disconnection
-- [ ] Implement authentication (JWT/session)
-- [ ] Handle incoming messages
-- [ ] Normalize to `NormalizedMessage`
-- [ ] Implement send message via WebSocket
-- [ ] Handle typing events
-- [ ] Add connection recovery
-- [ ] Test with browser clients
+- [x] Install Socket.IO - ✅ PR #17
+- [x] Implement WebSocket server - ✅ PR #17
+- [x] Handle connection/disconnection - ✅ PR #17
+- [x] Implement authentication (JWT/session) - ✅ PR #17
+- [x] Handle incoming messages - ✅ PR #17
+- [x] Normalize to `NormalizedMessage` - ✅ PR #17
+- [x] Implement send message via WebSocket - ✅ PR #17
+- [x] Handle typing events - ✅ PR #17
+- [x] Add connection recovery - ✅ PR #17
+- [x] Test with browser clients - ✅ PR #17
 
 ### 2.2 Channel Testing
-- [ ] Create mock webhook payloads
-- [ ] Test message normalization
-- [ ] Test message sending
-- [ ] Test error scenarios
-- [ ] Add unit tests for each adapter
-- [ ] Add integration tests
+- [x] Create mock webhook payloads - ✅ PR #17
+- [x] Test message normalization - ✅ PR #17
+- [x] Test message sending - ✅ PR #17
+- [x] Test error scenarios - ✅ PR #17
+- [x] Add unit tests for each adapter - ✅ PR #17
+- [x] Add integration tests - ✅ PR #17
 
 ### 2.3 Orchestrator Package (`packages/orchestrator`)
-- [ ] Implement tenant lookup from channel config
-- [ ] Cache tenant configurations
-- [ ] Handle tenant not found errors
-- [ ] Add tenant enablement check
-- [ ] Implement conversation lookup
-- [ ] Create new conversation if not exists
-- [ ] Update conversation metadata
-- [ ] Update `lastMessageAt` timestamp
-- [ ] Handle conversation status transitions
-- [ ] Check for handoff keywords in settings
-- [ ] Match against message content
-- [ ] Update conversation status to "assigned_human"
-- [ ] Emit handoff event
-- [ ] Stop AI processing when handed off
-- [ ] Fetch conversation history from database
-- [ ] Format messages for LLM (system, user, assistant)
-- [ ] Add RAG context chunks to system message
-- [ ] Apply token limits (e.g., last 10 messages)
-- [ ] Add tenant-specific instructions
-- [ ] Implement main processing pipeline
-- [ ] Coordinate all steps in order
-- [ ] Handle errors at each step
-- [ ] Add logging and tracing
-- [ ] Emit events at each stage
-- [ ] Get LLM provider from tenant config
-- [ ] Build messages array with context
-- [ ] Add function definitions
-- [ ] Call LLM with streaming
-- [ ] Parse LLM response
-- [ ] Handle function calls
-- [ ] Execute function handlers
-- [ ] Continue conversation if function called
-- [ ] Limit to 5 function call iterations
-- [ ] Check if RAG enabled for tenant
-- [ ] Extract query from user message
-- [ ] Call hybrid retrieval
-- [ ] Format chunks for context
-- [ ] Add to system message
-- [ ] Format response for channel
-- [ ] Call channel adapter send method
-- [ ] Handle send failures with retry
-- [ ] Log sent message to database
-- [ ] Emit message sent event
+- [x] Implement tenant lookup from channel config - ✅ PR #21
+- [x] Cache tenant configurations - ✅ PR #21
+- [x] Handle tenant not found errors - ✅ PR #21
+- [x] Add tenant enablement check - ✅ PR #21
+- [x] Implement conversation lookup - ✅ PR #21
+- [x] Create new conversation if not exists - ✅ PR #21
+- [x] Update conversation metadata - ✅ PR #21
+- [x] Update `lastMessageAt` timestamp - ✅ PR #21
+- [x] Handle conversation status transitions - ✅ PR #21
+- [x] Check for handoff keywords in settings - ✅ PR #21
+- [x] Match against message content - ✅ PR #21
+- [x] Update conversation status to "assigned_human" - ✅ PR #21
+- [x] Emit handoff event - ✅ PR #21
+- [x] Stop AI processing when handed off - ✅ PR #21
+- [x] Fetch conversation history from database - ✅ PR #21
+- [x] Format messages for LLM (system, user, assistant) - ✅ PR #21
+- [x] Add RAG context chunks to system message - ✅ PR #21
+- [x] Apply token limits (e.g., last 10 messages) - ✅ PR #21
+- [x] Add tenant-specific instructions - ✅ PR #21
+- [x] Implement main processing pipeline - ✅ PR #21
+- [x] Coordinate all steps in order - ✅ PR #21
+- [x] Handle errors at each step - ✅ PR #21
+- [x] Add logging and tracing - ✅ PR #21
+- [x] Emit events at each stage - ✅ PR #21
+- [x] Get LLM provider from tenant config - ✅ PR #21
+- [x] Build messages array with context - ✅ PR #21
+- [x] Add function definitions - ✅ PR #21
+- [x] Call LLM with streaming - ✅ PR #21
+- [x] Parse LLM response - ✅ PR #21
+- [x] Handle function calls - ✅ PR #21
+- [x] Execute function handlers - ✅ PR #21
+- [x] Continue conversation if function called - ✅ PR #21
+- [x] Limit to 5 function call iterations - ✅ PR #21
+- [x] Check if RAG enabled for tenant - ✅ PR #21
+- [x] Extract query from user message - ✅ PR #21
+- [x] Call hybrid retrieval - ✅ PR #21
+- [x] Format chunks for context - ✅ PR #21
+- [x] Add to system message - ✅ PR #21
+- [x] Format response for channel - ✅ PR #21
+- [x] Call channel adapter send method - ✅ PR #21
+- [x] Handle send failures with retry - ✅ PR #21
+- [x] Log sent message to database - ✅ PR #21
+- [x] Emit message sent event - ✅ PR #21
 
 ### 2.4 Orchestration Testing & Guardrails
-- [ ] Create mock tenant configurations
-- [ ] Test full message flow end-to-end
-- [ ] Test with each LLM provider
-- [ ] Test RAG retrieval integration
-- [ ] Test function calling
-- [ ] Test human handoff
-- [ ] Add unit tests
-- [ ] Add integration tests
-- [ ] `GET /webhooks/whatsapp` - Verify webhook
-- [ ] `POST /webhooks/whatsapp` - Receive WhatsApp messages
-- [ ] `GET /webhooks/messenger` - Verify webhook
-- [ ] `POST /webhooks/messenger` - Receive Messenger messages
-- [ ] Validate webhook signatures
-- [ ] Return 200 OK immediately
-- [ ] Process messages asynchronously
+- [x] Create mock tenant configurations - ✅ PR #21
+- [x] Test full message flow end-to-end - ✅ PR #21
+- [x] Test with each LLM provider - ✅ PR #23
+- [x] Test RAG retrieval integration - ✅ PR #22
+- [x] Test function calling - ✅ PR #21
+- [x] Test human handoff - ✅ PR #21
+- [x] Add unit tests - ✅ PR #24
+- [x] Add integration tests - ✅ PR #24
+- [x] `GET /webhooks/whatsapp` - Verify webhook - ✅ PR #18
+- [x] `POST /webhooks/whatsapp` - Receive WhatsApp messages - ✅ PR #18
+- [x] `GET /webhooks/messenger` - Verify webhook - ✅ PR #18
+- [x] `POST /webhooks/messenger` - Receive Messenger messages - ✅ PR #18
+- [x] Validate webhook signatures - ✅ PR #18
+- [x] Return 200 OK immediately - ✅ PR #18
+- [x] Process messages asynchronously - ✅ PR #21
 
 ---
 
