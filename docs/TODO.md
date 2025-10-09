@@ -127,6 +127,14 @@
 - [ ] Add provider health checks
 
 ### 1.2 RAG Package (`packages/rag`)
+- [x] Add Document model with checksum, storageProvider, and version fields - ✅ PR #10
+- [x] Implement storage provider interface - ✅ PR #10
+- [x] Create LocalStorageProvider with SHA-256 checksums - ✅ PR #10
+- [x] Build storage provider registry - ✅ PR #10
+- [x] Create document upload pipeline with integrity checks - ✅ PR #10
+- [x] Implement document integrity checker - ✅ PR #10
+- [x] Add remediation support for corrupted documents - ✅ PR #10
+- [x] Create metadata merge utilities - ✅ PR #10
 - [ ] Install `pdf-parse` for PDF files
 - [ ] Install `mammoth` for DOCX files
 - [ ] Implement PDF text extraction
@@ -186,7 +194,33 @@
 - [ ] Add unit tests
 - [ ] Add integration tests
 
-### 1.4 Security & Platform Guardrails
+### 1.3 Orchestrator Package (`packages/orchestrator`)
+- [x] Create QueueConsumer with RabbitMQ - ✅ PR #9
+- [x] Implement visibility timeout and retry logic - ✅ PR #9
+- [x] Add exponential backoff with jitter - ✅ PR #9
+- [x] Create MessageOrchestrator wrapper - ✅ PR #9
+- [x] Implement queue topology management (per-tenant/channel) - ✅ PR #9
+- [x] Add dead letter queue handling - ✅ PR #9
+- [x] Create webhook acknowledgement queue utilities - ✅ PR #9
+- [x] Add routing keys: {tenantId}.{channel}.{direction} - ✅ PR #9
+- [ ] Add tenant resolver logic
+- [ ] Add conversation manager
+- [ ] Implement message routing flow
+- [ ] Add LLM integration
+- [ ] Add context builder
+
+### 1.4 Admin Authentication (`apps/api`)
+- [x] Create AdminKey model with hashed secrets - ✅ PR #12
+- [x] Create AdminUser and AdminAuditLog models - ✅ PR #12
+- [x] Implement admin key generation with scrypt - ✅ PR #12
+- [x] Add admin key verification - ✅ PR #12
+- [x] Implement JWT token issuance - ✅ PR #12
+- [x] Add key rotation workflow - ✅ PR #12
+- [x] Add key revocation support - ✅ PR #12
+- [x] Implement audit logging for admin actions - ✅ PR #12
+- [x] Export AdminAuthService from API package - ✅ PR #12
+
+### 1.5 Security & Platform Guardrails
 - [x] Initialize Express.js app in `apps/api`
 - [x] Install dependencies (express, socket.io, etc.)
 - [x] Set up TypeScript configuration
@@ -198,6 +232,7 @@
 - [ ] Add body parsing (JSON, multipart)
 - [x] Implement API key authentication (global + tenant) - ✅ PR #13
 - [x] Add API key hashing in database - ✅ PR #13 (scrypt with salt/pepper, rotation workflow)
+- [x] Add admin authentication system - ✅ PR #12
 - [ ] Add rate limiting (Redis-backed)
 - [ ] Create async error handler wrapper
 - [ ] Add request ID generation
