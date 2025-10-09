@@ -42,7 +42,7 @@ prisma/migrations/
 
 # Uploads
 uploads/
-storage/
+/storage/
 
 # Turbo
 .turbo/
@@ -50,3 +50,4 @@ storage/
 # Temporary files
 tmp/
 temp/
+*.tsbuildinfo
