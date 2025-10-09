@@ -31,7 +31,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
     return this.executeWithPolicies(() => this.doComplete(params));
   }
 
-  public async *streamComplete(_params: CompletionParams): AsyncIterable<CompletionChunk> {
+  public streamComplete(_params: CompletionParams): AsyncIterable<CompletionChunk> {
     throw new Error('Streaming not implemented for this provider');
   }
 

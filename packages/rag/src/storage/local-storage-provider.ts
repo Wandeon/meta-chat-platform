@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-non-literal-fs-filename */
 import { createHash } from 'crypto';
 import { promises as fs, createWriteStream } from 'fs';
 import path from 'path';
