@@ -1,5 +1,5 @@
 import { EventEmitter2 } from 'eventemitter2';
-import { Event, EventType, Logger } from '@meta-chat/shared';
+import { Event, EventType, Logger, generateId } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
 
 const logger = new Logger('EventBus');
@@ -18,7 +18,7 @@ export class EventBus {
   async emit(event: Omit<Event, 'id'>): Promise<void> {
     const eventWithId: Event = {
       ...event,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateId(),
     };
 
     // Emit to internal listeners
