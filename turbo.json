@@ -11,8 +11,8 @@
       "persistent": true
     },
     "test": {
-      "dependsOn": ["build"],
-      "outputs": ["coverage/**"]
+      "cache": false,
+      "outputs": ["coverage/**", "reports/**"]
     },
     "lint": {
       "outputs": []
