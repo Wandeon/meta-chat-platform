@@ -1,0 +1,60 @@
+config:
+  target: "{{ $processEnvironment.API_BASE_URL || 'http://localhost:3000' }}"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: Warm up tenants
+    - duration: 120
+      arrivalRate: 15
+      rampTo: 30
+      name: Sustained load
+  defaults:
+    headers:
+      content-type: application/json
+  variables:
+    tenantId: "{{ $processEnvironment.PERF_TENANT_ID || 'tenant-load-test' }}"
+    adminKey: "{{ $processEnvironment.PERF_ADMIN_KEY || 'replace-with-admin-key' }}"
+  ensure:
+    p95: 500
+    p99: 750
+scenarios:
+  - name: Health check
+    flow:
+      - get:
+          url: /health
+  - name: Tenant key lifecycle
+    flow:
+      - function: setupTenantContext
+      - post:
+          url: "/api/security/tenants/{{ tenantId }}/api-keys"
+          headers:
+            x-admin-key: "{{ adminKey }}"
+          json:
+            label: "perf-{{ $randomString() }}"
+          capture:
+            - json: $.id
+              as: apiKeyId
+      - think: 2
+      - post:
+          url: "/api/security/tenants/{{ tenantId }}/api-keys/{{ apiKeyId }}/rotation"
+          headers:
+            x-admin-key: "{{ adminKey }}"
+          capture:
+            - json: $.rotationToken
+              as: rotationToken
+      - think: 1
+      - post:
+          url: "/api/security/tenants/{{ tenantId }}/api-keys/{{ apiKeyId }}/rotation/confirm"
+          headers:
+            x-admin-key: "{{ adminKey }}"
+          json:
+            token: "{{ rotationToken }}"
+
+functions:
+  setupTenantContext: |
+    function(userContext, events, done) {
+      if (!userContext.vars.tenantId) {
+        userContext.vars.tenantId = process.env.PERF_TENANT_ID || `tenant-${Date.now()}`;
+      }
+      done();
+    }

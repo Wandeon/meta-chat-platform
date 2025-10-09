@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "vitest --config vitest.config.ts --run --coverage"
   },
   "dependencies": {
     "pino": "^8.17.0"
