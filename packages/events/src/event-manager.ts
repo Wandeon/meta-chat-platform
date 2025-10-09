@@ -45,6 +45,7 @@ export class EventManager {
   }
 
   async close(): Promise<void> {
+    await this.eventBus.close();
     await this.rabbitmqEmitter.close();
     logger.info('Event manager closed');
   }

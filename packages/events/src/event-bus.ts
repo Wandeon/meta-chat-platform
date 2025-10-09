@@ -1,11 +1,13 @@
 import { EventEmitter2 } from 'eventemitter2';
 import { Event, EventType, Logger } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
+import { EventPersistenceWorker } from './persistence-worker';
 
 const logger = new Logger('EventBus');
 
 export class EventBus {
   private emitter: EventEmitter2;
+  private persistenceWorker: EventPersistenceWorker;
 
   constructor() {
     this.emitter = new EventEmitter2({
@@ -13,6 +15,7 @@ export class EventBus {
       delimiter: '.',
       maxListeners: 100,
     });
+    this.persistenceWorker = new EventPersistenceWorker();
   }
 
   async emit(event: Omit<Event, 'id'>): Promise<void> {
@@ -25,21 +28,8 @@ export class EventBus {
     this.emitter.emit(event.type, eventWithId);
     logger.debug(`Emitted event: ${event.type}`, { tenantId: event.tenantId });
 
-    // Persist to database
-    try {
-      const prisma = getPrismaClient();
-      await prisma.event.create({
-        data: {
-          id: eventWithId.id,
-          tenantId: event.tenantId,
-          type: event.type,
-          data: event.data,
-          timestamp: event.timestamp,
-        },
-      });
-    } catch (error) {
-      logger.error('Failed to persist event', error);
-    }
+    // Queue for asynchronous persistence
+    this.persistenceWorker.enqueue(eventWithId);
   }
 
   on(eventType: EventType | string, handler: (event: Event) => void | Promise<void>): void {
@@ -68,6 +58,10 @@ export class EventBus {
     });
 
     return events as Event[];
+  }
+
+  async close(): Promise<void> {
+    await this.persistenceWorker.stop();
   }
 }
 
