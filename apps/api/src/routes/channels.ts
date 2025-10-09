@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateTenant } from '../middleware/auth';
+import { authenticateAdmin } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -18,13 +18,15 @@ const createChannelSchema = z.object({
 
 const updateChannelSchema = createChannelSchema.partial();
 
-router.use(authenticateTenant);
+router.use(authenticateAdmin);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    const { tenantId } = req.query;
+
     const channels = await prisma.channel.findMany({
-      where: { tenantId: req.tenant!.id },
+      where: tenantId ? { tenantId: String(tenantId) } : undefined,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -35,11 +37,11 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createChannelSchema, req.body);
+    const payload = parseWithSchema(createChannelSchema.extend({ tenantId: z.string() }), req.body);
 
     const channel = await prisma.channel.create({
       data: {
-        tenantId: req.tenant!.id,
+        tenantId: payload.tenantId,
         type: payload.type,
         config: payload.config ?? {},
         enabled: payload.enabled ?? true,
@@ -50,17 +52,14 @@ router.post(
   }),
 );
 
-router.put(
+router.patch(
   '/:channelId',
   asyncHandler(async (req, res) => {
     const { channelId } = req.params;
     const payload = parseWithSchema(updateChannelSchema, req.body);
 
-    const existing = await prisma.channel.findFirst({
-      where: {
-        id: channelId,
-        tenantId: req.tenant!.id,
-      },
+    const existing = await prisma.channel.findUnique({
+      where: { id: channelId },
     });
 
     if (!existing) {
@@ -85,11 +84,8 @@ router.delete(
   asyncHandler(async (req, res) => {
     const { channelId } = req.params;
 
-    const existing = await prisma.channel.findFirst({
-      where: {
-        id: channelId,
-        tenantId: req.tenant!.id,
-      },
+    const existing = await prisma.channel.findUnique({
+      where: { id: channelId },
     });
 
     if (!existing) {
