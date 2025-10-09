@@ -120,20 +120,24 @@ We've successfully delivered the foundation, AI core, and channel integration la
 - Enhanced per-tenant rate limiting (current is global only)
 
 ### Milestone 4: Deployment & Observability
-**Status:** 🔄 In Progress (60% complete)
+**Status:** 🔄 In Progress (95% complete)
 
 **Completed:**
 - ✅ Docker Compose stack
 - ✅ Health checks
-- ✅ Documentation
+- ✅ Production `.env.production.example` template with comprehensive documentation
+- ✅ Secrets generation script (generate-secrets.js)
+- ✅ Production Nginx configuration with SSL/TLS, rate limiting, WebSocket support
+- ✅ SSL certificate setup script (setup-ssl.sh) with Let's Encrypt Certbot automation
+- ✅ Database backup automation (backup-database.sh) with S3 support and retention policy
+- ✅ Deployment automation script (deploy.sh) with health checks and rollback support
+- ✅ Log rotation configuration for all services
+- ✅ Prometheus monitoring setup with alerting rules
+- ✅ Comprehensive production deployment guide (PRODUCTION-DEPLOYMENT.md)
 
 **Remaining Tasks:**
-- Production `.env` configuration
-- SSL certificate setup with Certbot
-- Nginx reverse proxy deployment
-- Database backups automation
-- Monitoring with Netdata/Prometheus
-- Log rotation
+- Initial production deployment to chat.genai.hr server
+- Monitoring dashboard setup (Grafana integration - optional)
 
 ---
 
@@ -206,7 +210,7 @@ We've successfully delivered the foundation, AI core, and channel integration la
 | **M1: AI Core** | LLM/RAG/Orchestrator working | ✅ Done |
 | **M2: Channels** | 3 adapters + message flow | ✅ Done |
 | **M3: REST API** | Full CRUD + dashboard | 🔄 95% |
-| **M4: Deployment** | Production-ready stack | 🔄 60% |
+| **M4: Deployment** | Production-ready stack | 🔄 95% |
 | **M5: Hardening** | Load tested + secure | ⏳ 0% |
 
 ---
