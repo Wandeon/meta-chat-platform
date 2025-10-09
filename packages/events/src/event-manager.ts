@@ -1,31 +1,21 @@
 import { Event, EventType, createLogger } from '@meta-chat/shared';
 import { getEventBus } from './event-bus';
 import { getWebhookEmitter } from './webhook-emitter';
-import { getRabbitMQEmitter } from './rabbitmq-emitter';
 
 const logger = createLogger('EventManager');
 
 export class EventManager {
   private eventBus = getEventBus();
   private webhookEmitter = getWebhookEmitter();
-  private rabbitmqEmitter = getRabbitMQEmitter();
 
   async init(): Promise<void> {
-    await this.rabbitmqEmitter.init();
-
-    // Subscribe to all events on the bus and forward to external emitters
-    this.eventBus.on('*', async (event: Event) => {
-      await Promise.allSettled([
-        this.webhookEmitter.emit(event),
-        this.rabbitmqEmitter.emit(event),
-      ]);
-    });
-
+    await this.eventBus.init();
     logger.info('Event manager initialized');
   }
 
   async emit(event: Omit<Event, 'id'>): Promise<void> {
-    await this.eventBus.emit(event);
+    const emittedEvent = await this.eventBus.emit(event);
+    await this.webhookEmitter.emit(emittedEvent);
   }
 
   on(eventType: EventType | string, handler: (event: Event) => void | Promise<void>): void {
@@ -45,7 +35,7 @@ export class EventManager {
   }
 
   async close(): Promise<void> {
-    await this.rabbitmqEmitter.close();
+    await this.eventBus.close();
     logger.info('Event manager closed');
   }
 }
