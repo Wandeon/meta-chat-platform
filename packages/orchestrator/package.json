@@ -11,6 +11,9 @@
   "dependencies": {
     "@meta-chat/shared": "*",
     "@meta-chat/events": "*",
+    "@meta-chat/database": "*",
+    "@meta-chat/llm": "*",
+    "@meta-chat/rag": "*",
     "amqplib": "^0.10.4"
   },
   "devDependencies": {

@@ -26,7 +26,7 @@ const baseLogger = pino({
   messageKey: 'message',
   timestamp: pino.stdTimeFunctions.isoTime,
   formatters: {
-    level(label) {
+    level(label: string) {
       return { level: label.toUpperCase() };
     },
   },
