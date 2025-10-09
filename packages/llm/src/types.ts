@@ -1,9 +1,37 @@
+import type { RequestInit, Response } from 'node-fetch';
+import type { CostTracker } from './utils/cost-tracker';
+
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
+
+export interface FunctionDefinition {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+}
+
+export interface FunctionCall {
+  name: string;
+  arguments: string;
+}
+
+export interface ToolDefinition {
+  type: 'function';
+  function: FunctionDefinition;
+}
+
+export interface ToolCall {
+  id?: string;
+  type: string;
+  function: FunctionCall;
+}
 
 export interface CompletionMessage {
   role: Role;
   content: string;
   name?: string;
+  toolCallId?: string;
+  functionCall?: FunctionCall;
+  toolCalls?: ToolCall[];
 }
 
 export interface CompletionParams {
@@ -11,7 +39,10 @@ export interface CompletionParams {
   temperature?: number;
   topP?: number;
   maxTokens?: number;
-  functions?: unknown[];
+  functions?: FunctionDefinition[];
+  functionCall?: 'auto' | 'none' | FunctionCall;
+  tools?: ToolDefinition[];
+  toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
   metadata?: Record<string, unknown>;
 }
 
@@ -27,6 +58,8 @@ export interface CompletionResponse {
   created: number;
   model: string;
   content: string;
+  functionCall?: FunctionCall;
+  toolCalls?: ToolCall[];
   usage?: {
     promptTokens: number;
     completionTokens: number;
@@ -55,6 +88,10 @@ export interface ProviderConfig {
   timeoutMs?: number;
   retry?: Partial<RetryOptions>;
   circuitBreaker?: Partial<CircuitBreakerOptions>;
+  httpClient?: FetchLike;
+  costTracker?: CostTracker;
+  pricing?: PricingConfig;
+  additionalHeaders?: Record<string, string>;
 }
 
 export interface RetryOptions {
@@ -76,4 +113,11 @@ export interface LLMProvider {
   streamComplete(params: CompletionParams): AsyncIterable<CompletionChunk>;
   embed(texts: string[]): Promise<number[][]>;
   getInfo(): ProviderInfo;
+}
+
+export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
+
+export interface PricingConfig {
+  promptTokenUsdPer1K?: number;
+  completionTokenUsdPer1K?: number;
 }
