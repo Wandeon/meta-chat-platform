@@ -22,6 +22,7 @@ import channelRouter from './routes/channels';
 import documentRouter from './routes/documents';
 import conversationRouter from './routes/conversations';
 import webhookRouter from './routes/webhooks';
+import chatRouter from './routes/chat';
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
 import { metricsRegistry, httpRequestDuration } from './metrics';
 import { TenantQueuePublisher } from './queues/task-publisher';
@@ -207,6 +208,7 @@ function registerRoutes(
   app.use('/api/documents', documentRouter);
   app.use('/api/conversations', conversationRouter);
   app.use('/api/webhooks', webhookRouter);
+  app.use('/api/chat', chatRouter);
   app.use('/api/integrations', createWebhookIntegrationsRouter(deps));
 
   app.use((req, _res, next) => {
