@@ -4,6 +4,7 @@ FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 ENV NODE_ENV=development
 COPY package.json package-lock.json turbo.json tsconfig.base.json ./
+COPY apps/dashboard/package.json apps/dashboard/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/database/package.json packages/database/package.json
 COPY packages/events/package.json packages/events/package.json
@@ -16,7 +17,6 @@ FROM deps AS build
 WORKDIR /app
 ENV NODE_ENV=development
 COPY . .
-RUN mkdir -p apps/dashboard
 RUN npx turbo run build --filter=@meta-chat/dashboard...
 
 FROM build AS prune
