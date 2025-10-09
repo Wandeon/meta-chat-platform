@@ -1,5 +1,4 @@
 "use strict";
-// Core types shared across all packages
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventType = void 0;
 // Event types

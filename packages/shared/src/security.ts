@@ -1,7 +1,25 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'crypto';
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual, ScryptOptions } from 'crypto';
 import { promisify } from 'util';
 
-const scrypt = promisify(scryptCallback);
+const scryptAsync = promisify(scryptCallback);
+
+// Wrapper to support scrypt with options parameter
+async function scrypt(
+  password: string,
+  salt: Buffer,
+  keylen: number,
+  options?: ScryptOptions
+): Promise<Buffer> {
+  if (options) {
+    return new Promise((resolve, reject) => {
+      scryptCallback(password, salt, keylen, options, (err, derivedKey) => {
+        if (err) reject(err);
+        else resolve(derivedKey);
+      });
+    });
+  }
+  return scryptAsync(password, salt, keylen) as Promise<Buffer>;
+}
 
 export interface HashSecretOptions {
   /**
@@ -58,11 +76,16 @@ export async function hashSecret(
   }
 
   const normalized = normalizeOptions(options);
-  const derived = (await scrypt(secret, Buffer.from(salt, 'hex'), normalized.keyLength, {
-    N: normalized.cost,
-    r: normalized.blockSize,
-    p: normalized.parallelization,
-  })) as Buffer;
+  const derived = await scrypt(
+    secret,
+    Buffer.from(salt, 'hex'),
+    normalized.keyLength,
+    {
+      N: normalized.cost,
+      r: normalized.blockSize,
+      p: normalized.parallelization,
+    }
+  );
 
   return {
     hash: toHex(derived),

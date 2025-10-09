@@ -1,7 +1,6 @@
 "use strict";
 // Utility functions
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Logger = void 0;
 exports.generateId = generateId;
 exports.sleep = sleep;
 exports.retry = retry;
@@ -10,8 +9,35 @@ exports.truncateText = truncateText;
 exports.parseJSON = parseJSON;
 exports.isObject = isObject;
 exports.deepMerge = deepMerge;
+function bytesToUuid(bytes) {
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
 function generateId() {
-    return `${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 9)}`;
+    const globalCrypto = typeof globalThis !== 'undefined'
+        ? (globalThis.crypto ||
+            // Node.js compatibility: global crypto may be exposed under webcrypto
+            ((typeof require !== 'undefined' &&
+                require('crypto').webcrypto) ||
+                undefined))
+        : undefined;
+    if (globalCrypto?.randomUUID) {
+        return globalCrypto.randomUUID();
+    }
+    if (globalCrypto?.getRandomValues) {
+        const bytes = new Uint8Array(16);
+        globalCrypto.getRandomValues(bytes);
+        // Per RFC 4122, set version to 4 and variant to RFC 4122
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        return bytesToUuid(bytes);
+    }
+    // Fallback for environments without crypto support
+    const random = () => Math.floor(Math.random() * 256);
+    const bytes = Array.from({ length: 16 }, random);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    return bytesToUuid(bytes);
 }
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -66,33 +92,4 @@ function deepMerge(target, source) {
     }
     return result;
 }
-class Logger {
-    context;
-    constructor(context) {
-        this.context = context;
-    }
-    format(level, message, meta) {
-        const timestamp = new Date().toISOString();
-        const metaStr = meta ? ` ${JSON.stringify(meta)}` : '';
-        return `[${timestamp}] [${level}] [${this.context}] ${message}${metaStr}`;
-    }
-    info(message, meta) {
-        console.log(this.format('INFO', message, meta));
-    }
-    warn(message, meta) {
-        console.warn(this.format('WARN', message, meta));
-    }
-    error(message, error) {
-        const meta = error instanceof Error
-            ? { message: error.message, stack: error.stack }
-            : error;
-        console.error(this.format('ERROR', message, meta));
-    }
-    debug(message, meta) {
-        if (process.env.LOG_LEVEL === 'debug') {
-            console.debug(this.format('DEBUG', message, meta));
-        }
-    }
-}
-exports.Logger = Logger;
 //# sourceMappingURL=utils.js.map
