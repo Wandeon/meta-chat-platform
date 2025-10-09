@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { ChannelType, MessageDirection, NormalizedMessage, createLogger } from '@meta-chat/shared';
+import { ChannelType, NormalizedMessage, createLogger } from '@meta-chat/shared';
 import { TenantQueuePublisher } from '../queues/task-publisher';
 import { WebhookAckStrategy } from '../webhooks/ack-strategy';
 import { randomUUID, createHmac, timingSafeEqual } from 'crypto';

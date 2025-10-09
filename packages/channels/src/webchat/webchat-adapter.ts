@@ -109,7 +109,7 @@ export class WebChatAdapter extends ChannelAdapter {
 
     this.io.on('connection', (socket) => {
       const conversationId = this.getConversationId(socket);
-      socket.join(conversationId);
+      void socket.join(conversationId);
 
       socket.on('message', async (payload: WebChatInboundPayload) => {
         const normalized = this.normalizeInbound(socket, payload);

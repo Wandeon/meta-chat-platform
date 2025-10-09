@@ -38,7 +38,7 @@ export class AnthropicProvider extends BaseLLMProvider {
         tools: params.tools?.map((tool) => ({
           name: tool.function.name,
           description: tool.function.description,
-          input_schema: tool.function.parameters ?? { type: 'object' },
+          input_schema: { type: 'object' as const, ...(tool.function.parameters ?? {}) },
         })),
         metadata: params.metadata,
       });
@@ -48,7 +48,7 @@ export class AnthropicProvider extends BaseLLMProvider {
 
       const completion: CompletionResponse = {
         id: response.id,
-        created: response.created_at ? Date.parse(response.created_at) : Date.now(),
+        created: (response as any).created_at ? Date.parse((response as any).created_at) : Date.now(),
         model: response.model ?? this.config.model,
         content,
         toolCalls: toolCalls.length ? toolCalls : undefined,
@@ -76,7 +76,7 @@ export class AnthropicProvider extends BaseLLMProvider {
         tools: params.tools?.map((tool) => ({
           name: tool.function.name,
           description: tool.function.description,
-          input_schema: tool.function.parameters ?? { type: 'object' },
+          input_schema: { type: 'object' as const, ...(tool.function.parameters ?? {}) },
         })),
         metadata: params.metadata,
       });
@@ -108,10 +108,10 @@ export class AnthropicProvider extends BaseLLMProvider {
 
   private partitionMessages(messages: CompletionMessage[]): {
     system: string[];
-    messages: Array<{ role: 'user' | 'assistant'; content: unknown[] }>;
+    messages: Array<{ role: 'user' | 'assistant'; content: any[] }>;
   } {
     const system: string[] = [];
-    const formatted: Array<{ role: 'user' | 'assistant'; content: unknown[] }> = [];
+    const formatted: Array<{ role: 'user' | 'assistant'; content: any[] }> = [];
 
     for (const message of messages) {
       if (message.role === 'system') {
@@ -133,7 +133,7 @@ export class AnthropicProvider extends BaseLLMProvider {
         continue;
       }
 
-      const contentBlocks: unknown[] = [
+      const contentBlocks: any[] = [
         { type: 'text', text: message.content },
       ];
 
@@ -220,7 +220,8 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   private buildStreamIterator(stream: AsyncIterable<any>): AsyncIterable<CompletionChunk> {
-    const self = this;
+    const mapToolCall = this.mapToolCall.bind(this);
+    const mapUsage = this.mapUsage.bind(this);
     let lastId: string | undefined;
     let lastCreated = Date.now();
 
@@ -240,14 +241,14 @@ export class AnthropicProvider extends BaseLLMProvider {
         }
 
         if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
-          const toolCall = self.mapToolCall(event.content_block);
+          const toolCall = mapToolCall(event.content_block);
           if (toolCall) {
             chunk.delta.toolCalls = [toolCall];
           }
         }
 
         if (event.type === 'message_delta' && event.usage) {
-          const usage = self.mapUsage(event.usage);
+          const usage = mapUsage(event.usage);
           if (usage) {
             chunk.delta.usage = usage;
           }
