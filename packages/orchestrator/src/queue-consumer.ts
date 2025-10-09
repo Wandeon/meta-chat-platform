@@ -1,8 +1,8 @@
-import amqp, { Channel, Connection, ConsumeMessage, Options } from 'amqplib';
-import { Logger, ChannelType } from '@meta-chat/shared';
+import amqp, { Channel, ChannelModel, ConsumeMessage, Options } from 'amqplib';
+import { createLogger, ChannelType } from '@meta-chat/shared';
 import { DEAD_LETTER_EXCHANGE, ensureChannelTopology, getDeadLetterRoutingKey } from '@meta-chat/events';
 
-const logger = new Logger('QueueConsumer');
+const logger = createLogger('QueueConsumer');
 
 export interface QueueConsumerOptions<T> {
   tenantId: string;
@@ -23,7 +23,7 @@ export interface MessageContext {
 }
 
 export class QueueConsumer<T = Record<string, unknown>> {
-  private connection: Connection | null = null;
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
   private queueName: string | null = null;
   private isConsuming = false;

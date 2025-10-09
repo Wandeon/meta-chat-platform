@@ -2,7 +2,6 @@
   "name": "meta-chat-platform",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "npm@10.0.0",
   "description": "Multi-tenant WhatsApp, Messenger, and Web Chat platform with RAG-powered AI assistants",
   "author": "Your Team",
   "license": "MIT",

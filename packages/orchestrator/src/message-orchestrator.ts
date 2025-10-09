@@ -1,4 +1,4 @@
-import { NormalizedMessage, Logger } from '@meta-chat/shared';
+import { NormalizedMessage, createLogger } from '@meta-chat/shared';
 import { QueueConsumer, QueueConsumerOptions } from './queue-consumer';
 
 export interface MessageOrchestratorOptions
@@ -6,7 +6,7 @@ export interface MessageOrchestratorOptions
   handler: (message: NormalizedMessage) => Promise<void>;
 }
 
-const orchestratorLogger = new Logger('MessageOrchestrator');
+const orchestratorLogger = createLogger('MessageOrchestrator');
 
 export class MessageOrchestrator {
   private consumer: QueueConsumer<NormalizedMessage>;
