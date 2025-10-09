@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+**/dist
+.git
+Dockerfile
+npm-debug.log
+.yarn
+.pnp.*
+.env*
+!.env.example

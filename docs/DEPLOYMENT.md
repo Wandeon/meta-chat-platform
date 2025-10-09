@@ -86,8 +86,11 @@
 
 ```
 /home/deploy/meta-chat-platform/
-├── docker-compose.yml          # All services
-├── .env                        # Environment variables
+├── docker/
+│   ├── docker-compose.yml      # Core services + ops helpers
+│   ├── api.Dockerfile          # Production API image
+│   └── dashboard.Dockerfile    # Dashboard/placeholder image
+├── .env                        # Environment overrides (optional)
 ├── storage/                    # Uploaded documents
 ├── postgres-data/              # PostgreSQL volume
 ├── redis-data/                 # Redis volume
@@ -106,6 +109,29 @@ Docker Network: meta-chat-network (bridge)
 ├── api (exposed to 127.0.0.1:3000)
 └── dashboard (exposed to 127.0.0.1:3001)
 ```
+
+### Secrets Management
+
+- **Environment templates**: Production defaults live in `apps/api/.env.production` and `apps/dashboard/.env.production`. Copy these to `/home/deploy/meta-chat-platform/secrets/` (or your password manager vault), set ownership to the deploy user, and restrict permissions (`chmod 600`).
+- **Runtime overrides**: Place non-secret overrides in `.env` beside `docker/docker-compose.yml`. Sensitive values (API keys, JWT secrets) must never be committed—inject them at deploy time via `docker compose --env-file` or environment-specific secret stores (1Password Connect, Doppler, AWS Secrets Manager, etc.).
+- **Rotation**: Store the generated admin API keys from `ops/seed-admin.cjs` in an encrypted vault. The script can be re-run with the same `--label` to rotate credentials without creating duplicates.
+- **Audit**: Track who loads the `.env.production` files and ensure secrets changes are reflected in your change-management tool (e.g., create a ticket whenever JWT secrets rotate).
+
+### Network Bindings
+
+- `postgres`: bound to `127.0.0.1:5432` for local access only. Use SSH tunnels or Tailscale for remote administration.
+- `redis`: bound to `127.0.0.1:6379` with append-only persistence enabled. Protect with host-level firewall rules.
+- `rabbitmq`: AMQP on `127.0.0.1:5672`, management UI on `127.0.0.1:15672`. Restrict inbound firewall access and change the default credentials in your `.env.production` file.
+- `api`: exported on `127.0.0.1:3000`; Nginx terminates TLS and proxies public requests to this port.
+- `dashboard`: exported on `127.0.0.1:3001`; behind Nginx basic auth until SSO is implemented.
+
+### Startup Order & Automation
+
+1. `ops/bootstrap-stack.sh` orchestrates the full bring-up: builds images, starts data services, runs migrations, and launches API/dashboard containers. Pass `--seed-admin-email` to automate admin provisioning.
+2. `ops/run-migrations.sh` can be invoked after schema changes or during CI/CD to ensure the database schema matches the Prisma migrations (`docker compose --profile ops run --rm migrator`).
+3. Admin seeding runs through `ops/seed-admin.cjs` (also exposed via the `seed-admin` compose service). Re-running with the same label rotates the API key without leaving stale credentials.
+
+**Manual fallback:** If the bootstrap script fails, start the services incrementally using `docker compose -f docker/docker-compose.yml up -d postgres redis rabbitmq`, run migrations, then `up -d api dashboard`.
 
 ### High-Availability Topology
 
@@ -181,6 +207,17 @@ Docker Network: meta-chat-network (bridge)
 - [ ] **5.7** Verify webhook endpoints are accessible
 - [ ] **5.8** Run `scripts/backup/verify_backups.sh` and archive the log
 - [ ] **5.9** Execute `scripts/backup/rollback.sh --dry-run` to rehearse restoration
+
+### Local Validation & Troubleshooting
+
+1. **Validate Compose syntax**: `python -c "import yaml, pathlib; yaml.safe_load(pathlib.Path('docker/docker-compose.yml').read_text())"` (runs without needing a Docker daemon).
+2. **Dry-run build**: `docker compose -f docker/docker-compose.yml build --no-cache --pull` to surface missing dependencies before the maintenance window.
+3. **Health checks**: Use `docker inspect --format '{{json .State.Health}}' meta-chat-api | jq` to confirm readiness gates before promoting traffic.
+4. **Common issues**:
+   - *`database is locked` errors*: ensure Prisma migrations finish before API boot (`ops/run-migrations.sh`).
+   - *Permission denied on storage path*: fix host permissions with `sudo chown -R deploy:deploy storage && chmod 750 storage`.
+   - *RabbitMQ refusing connections*: verify credentials match the overridden `.env.production` values and reset using `docker compose restart rabbitmq`.
+5. **Rollback plan**: stop services via `docker compose down` and follow `scripts/backup/rollback.sh --dry-run` to rehearse restoration before the go-live milestone.
 
 ### Phase 6: Migration Path to High Availability
 
@@ -393,35 +430,45 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: docker/api.Dockerfile
+      target: runtime
     container_name: meta-chat-api
     restart: unless-stopped
-    env_file: .env
+    env_file:
+      - apps/api/.env.production
     environment:
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/metachat
-      REDIS_URL: redis://redis:6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASS}@rabbitmq:5672
+      DATABASE_URL: ${DATABASE_URL:-postgresql://metachat:metachat@postgres:5432/metachat?schema=public}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://rabbitmq:5672}
+      STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
     volumes:
-      - ./storage:/app/storage
+      - storage:/app/storage
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - meta-chat-network
 
   dashboard:
     build:
       context: .
-      dockerfile: apps/dashboard/Dockerfile
+      dockerfile: docker/dashboard.Dockerfile
+      target: runtime
     container_name: meta-chat-dashboard
     restart: unless-stopped
-    environment:
-      API_URL: https://chat.genai.hr
+    env_file:
+      - apps/dashboard/.env.production
     ports:
-      - "127.0.0.1:3001:80"
+      - "127.0.0.1:3001:4173"
+    depends_on:
+      api:
+        condition: service_started
     networks:
       - meta-chat-network
 
@@ -433,7 +480,10 @@ volumes:
   postgres-data:
   redis-data:
   rabbitmq-data:
+  storage:
 ```
+
+> **Note:** `docker/dashboard-entrypoint.cjs` serves a lightweight placeholder response (including `/health`) until the real dashboard workspace ships its own `start` script. Replace this fallback when the UI is production-ready.
 
 ### Nginx Config (chat.genai.hr)
 
