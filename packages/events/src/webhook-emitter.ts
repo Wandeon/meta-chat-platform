@@ -2,6 +2,12 @@ import axios, { AxiosInstance } from 'axios';
 import { Event, EventType, WebhookPayload, Logger, retry } from '@meta-chat/shared';
 import { getPrismaClient } from '@meta-chat/database';
 
+type TenantWebhookRecord = {
+  url: string;
+  headers: Record<string, string> | null;
+  tenant: { id: string; name: string };
+};
+
 const logger = new Logger('WebhookEmitter');
 
 export class WebhookEmitter {
@@ -45,16 +51,19 @@ export class WebhookEmitter {
     }
 
     // Emit to all webhooks in parallel
-    const promises = webhooks.map(webhook =>
-      this.sendWebhook(webhook, event).catch(error => {
-        logger.error(`Webhook delivery failed: ${webhook.url}`, error);
+    const promises = webhooks.map((webhookRecord: TenantWebhookRecord) =>
+      this.sendWebhook(webhookRecord, event).catch(error => {
+        logger.error(`Webhook delivery failed: ${webhookRecord.url}`, error);
       })
     );
 
     await Promise.allSettled(promises);
   }
 
-  private async sendWebhook(webhook: any, event: Event): Promise<void> {
+  private async sendWebhook(
+    webhook: TenantWebhookRecord,
+    event: Event
+  ): Promise<void> {
     const payload: WebhookPayload = {
       event: event.type as EventType,
       tenant: {
