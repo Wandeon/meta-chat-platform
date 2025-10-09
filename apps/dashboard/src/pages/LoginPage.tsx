@@ -3,29 +3,33 @@ import { useAuth } from '../routes/AuthProvider';
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [token, setToken] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!token.trim()) {
-      setError('Enter a valid admin JWT');
+    if (!apiKey.trim()) {
+      setError('Enter a valid admin API key');
+      return;
+    }
+    if (!apiKey.startsWith('adm_')) {
+      setError('Admin API keys must start with "adm_"');
       return;
     }
     try {
-      login(token.trim());
+      login(apiKey.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to login');
     }
   };
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc' }}>
       <form
         onSubmit={handleSubmit}
         style={{
           width: '100%',
-          maxWidth: 360,
+          maxWidth: 400,
           background: '#fff',
           padding: '32px',
           borderRadius: '16px',
@@ -35,28 +39,60 @@ export function LoginPage() {
         }}
       >
         <div>
-          <h1 style={{ marginBottom: 8 }}>Meta Chat Admin</h1>
-          <p style={{ margin: 0, color: '#475569' }}>Enter the admin JWT issued by the platform.</p>
+          <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Meta Chat Admin</h1>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+            Enter your admin API key to access the dashboard.
+          </p>
         </div>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span>Admin JWT</span>
-          <textarea
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-            placeholder="eyJhbGciOiJI..."
-            rows={5}
+        <label style={{ display: 'grid', gap: 8 }}>
+          <span style={{ fontWeight: 500, fontSize: '14px' }}>Admin API Key</span>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(event) => setApiKey(event.target.value)}
+            placeholder="adm_..."
+            autoComplete="off"
             style={{
               font: 'inherit',
-              borderRadius: 12,
-              border: '1px solid rgba(148, 163, 184, 0.6)',
-              padding: '12px',
+              fontSize: '14px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              padding: '10px 12px',
+              outline: 'none',
+              transition: 'border-color 0.2s',
             }}
+            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
+            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
           />
         </label>
-        {error && <span style={{ color: '#b91c1c' }}>{error}</span>}
-        <button className="primary-button" type="submit">
+        {error && (
+          <div
+            style={{
+              color: '#dc2626',
+              background: '#fee2e2',
+              padding: '10px 12px',
+              borderRadius: 8,
+              fontSize: '14px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+        <button
+          className="primary-button"
+          type="submit"
+          style={{
+            marginTop: '8px',
+            padding: '12px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
           Sign in
         </button>
+        <p style={{ margin: 0, marginTop: '8px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
+          Admin API keys can be generated via the REST API or database.
+        </p>
       </form>
     </div>
   );
