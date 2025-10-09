@@ -1,6 +1,6 @@
 import createHttpError from 'http-errors';
 import type { NextFunction, Request, Response } from 'express';
-import { deriveApiKeyMetadata, verifySecret } from '@meta-chat/shared';
+import { addToRequestContext, deriveApiKeyMetadata, verifySecret } from '@meta-chat/shared';
 import { prisma } from '../prisma';
 
 const AUTH_HEADER = 'x-api-key';
@@ -128,6 +128,8 @@ export async function authenticateTenant(
     apiKeyId: resolved.apiKeyId,
   };
 
+  addToRequestContext({ tenantId: resolved.tenantId });
+
   return next();
 }
 
@@ -150,6 +152,8 @@ export async function authenticateAdmin(
     id: resolved.adminId,
     role: resolved.role,
   };
+
+  addToRequestContext({ adminId: resolved.adminId });
 
   return next();
 }
