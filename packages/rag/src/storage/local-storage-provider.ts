@@ -2,12 +2,12 @@ import { createHash } from 'crypto';
 import { promises as fs, createWriteStream } from 'fs';
 import path from 'path';
 import { pipeline } from 'stream/promises';
-import { createLogger } from '@meta-chat/shared';
+import { getSharedModule } from '../internal/dependencies';
 import { SaveOptions, SaveResult, StorageProvider } from './storage-provider';
 
 export class LocalStorageProvider implements StorageProvider {
   public readonly name = 'local';
-  private readonly logger = createLogger('LocalStorageProvider');
+  private readonly logger = getSharedModule().createLogger('LocalStorageProvider');
 
   constructor(private readonly rootPath: string = process.env.STORAGE_PATH || path.join(process.cwd(), 'storage')) {}
 
