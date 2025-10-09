@@ -32,6 +32,9 @@
 - [x] Create constants (limits, error codes)
 - [x] Implement utilities (retry, logger, ID generation)
 - [x] Export all shared functionality
+- [x] Add structured logging with Pino - ✅ PR #8
+- [x] Add security utilities (API key generation, hashing) - ✅ PR #13
+- [x] Add secret encryption/decryption with AES-256-GCM - ✅ PR #16
 
 ### 0.3 Database Package (`packages/database`)
 - [x] Design Prisma schema (multi-tenant)
@@ -43,6 +46,12 @@
 - [x] Implement keyword search functions
 - [x] Create Prisma client singleton
 - [x] Add TypeScript types generation
+- [x] Add monthly partitions for messages and api_logs - ✅ PR #11
+- [x] Implement data retention and archival jobs - ✅ PR #11
+- [x] Add IVFFlat index for vector similarity search - ✅ PR #14
+- [x] Implement tenant isolation with Row Level Security - ✅ PR #15
+- [x] Add TenantApiKey and AdminApiKey models - ✅ PR #13
+- [x] Add TenantSecret and ChannelSecret models - ✅ PR #16
 
 ### 0.4 Events Package (`packages/events`)
 - [x] Set up EventEmitter2 for internal events
@@ -178,21 +187,21 @@
 - [ ] Add integration tests
 
 ### 1.4 Security & Platform Guardrails
-- [ ] Initialize Express.js app in `apps/api`
-- [ ] Install dependencies (express, socket.io, etc.)
-- [ ] Set up TypeScript configuration
-- [ ] Create server entry point
+- [x] Initialize Express.js app in `apps/api`
+- [x] Install dependencies (express, socket.io, etc.)
+- [x] Set up TypeScript configuration
+- [x] Create server entry point
 - [ ] Add environment variable loading
 - [ ] Set up graceful shutdown
 - [ ] Implement request logging
 - [ ] Add CORS configuration
 - [ ] Add body parsing (JSON, multipart)
-- [ ] Implement API key authentication (global + tenant)
-- [ ] Add API key hashing in database
+- [x] Implement API key authentication (global + tenant) - ✅ PR #13
+- [x] Add API key hashing in database - ✅ PR #13 (scrypt with salt/pepper, rotation workflow)
 - [ ] Add rate limiting (Redis-backed)
 - [ ] Create async error handler wrapper
 - [ ] Add request ID generation
-- [ ] Encrypt sensitive channel configs
+- [x] Encrypt sensitive channel configs - ✅ PR #16 (AES-256-GCM encryption)
 - [ ] Copy `.env.example` to `.env`
 - [ ] Generate database password
 - [ ] Generate Redis password (optional)
