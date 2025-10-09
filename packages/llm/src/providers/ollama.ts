@@ -147,7 +147,8 @@ export class OllamaProvider extends BaseLLMProvider {
   }
 
   private buildStreamIterator(body: AsyncIterable<Uint8Array>): AsyncIterable<CompletionChunk> {
-    const self = this;
+    const safeJson = this.safeJson.bind(this);
+    const mapStreamPayload = this.mapStreamPayload.bind(this);
     const decoder = new TextDecoder();
 
     async function* iterator(): AsyncGenerator<CompletionChunk> {
@@ -160,9 +161,9 @@ export class OllamaProvider extends BaseLLMProvider {
           const line = buffer.slice(0, newlineIndex).trim();
           buffer = buffer.slice(newlineIndex + 1);
           if (line) {
-            const payload = self.safeJson(line);
+            const payload = safeJson(line);
             if (payload) {
-              const completionChunk = self.mapStreamPayload(payload);
+              const completionChunk = mapStreamPayload(payload);
               if (completionChunk) {
                 yield completionChunk;
               }
@@ -175,9 +176,9 @@ export class OllamaProvider extends BaseLLMProvider {
 
       const remaining = buffer.trim();
       if (remaining) {
-        const payload = self.safeJson(remaining);
+        const payload = safeJson(remaining);
         if (payload) {
-          const chunk = self.mapStreamPayload(payload);
+          const chunk = mapStreamPayload(payload);
           if (chunk) {
             yield chunk;
           }

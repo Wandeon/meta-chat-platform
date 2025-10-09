@@ -220,7 +220,8 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   private buildStreamIterator(stream: AsyncIterable<any>): AsyncIterable<CompletionChunk> {
-    const self = this;
+    const mapToolCall = this.mapToolCall.bind(this);
+    const mapUsage = this.mapUsage.bind(this);
     let lastId: string | undefined;
     let lastCreated = Date.now();
 
@@ -240,14 +241,14 @@ export class AnthropicProvider extends BaseLLMProvider {
         }
 
         if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
-          const toolCall = self.mapToolCall(event.content_block);
+          const toolCall = mapToolCall(event.content_block);
           if (toolCall) {
             chunk.delta.toolCalls = [toolCall];
           }
         }
 
         if (event.type === 'message_delta' && event.usage) {
-          const usage = self.mapUsage(event.usage);
+          const usage = mapUsage(event.usage);
           if (usage) {
             chunk.delta.usage = usage;
           }

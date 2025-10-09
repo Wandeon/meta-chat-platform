@@ -194,7 +194,7 @@ export class MessagePipeline {
     }
 
     const provider = this.providerFactory(config.llm.config);
-    const functionSchemas = functions.map(({ handler, ...schema }) => schema);
+    const functionSchemas = functions.map(({ handler: _handler, ...schema }) => schema);
 
     const systemPrompt = this.buildSystemPrompt(config, ragResults);
     const messages: CompletionMessage[] = [

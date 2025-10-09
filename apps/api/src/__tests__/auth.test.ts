@@ -19,12 +19,12 @@ vi.mock('../prisma', () => ({
   },
 }));
 
-let prisma: typeof import('../prisma').prisma;
+let _prisma: typeof import('../prisma').prisma;
 let authenticateTenant: typeof import('../middleware/auth').authenticateTenant;
 let authenticateAdmin: typeof import('../middleware/auth').authenticateAdmin;
 
 beforeAll(async () => {
-  ({ prisma } = await import('../prisma'));
+  ({ prisma: _prisma } = await import('../prisma'));
   ({ authenticateAdmin, authenticateTenant } = await import('../middleware/auth'));
 });
 

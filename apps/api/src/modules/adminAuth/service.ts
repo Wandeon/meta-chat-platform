@@ -187,7 +187,8 @@ export class AdminAuthService {
       throw new Error('Admin key has expired');
     }
 
-    if (!secret || !verifyAdminKeySecret(secret, adminKey.hashedSecret)) {
+    const isSecretValid = secret ? verifyAdminKeySecret(secret, adminKey.hashedSecret) : false;
+    if (!isSecretValid) {
       await recordAdminAuditLog({
         adminKeyId: adminKey.id,
         actorId: adminKey.id,

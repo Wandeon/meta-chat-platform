@@ -222,7 +222,7 @@ class MockPrismaClient {
 }
 
 function parseVector(literal: string): number[] {
-  const trimmed = literal.replace(/[\[\]]/g, '').trim();
+  const trimmed = literal.replace(/[[\]]/g, '').trim();
   if (!trimmed) {
     return [];
   }
@@ -310,7 +310,7 @@ beforeEach(() => {
   pipeline = new DocumentUploadPipeline(prisma as any, storageRegistry, loaderRegistry, embeddingsService);
 });
 
-test('document upload pipeline indexes and chunks text documents', async () => {
+void test('document upload pipeline indexes and chunks text documents', async () => {
   const buffer = Buffer.from(
     'Paragraph one introduces the topic.\n\nParagraph two expands the idea with additional detail.\n\nParagraph three concludes.'
   );
@@ -339,7 +339,7 @@ test('document upload pipeline indexes and chunks text documents', async () => {
   assert.ok(firstChunk.metadata.tokens > 0);
 });
 
-test('retrieveKnowledgeBase performs hybrid retrieval', async () => {
+void test('retrieveKnowledgeBase performs hybrid retrieval', async () => {
   const buffer = Buffer.from(
     'Alpha section covers introductions.\n\nBeta section dives deep into hybrid retrieval strategies.\n\nGamma section mentions Alpha again for reinforcement.'
   );
@@ -373,7 +373,7 @@ test('retrieveKnowledgeBase performs hybrid retrieval', async () => {
   assert.ok(results.some((result) => result.type === 'hybrid' || result.type === 'vector'));
 });
 
-test('search_knowledge_base function serializes retrieval results', async () => {
+void test('search_knowledge_base function serializes retrieval results', async () => {
   const buffer = Buffer.from('Delta section explains serialization.\n\nEpsilon section references Delta for completeness.');
   await pipeline.upload({
     tenantId: TENANT_ID,
