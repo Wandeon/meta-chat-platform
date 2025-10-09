@@ -47,9 +47,10 @@ meta-chat-platform/
 │   ├── shared/           # ✅ COMPLETE - Types, constants, utilities
 │   ├── database/         # ✅ COMPLETE - Prisma schema, vector search, client
 │   ├── events/           # ✅ COMPLETE - Brokered event bus, webhook emitter, RabbitMQ
-│   ├── rag/              # 📦 TODO - Document processing, embeddings, retrieval
-│   ├── channels/         # 📦 TODO - WhatsApp, Messenger, WebChat adapters
-│   └── orchestrator/     # 📦 TODO - Message routing, LLM integration
+│   ├── orchestrator/     # ✅ COMPLETE - Queue consumers, message routing
+│   ├── rag/              # ✅ COMPLETE - Document integrity, storage providers, upload pipeline
+│   ├── llm/              # 🔄 IN PROGRESS - LLM provider interfaces (scaffold only)
+│   └── channels/         # 📦 TODO - WhatsApp, Messenger, WebChat adapters
 ├── docs/                 # 📦 TODO - Architecture, API reference, deployment
 └── docker/               # 📦 TODO - Docker Compose setup
 ```
@@ -98,18 +99,39 @@ meta-chat-platform/
   - Routing keys: `{tenantId}.{eventType}`
 - **Event Manager**: Unified interface coordinating broker publishing, local cache, and webhooks
 
-### 🔐 **Admin Authentication Module** (`apps/api`)
-- **Short-lived Admin Sessions**: Issues JWTs (default 15 minutes) for validated admin keys.
-- **Hashed Admin Keys**: Secrets are generated server-side, stored using salted + peppered scrypt hashes, and returned only once.
-- **Key Lifecycle Management**: Helpers to create, rotate, and revoke admin keys while preserving rotation metadata.
-- **Audit Logging**: Every authentication attempt and key lifecycle change is persisted to `admin_audit_logs` for traceability.
-- **Extensible Logging API**: Service exposes a `logAction` helper so other modules can record privileged activity with contextual metadata.
+### 4. **Orchestrator Package** (`packages/orchestrator`)
+- **Queue Consumer**: RabbitMQ consumer with configurable visibility timeout and retry logic
+- **Message Orchestrator**: High-level abstraction for consuming tenant/channel-specific messages
+- **Queue Topology Management**: Per-tenant and per-channel queue setup with routing keys `{tenantId}.{channel}.{direction}`
+- **Dead Letter Queue**: Failed messages automatically routed to DLQ after max retries with error metadata
+- **Webhook Acknowledgement**: Queued webhook acks for async processing to prevent blocking webhook handlers
+- **Retry with Backoff**: Exponential backoff with jitter for failed message processing
+
+### 5. **RAG Package** (`packages/rag`)
+- **Document Upload Pipeline**: Checksum-aware upload with version tracking and integrity verification
+- **Storage Providers**: Pluggable storage backends (LocalStorageProvider implemented)
+  - Save/read/remove operations with streaming support
+  - SHA-256 checksum calculation and verification
+  - Path resolution and directory management
+- **Storage Registry**: Provider registration and default provider management
+- **Integrity Checker**: Background job to verify document checksums and detect corruption
+  - Batch processing with configurable batch size
+  - Automatic remediation with re-upload support
+  - Status tracking (healthy/stale) with metadata
+- **Metadata Utilities**: Deep merge for document metadata with type safety
+
+### 6. **Admin Authentication Module** (`apps/api`)
+- **Short-lived Admin Sessions**: Issues JWTs (default 15 minutes) for validated admin keys
+- **Hashed Admin Keys**: Secrets generated server-side, stored using salted + peppered scrypt hashes, returned only once
+- **Key Lifecycle Management**: Create, rotate, and revoke admin keys while preserving rotation metadata
+- **Audit Logging**: Every authentication attempt and key lifecycle change persisted to `admin_audit_logs` for traceability
+- **Extensible Logging API**: Service exposes `logAction` helper for other modules to record privileged activity with contextual metadata
 
 ---
 
 ## 📦 What Needs to Be Built
 
-### 4. **RAG Engine** (`packages/rag`)
+### 7. **RAG Engine Extensions** (`packages/rag`)
 Build a complete RAG system with:
 - **Document Loader**: PDF, TXT, MD, DOCX parsing
 - **Chunker**: Template-based chunking (fixed-size, semantic, recursive)
@@ -122,7 +144,7 @@ Build a complete RAG system with:
 
 **Reference Implementation**: Use RAGFlow patterns from research
 
-### 5. **Channel Adapters** (`packages/channels`)
+### 8. **Channel Adapters** (`packages/channels`)
 Implement 3 channel adapters:
 
 #### **WhatsApp Cloud API**
@@ -151,7 +173,7 @@ Implement 3 channel adapters:
 
 **Reference**: Tiledesk web widget architecture
 
-### 6. **Orchestrator** (`packages/orchestrator`)
+### 9. **Orchestrator Extensions** (`packages/orchestrator`)
 Build the core message processing engine:
 - **Tenant Resolver**: Identify tenant from channel-specific IDs
 - **Conversation Manager**: Create/retrieve conversations
@@ -166,7 +188,7 @@ Build the core message processing engine:
 
 **Reference**: Wassenger bot orchestration pattern
 
-### 7. **API Server** (`apps/api`)
+### 10. **API Server** (`apps/api`)
 Express server with:
 - **Authentication Middleware**: API key validation (global + per-tenant)
 - **Signature Verification**: HMAC digest check on management/webhook requests
@@ -185,7 +207,7 @@ Express server with:
 - **WebSocket Server**: Web chat connections
 - **Error Handling**: Async error wrapper, structured responses
 
-### 8. **Web Widget** (`apps/web-widget`)
+### 11. **Web Widget** (`apps/web-widget`)
 Lightweight embeddable chat (vanilla TS, <50KB):
 - **Loader**: Iframe-based injection (load with one script tag)
 - **WebSocket Client**: Connect to API WebSocket
