@@ -21,9 +21,10 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/node-cron": "^3.0.11",
     "turbo": "^1.13.0",
-    "typescript": "^5.4.0",
-    "@types/node": "^20.11.0"
+    "typescript": "^5.4.0"
   },
   "engines": {
     "node": ">=20.0.0",

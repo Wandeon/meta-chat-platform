@@ -13,7 +13,7 @@ import {
   rotateAdminKey as rotateAdminKeyRecord,
   verifyAdminKeySecret,
 } from '@meta-chat/database';
-import { Logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
 import { AdminAuthContext, AdminKeyRotationResult, AdminSession, AdminTokenPayload } from './types';
 import type { Prisma } from '@meta-chat/database';
 
@@ -56,7 +56,7 @@ const DEFAULT_SCOPE = ['admin:read'];
 
 export class AdminAuthService {
   private readonly prisma = getPrismaClient();
-  private readonly logger = new Logger('AdminAuthService');
+  private readonly logger = createLogger('AdminAuthService');
   private readonly config: AdminAuthServiceConfig;
 
   constructor(config: Partial<AdminAuthServiceConfig> = {}) {
