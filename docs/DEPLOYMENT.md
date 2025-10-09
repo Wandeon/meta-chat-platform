@@ -458,6 +458,13 @@ LOG_LEVEL="info"
 - [ ] **Include storage directory** in backups
 - [ ] **Test restore procedure**
 
+### Data Retention Policy
+
+- Default retention: **90 days for messages**, **30 days for API logs**
+- Jobs run via `scheduleDataRetentionJobs` nightly at 03:00 UTC (configurable cron)
+- Enable archival by specifying `archiveTable` (e.g., `messages_archive`) before deletion
+- Tenants can override defaults through `TenantSettings.retention`
+
 ---
 
 ## 📊 Resource Estimates

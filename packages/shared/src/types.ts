@@ -78,6 +78,16 @@ export interface TenantSettings {
     messagesPerHour: number;
     messagesPerDay: number;
   };
+  retention?: {
+    messages: {
+      retentionDays: number;
+      archive?: boolean;
+      archiveTable?: string;
+    };
+    apiLogs: {
+      retentionDays: number;
+    };
+  };
 }
 
 // RAG types
