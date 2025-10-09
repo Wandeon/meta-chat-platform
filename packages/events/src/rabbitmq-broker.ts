@@ -1,8 +1,8 @@
 import { Channel, ChannelModel, connect } from 'amqplib';
-import { Event, Logger } from '@meta-chat/shared';
+import { Event, createLogger } from '@meta-chat/shared';
 import { EventBroker } from './event-broker';
 
-const logger = new Logger('RabbitMQBroker');
+const logger = createLogger('RabbitMQBroker');
 
 export class RabbitMQBroker implements EventBroker {
   private connection: ChannelModel | null = null;
@@ -53,7 +53,7 @@ export class RabbitMQBroker implements EventBroker {
 
       logger.info('RabbitMQ connected successfully');
     } catch (error) {
-      logger.error('Failed to connect to RabbitMQ', error);
+      logger.error('Failed to connect to RabbitMQ', error as Error);
       this.handleDisconnect();
     } finally {
       this.isConnecting = false;
@@ -97,7 +97,7 @@ export class RabbitMQBroker implements EventBroker {
 
       logger.debug(`Published to RabbitMQ: ${routingKey}`);
     } catch (error) {
-      logger.error('Failed to publish event to RabbitMQ', error);
+      logger.error('Failed to publish event to RabbitMQ', error as Error);
     }
   }
 
