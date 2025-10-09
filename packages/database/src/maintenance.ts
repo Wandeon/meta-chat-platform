@@ -1,9 +1,9 @@
 import cron, { ScheduledTask } from 'node-cron';
-import { Logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
 
 import { getPrismaClient } from './client';
 
-const logger = new Logger('DatabaseMaintenance');
+const logger = createLogger('DatabaseMaintenance');
 
 interface PartitionTableConfig {
   name: string;
