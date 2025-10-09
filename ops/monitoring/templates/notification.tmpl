@@ -1,0 +1,9 @@
+{{ define "slack.title" }}{{ .Status | toUpper }}: {{ .CommonLabels.alertname }}{{ end }}
+{{ define "slack.text" }}
+*Alert:* {{ .CommonLabels.alertname }}
+*Severity:* {{ .CommonLabels.severity }}
+*Summary:* {{ .CommonAnnotations.summary }}
+*Description:* {{ .CommonAnnotations.description }}
+*Starts At:* {{ .Alerts | first | .StartsAt }}
+*Dashboard:* {{ .ExternalURL }}
+{{ end }}

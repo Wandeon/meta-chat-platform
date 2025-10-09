@@ -1,14 +1,16 @@
-import amqp, { Channel, Connection } from 'amqplib';
-import { Event, Logger } from '@meta-chat/shared';
+import { Channel, ChannelModel, connect } from 'amqplib';
+import { Event, createLogger } from '@meta-chat/shared';
+import { EventBroker } from './event-broker';
 
-const logger = new Logger('RabbitMQEmitter');
+const logger = createLogger('RabbitMQBroker');
 
-export class RabbitMQEmitter {
-  private connection: Connection | null = null;
+export class RabbitMQBroker implements EventBroker {
+  private connection: ChannelModel | null = null;
   private channel: Channel | null = null;
-  private exchangeName: string = 'metachat.events';
-  private reconnectDelay: number = 5000;
+  private exchangeName: string = process.env.RABBITMQ_EXCHANGE || 'metachat.events';
+  private reconnectDelay: number = Number(process.env.RABBITMQ_RECONNECT_DELAY_MS || 5000);
   private isConnecting: boolean = false;
+  private url: string | null = null;
 
   async init(): Promise<void> {
     const url = process.env.RABBITMQ_URL;
@@ -18,27 +20,31 @@ export class RabbitMQEmitter {
       return;
     }
 
+    this.url = url;
     await this.connect(url);
   }
 
   private async connect(url: string): Promise<void> {
-    if (this.isConnecting) return;
+    if (this.isConnecting || this.channel) {
+      return;
+    }
     this.isConnecting = true;
 
     try {
-      this.connection = await amqp.connect(url);
+      const connection: ChannelModel = await connect(url);
+      this.connection = connection;
 
-      this.connection.on('error', (err) => {
+      connection.on('error', (err) => {
         logger.error('RabbitMQ connection error', err);
         this.handleDisconnect();
       });
 
-      this.connection.on('close', () => {
+      connection.on('close', () => {
         logger.warn('RabbitMQ connection closed');
         this.handleDisconnect();
       });
 
-      this.channel = await this.connection.createChannel();
+      this.channel = await connection.createChannel();
 
       await this.channel.assertExchange(this.exchangeName, 'topic', {
         durable: true,
@@ -46,30 +52,36 @@ export class RabbitMQEmitter {
       });
 
       logger.info('RabbitMQ connected successfully');
-      this.isConnecting = false;
     } catch (error) {
-      logger.error('Failed to connect to RabbitMQ', error);
-      this.isConnecting = false;
+      logger.error('Failed to connect to RabbitMQ', error as Error);
       this.handleDisconnect();
+    } finally {
+      this.isConnecting = false;
     }
   }
 
   private handleDisconnect(): void {
-    this.connection = null;
     this.channel = null;
 
+    const { connection } = this;
+    if (connection) {
+      connection.removeAllListeners();
+      this.connection = null;
+    }
+
+    if (!this.url) {
+      return;
+    }
+
     setTimeout(() => {
-      const url = process.env.RABBITMQ_URL;
-      if (url) {
-        logger.info('Attempting to reconnect to RabbitMQ');
-        this.connect(url);
-      }
+      logger.info('Attempting to reconnect to RabbitMQ');
+      this.connect(this.url!);
     }, this.reconnectDelay);
   }
 
-  async emit(event: Event): Promise<void> {
+  async publish(event: Event): Promise<void> {
     if (!this.channel) {
-      logger.warn('RabbitMQ not connected, skipping event emission');
+      logger.warn('RabbitMQ not connected, skipping event publish');
       return;
     }
 
@@ -85,7 +97,7 @@ export class RabbitMQEmitter {
 
       logger.debug(`Published to RabbitMQ: ${routingKey}`);
     } catch (error) {
-      logger.error('Failed to publish event to RabbitMQ', error);
+      logger.error('Failed to publish event to RabbitMQ', error as Error);
     }
   }
 
@@ -105,11 +117,11 @@ export class RabbitMQEmitter {
 }
 
 // Singleton instance
-let rabbitmqEmitter: RabbitMQEmitter;
+let rabbitmqBroker: RabbitMQBroker;
 
-export function getRabbitMQEmitter(): RabbitMQEmitter {
-  if (!rabbitmqEmitter) {
-    rabbitmqEmitter = new RabbitMQEmitter();
+export function getRabbitMQBroker(): RabbitMQBroker {
+  if (!rabbitmqBroker) {
+    rabbitmqBroker = new RabbitMQBroker();
   }
-  return rabbitmqEmitter;
+  return rabbitmqBroker;
 }
