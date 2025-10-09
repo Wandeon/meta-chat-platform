@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+
+  lint:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Run ESLint
+        run: npm run lint
+
+  unit:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Run unit tests
+        run: npm run test:unit
+      - name: Collect QA summary
+        if: always()
+        run: npm run qa:collect
+      - name: Upload coverage & QA reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: |
+            coverage
+            reports/qa
+          if-no-files-found: warn
+
+  integration:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Run integration tests (Testcontainers)
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'true'
+        run: npm run test:integration
+      - name: Upload Vitest reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs
+          path: reports
+          if-no-files-found: warn
+
+  security:
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Dependency audit
+        run: npm run scan:deps
+
+  load-test:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    needs: [unit, integration, security]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: metachat
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: metachat
+        options: >-
+          --health-cmd "pg_isready -U metachat -d metachat"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      rabbitmq:
+        image: rabbitmq:3.12-management
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://metachat:password@localhost:5432/metachat
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      PERF_TENANT_ID: tenant-load-test
+      PERF_ADMIN_KEY: ${{ secrets.PERF_ADMIN_KEY || 'adm_demo_key' }}
+      API_BASE_URL: http://127.0.0.1:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Apply Prisma migrations
+        run: npx prisma migrate deploy
+        working-directory: packages/database
+      - name: Seed load-test fixtures
+        run: node scripts/seed-load-test.js
+      - name: Build API
+        run: npx turbo run build --filter @meta-chat/api
+      - name: Start API server
+        run: |
+          node apps/api/dist/server.js &
+          echo $! > server.pid
+          npx wait-on http://127.0.0.1:3000/health
+      - name: Execute load test
+        run: npm run test:perf
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+          fi
+      - name: Upload performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: reports/perf
+          if-no-files-found: warn
