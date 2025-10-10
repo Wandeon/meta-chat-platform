@@ -8,6 +8,13 @@ import { searchChunks, buildContext } from '../services/vectorSearch';
 import { getEmbeddingConfig } from '../services/documentProcessor';
 import { getAvailableMcpTools, executeMcpTool } from '../services/mcpClient';
 import { callLlm, LlmMessage, LlmConfig } from '../services/llmProviders';
+import {
+  ConfidenceAnalyzer,
+  EscalationEngine,
+  EscalationAction,
+  buildEscalationConfigFromTenant,
+  isConfidenceEscalationEnabled
+} from '@meta-chat/orchestrator';
 
 const prisma = getPrismaClient();
 const router = Router();
@@ -133,6 +140,22 @@ router.post(
     const allTools = mcpToolServers.flatMap((s) => s.tools);
     const hasTools = allTools.length > 0;
 
+    // ============= CONFIDENCE ESCALATION SETUP =============
+
+    // Check if confidence escalation is enabled for this tenant
+    const enableConfidenceEscalation = isConfidenceEscalationEnabled(settings);
+    const escalationConfig = enableConfidenceEscalation
+      ? buildEscalationConfigFromTenant(settings)
+      : undefined;
+
+    let confidenceAnalyzer: ConfidenceAnalyzer | undefined;
+    let escalationEngine: EscalationEngine | undefined;
+
+    if (enableConfidenceEscalation && escalationConfig) {
+      confidenceAnalyzer = new ConfidenceAnalyzer();
+      escalationEngine = new EscalationEngine(escalationConfig);
+    }
+
     // ============= SMART ROUTER LOGIC =============
 
     let result;
@@ -222,6 +245,89 @@ router.post(
       result = await callLlm(llmConfigNoTools, messages);
     }
 
+    // ============= CONFIDENCE ESCALATION ANALYSIS =============
+
+    let escalationDecision;
+    let confidenceEscalated = false;
+    let responseToSend = result.message;
+
+    if (escalationEngine && confidenceAnalyzer) {
+      try {
+        // Analyze confidence and make escalation decision
+        // Create a mock CompletionResponse for analysis
+        const responseForAnalysis = {
+          id: 'chat-' + Date.now(),
+          created: Date.now(),
+          model: model,
+          content: result.message,
+        };
+
+        escalationDecision = await escalationEngine.decide(
+          responseForAnalysis,
+          {
+            tenantId: payload.tenantId,
+            conversationId: conversation.id,
+            userMessage: payload.message,
+            conversationHistory: conversation.messages?.map((m: any) => {
+              const content = typeof m.content === 'object' ? (m.content as any).text || '' : String(m.content);
+              return content;
+            }),
+          }
+        );
+
+        // Check if we need to escalate
+        if (escalationDecision.action === EscalationAction.IMMEDIATE_ESCALATION) {
+          confidenceEscalated = true;
+
+          // Create escalation event
+          await prisma.event.create({
+            data: {
+              type: 'human_handoff.requested',
+              tenantId: payload.tenantId,
+              conversationId: conversation.id,
+              data: {
+                reason: 'low_confidence',
+                confidenceScore: escalationDecision.analysis.overallScore,
+                confidenceLevel: escalationDecision.analysis.level,
+                userMessage: payload.message,
+                aiResponse: result.message,
+                signals: escalationDecision.analysis.signals,
+                shouldEscalate: escalationDecision.analysis.shouldEscalate,
+                escalationReason: escalationDecision.analysis.escalationReason,
+              },
+            },
+          });
+
+          // Update conversation to mark as needing human attention
+          await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: {
+              status: 'assigned_human',
+              metadata: {
+                humanHandoffRequested: true,
+                handoffReason: 'low_confidence',
+                requestedAt: new Date().toISOString(),
+              },
+            },
+          });
+
+          console.log('[Chat] Confidence escalation triggered', {
+            conversationId: conversation.id,
+            confidenceScore: escalationDecision.analysis.overallScore,
+            confidenceLevel: escalationDecision.analysis.level,
+          });
+        }
+
+        // Use modified response if available (e.g., with disclaimer added)
+        if (escalationDecision.modifiedResponse) {
+          responseToSend = escalationDecision.modifiedResponse;
+        }
+      } catch (error) {
+        console.error('[Chat] Confidence analysis error:', error);
+        // Continue without escalation if analysis fails
+      }
+    }
+
     // Save user message and assistant response to database
     const now = new Date();
 
@@ -246,13 +352,22 @@ router.post(
         direction: 'outbound',
         from: 'assistant',
         type: 'text',
-        content: { text: result.message },
+        content: { text: responseToSend },
         metadata: {
           ...result.metadata,
           ragEnabled: enableRag,
           contextUsed,
           toolsUsed,
           mcpEnabled: hasTools,
+          confidenceEscalation: enableConfidenceEscalation
+            ? {
+                enabled: true,
+                escalated: confidenceEscalated,
+                action: escalationDecision?.action,
+                confidenceScore: escalationDecision?.analysis.overallScore,
+                confidenceLevel: escalationDecision?.analysis.level,
+              }
+            : undefined,
         },
         timestamp: new Date(),
       },
@@ -265,7 +380,7 @@ router.post(
     });
 
     const response = {
-      message: result.message,
+      message: responseToSend,
       conversationId: conversation.id,
       metadata: {
         ...result.metadata,
@@ -273,6 +388,15 @@ router.post(
         contextUsed,
         toolsUsed,
         mcpEnabled: hasTools,
+        confidenceEscalation: enableConfidenceEscalation
+          ? {
+              enabled: true,
+              escalated: confidenceEscalated,
+              action: escalationDecision?.action,
+              confidenceScore: escalationDecision?.analysis.overallScore,
+              confidenceLevel: escalationDecision?.analysis.level,
+            }
+          : undefined,
       },
     };
 

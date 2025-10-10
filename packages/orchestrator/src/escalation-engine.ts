@@ -11,6 +11,9 @@ import { ConfidencePromptBuilder, type PromptBuilderConfig } from './confidence-
 
 const logger = createLogger('EscalationEngine');
 
+// Re-export ConfidenceLevel for convenience
+export { ConfidenceLevel } from './confidence-analyzer';
+
 /**
  * Escalation action to take when confidence is low
  */

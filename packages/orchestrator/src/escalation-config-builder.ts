@@ -50,7 +50,7 @@ export function buildEscalationConfigFromTenant(
     },
   };
 
-  const mode = escalationSettings.mode || 'standard';
+  const mode = (escalationSettings.mode || 'standard') as keyof typeof modePresets;
   const preset = modePresets[mode];
 
   // Build config with tenant overrides

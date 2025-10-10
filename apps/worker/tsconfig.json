@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": "./",
+    "paths": {
+      "@meta-chat/shared": ["../../packages/shared/src"],
+      "@meta-chat/shared/*": ["../../packages/shared/src/*"],
+      "@meta-chat/database": ["../../packages/database/src"],
+      "@meta-chat/database/*": ["../../packages/database/src/*"],
+      "@meta-chat/channels": ["../../packages/channels/src"],
+      "@meta-chat/channels/*": ["../../packages/channels/src/*"],
+      "@meta-chat/orchestrator": ["../../packages/orchestrator/src"],
+      "@meta-chat/orchestrator/*": ["../../packages/orchestrator/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/database" },
+    { "path": "../../packages/channels" },
+    { "path": "../../packages/orchestrator" }
+  ]
+}
