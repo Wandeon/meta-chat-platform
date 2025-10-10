@@ -9,7 +9,7 @@ interface McpServer {
   description: string | null;
   command: string;
   args: string[];
-  env: Record<string, string>;
+  requiredEnv: string[];
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -20,7 +20,7 @@ interface CreateMcpServerRequest {
   description?: string;
   command: string;
   args: string[];
-  env: Record<string, string>;
+  requiredEnv: string[];
   enabled?: boolean;
 }
 
@@ -29,7 +29,7 @@ interface UpdateMcpServerRequest {
   description?: string;
   command?: string;
   args?: string[];
-  env?: Record<string, string>;
+  requiredEnv?: string[];
   enabled?: boolean;
 }
 
@@ -45,14 +45,13 @@ export function McpServersPage() {
     description: '',
     command: '',
     args: [],
-    env: {},
+    requiredEnv: [],
     enabled: true,
   });
 
-  // State for args/env inputs
+  // State for args/requiredEnv inputs
   const [argInput, setArgInput] = useState('');
-  const [envKey, setEnvKey] = useState('');
-  const [envValue, setEnvValue] = useState('');
+  const [requiredEnvInput, setRequiredEnvInput] = useState('');
 
   // Fetch all MCP servers
   const serversQuery = useQuery({
@@ -96,7 +95,7 @@ export function McpServersPage() {
       description: '',
       command: '',
       args: [],
-      env: {},
+      requiredEnv: [],
       enabled: true,
     });
     setIsFormOpen(true);
@@ -109,7 +108,7 @@ export function McpServersPage() {
       description: server.description || '',
       command: server.command,
       args: server.args,
-      env: server.env,
+      requiredEnv: server.requiredEnv,
       enabled: server.enabled,
     });
     setIsFormOpen(true);
@@ -119,8 +118,7 @@ export function McpServersPage() {
     setIsFormOpen(false);
     setEditingServer(null);
     setArgInput('');
-    setEnvKey('');
-    setEnvValue('');
+    setRequiredEnvInput('');
   };
 
   const handleSubmit = () => {
@@ -160,24 +158,22 @@ export function McpServersPage() {
     }));
   };
 
-  // Env handlers
-  const handleAddEnv = () => {
-    if (envKey.trim()) {
+  // Required env handlers
+  const handleAddRequiredEnv = () => {
+    if (requiredEnvInput.trim()) {
       setFormData((prev) => ({
         ...prev,
-        env: { ...prev.env, [envKey.trim()]: envValue },
+        requiredEnv: [...prev.requiredEnv, requiredEnvInput.trim()],
       }));
-      setEnvKey('');
-      setEnvValue('');
+      setRequiredEnvInput('');
     }
   };
 
-  const handleRemoveEnv = (key: string) => {
-    setFormData((prev) => {
-      const newEnv = { ...prev.env };
-      delete newEnv[key];
-      return { ...prev, env: newEnv };
-    });
+  const handleRemoveRequiredEnv = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      requiredEnv: prev.requiredEnv.filter((_, i) => i !== index),
+    }));
   };
 
   if (serversQuery.isLoading) {
@@ -322,18 +318,19 @@ export function McpServersPage() {
                       </div>
                     )}
 
-                    {Object.keys(server.env).length > 0 && (
+                    {server.requiredEnv.length > 0 && (
                       <div style={{ fontSize: '13px', color: '#475569' }}>
-                        <strong>Environment:</strong>{' '}
-                        {Object.entries(server.env).map(([key, value]) => (
-                          <code key={key} style={{
-                            background: '#f1f5f9',
+                        <strong>Required Environment Variables:</strong>{' '}
+                        {server.requiredEnv.map((envVar, i) => (
+                          <code key={i} style={{
+                            background: '#fef3c7',
                             padding: '2px 6px',
                             borderRadius: '4px',
                             fontFamily: 'monospace',
                             marginRight: '4px',
+                            color: '#92400e',
                           }}>
-                            {key}={value}
+                            {envVar}
                           </code>
                         ))}
                       </div>
@@ -507,68 +504,65 @@ export function McpServersPage() {
               </div>
             </div>
 
-            {/* Environment Variables */}
+            {/* Required Environment Variables */}
             <div style={{ marginBottom: '20px' }}>
               <span style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
-                Environment Variables
+                Required Environment Variables
               </span>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 8px 0' }}>
+                List the names of environment variables that tenants must provide (e.g., API keys, tokens).
+                Tenants will enter the actual values in their settings.
+              </p>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                 <input
                   type="text"
-                  value={envKey}
-                  onChange={(e) => setEnvKey(e.target.value)}
-                  placeholder="Key (e.g., API_KEY)"
+                  value={requiredEnvInput}
+                  onChange={(e) => setRequiredEnvInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddRequiredEnv()}
+                  placeholder="e.g., GOOGLE_CLIENT_ID, GITHUB_TOKEN"
                   style={{ flex: 1 }}
                 />
-                <input
-                  type="text"
-                  value={envValue}
-                  onChange={(e) => setEnvValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddEnv()}
-                  placeholder="Value"
-                  style={{ flex: 1 }}
-                />
-                <button onClick={handleAddEnv} className="secondary-button">
+                <button onClick={handleAddRequiredEnv} className="secondary-button">
                   Add
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {Object.entries(formData.env).map(([key, value]) => (
-                  <div
-                    key={key}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {formData.requiredEnv.map((envVar, index) => (
+                  <span
+                    key={index}
                     style={{
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: '#f8fafc',
-                      padding: '8px 12px',
+                      gap: '6px',
+                      background: '#fef3c7',
+                      color: '#92400e',
+                      padding: '4px 10px',
                       borderRadius: '6px',
                       fontSize: '13px',
                       fontFamily: 'monospace',
+                      fontWeight: 500,
                     }}
                   >
-                    <span>
-                      <strong>{key}</strong>=<span style={{ color: '#64748b' }}>{value}</span>
-                    </span>
+                    {envVar}
                     <button
-                      onClick={() => handleRemoveEnv(key)}
+                      onClick={() => handleRemoveRequiredEnv(index)}
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: '#dc2626',
+                        color: '#92400e',
                         cursor: 'pointer',
                         padding: '0 4px',
                         fontSize: '16px',
-                        fontWeight: 'bold',
+                        lineHeight: 1,
                       }}
                     >
                       ×
                     </button>
-                  </div>
+                  </span>
                 ))}
-                {Object.keys(formData.env).length === 0 && (
+                {formData.requiredEnv.length === 0 && (
                   <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-                    No environment variables. Add optional variables above.
+                    No required environment variables. Tenants won't need to provide credentials.
                   </p>
                 )}
               </div>

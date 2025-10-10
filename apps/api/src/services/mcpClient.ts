@@ -37,10 +37,19 @@ const activeConnections = new Map<string, McpServerConnection>();
 
 /**
  * Connect to an MCP server and discover its tools
+ * @param serverId - Global MCP server ID
+ * @param tenantCredentials - Tenant-specific environment variables (credentials)
  */
-export async function connectToMcpServer(serverId: string): Promise<McpTool[]> {
-  // Check if already connected
-  const existing = activeConnections.get(serverId);
+export async function connectToMcpServer(
+  serverId: string,
+  tenantCredentials: Record<string, string> = {}
+): Promise<McpTool[]> {
+  // Create unique connection key including tenant credentials hash
+  const credentialsKey = JSON.stringify(tenantCredentials);
+  const connectionKey = `${serverId}:${Buffer.from(credentialsKey).toString('base64').slice(0, 20)}`;
+
+  // Check if already connected with same credentials
+  const existing = activeConnections.get(connectionKey);
   if (existing) {
     return existing.tools;
   }
@@ -53,11 +62,11 @@ export async function connectToMcpServer(serverId: string): Promise<McpTool[]> {
     throw new Error(`MCP server ${serverId} not found or disabled`);
   }
 
-  console.log(`[MCP] Connecting to server: ${server.name}`);
+  console.log(`[MCP] Connecting to server: ${server.name} (tenant-specific)`);
 
-  // Spawn MCP server process
+  // Spawn MCP server process with tenant-specific credentials
   const args = server.args as string[];
-  const env = { ...process.env, ...(server.env as Record<string, string>) };
+  const env = { ...process.env, ...tenantCredentials };
 
   const childProcess = spawn(server.command, args, {
     env,
@@ -65,7 +74,7 @@ export async function connectToMcpServer(serverId: string): Promise<McpTool[]> {
   });
 
   const connection: McpServerConnection = {
-    serverId: server.id,
+    serverId: connectionKey, // Use connection-specific key
     serverName: server.name,
     process: childProcess,
     tools: [],
@@ -99,10 +108,10 @@ export async function connectToMcpServer(serverId: string): Promise<McpTool[]> {
   // Handle process exit
   childProcess.on('exit', (code) => {
     console.log(`[MCP] ${server.name} process exited with code ${code}`);
-    activeConnections.delete(serverId);
+    activeConnections.delete(connectionKey);
   });
 
-  activeConnections.set(serverId, connection);
+  activeConnections.set(connectionKey, connection);
 
   // Initialize connection
   await sendMcpRequest(connection, 'initialize', {
@@ -128,21 +137,20 @@ export async function connectToMcpServer(serverId: string): Promise<McpTool[]> {
 
 /**
  * Execute a tool call on an MCP server
+ * @param connectionKey - Connection key (serverId + credentials hash)
+ * @param toolName - Name of the tool to execute
+ * @param args - Tool arguments
  */
 export async function executeMcpTool(
-  serverId: string,
+  connectionKey: string,
   toolName: string,
   args: Record<string, any>
 ): Promise<McpToolResult> {
-  let connection = activeConnections.get(serverId);
+  let connection = activeConnections.get(connectionKey);
 
   if (!connection) {
-    // Auto-connect if not connected
-    await connectToMcpServer(serverId);
-    connection = activeConnections.get(serverId);
-    if (!connection) {
-      throw new Error(`Failed to connect to MCP server ${serverId}`);
-    }
+    // Connection should already exist from tool discovery
+    throw new Error(`MCP server connection not found: ${connectionKey}`);
   }
 
   console.log(`[MCP] Executing tool ${toolName} on ${connection.serverName}`);
@@ -173,11 +181,11 @@ export async function executeMcpTool(
 }
 
 /**
- * Get all tools from enabled MCP servers for a tenant
+ * Get all tools from enabled MCP servers for a tenant with tenant-specific credentials
  */
 export async function getAvailableMcpTools(
   tenantId: string
-): Promise<{ serverId: string; serverName: string; tools: McpTool[] }[]> {
+): Promise<{ connectionKey: string; serverId: string; serverName: string; tools: McpTool[] }[]> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
   });
@@ -187,7 +195,16 @@ export async function getAvailableMcpTools(
   }
 
   const settings = tenant.settings as any;
-  const enabledServerIds = settings?.enabledMcpServers || [];
+  const mcpConfigs = settings?.mcpConfigs || [];
+
+  if (mcpConfigs.length === 0) {
+    return [];
+  }
+
+  // Get all enabled server IDs
+  const enabledServerIds = mcpConfigs
+    .filter((config: any) => config.enabled)
+    .map((config: any) => config.serverId);
 
   if (enabledServerIds.length === 0) {
     return [];
@@ -203,8 +220,19 @@ export async function getAvailableMcpTools(
   const results = [];
   for (const server of servers) {
     try {
-      const tools = await connectToMcpServer(server.id);
+      // Find tenant-specific credentials for this server
+      const mcpConfig = mcpConfigs.find((c: any) => c.serverId === server.id);
+      const tenantCredentials = mcpConfig?.credentials || {};
+
+      // Connect with tenant-specific credentials
+      const tools = await connectToMcpServer(server.id, tenantCredentials);
+
+      // Generate connection key
+      const credentialsKey = JSON.stringify(tenantCredentials);
+      const connectionKey = `${server.id}:${Buffer.from(credentialsKey).toString('base64').slice(0, 20)}`;
+
       results.push({
+        connectionKey,
         serverId: server.id,
         serverName: server.name,
         tools,

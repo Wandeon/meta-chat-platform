@@ -15,7 +15,7 @@ const createMcpServerSchema = z.object({
   description: z.string().optional(),
   command: z.string().min(1),
   args: z.array(z.string()).default([]),
-  env: z.record(z.string(), z.string()).default({}),
+  requiredEnv: z.array(z.string()).default([]), // Names of required env vars
   enabled: z.boolean().default(true),
 });
 
@@ -24,7 +24,7 @@ const updateMcpServerSchema = z.object({
   description: z.string().optional().nullable(),
   command: z.string().min(1).optional(),
   args: z.array(z.string()).optional(),
-  env: z.record(z.string(), z.string()).optional(),
+  requiredEnv: z.array(z.string()).optional(), // Names of required env vars
   enabled: z.boolean().optional(),
 });
 
@@ -70,7 +70,7 @@ router.post(
         description: payload.description,
         command: payload.command,
         args: payload.args,
-        env: payload.env,
+        requiredEnv: payload.requiredEnv,
         enabled: payload.enabled,
       },
     });
@@ -101,7 +101,7 @@ router.patch(
         description: payload.description !== undefined ? payload.description : existing.description,
         command: payload.command ?? existing.command,
         args: payload.args ?? existing.args,
-        env: payload.env ?? existing.env,
+        requiredEnv: payload.requiredEnv ?? existing.requiredEnv,
         enabled: payload.enabled ?? existing.enabled,
       },
     });

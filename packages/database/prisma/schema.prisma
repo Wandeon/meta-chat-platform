@@ -358,15 +358,15 @@ enum AdminRole {
 // ============= MCP (Model Context Protocol) Servers =============
 
 model McpServer {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  command     String   // e.g., "npx", "node", "python"
-  args        Json     @default("[]") // Command arguments as array
-  env         Json     @default("{}") // Environment variables
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String   @unique
+  description  String?
+  command      String   // e.g., "npx", "node", "python"
+  args         Json     @default("[]") // Command arguments as array
+  requiredEnv  Json     @default("[]") // Required env var names (array of strings)
+  enabled      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("mcp_servers")
 }

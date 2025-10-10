@@ -187,7 +187,7 @@ router.post(
 
           if (serverWithTool) {
             const toolResult = await executeMcpTool(
-              serverWithTool.serverId,
+              serverWithTool.connectionKey,
               toolCall.name,
               toolCall.arguments
             );
