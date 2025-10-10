@@ -213,7 +213,7 @@ describe('EscalationEngine', () => {
       id: 'test-3',
       created: Date.now(),
       model: 'gpt-4',
-      content: 'This might be the answer, but I'm not entirely certain about the details.',
+      content: "This might be the answer, but I'm not entirely certain about the details.",
     };
 
     const decision = await engine.decide(response, {

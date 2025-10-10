@@ -211,7 +211,7 @@ export class MessagePipelineWithEscalation {
       // Notify human if suggested (but still send AI response)
       if (decision.shouldNotifyHuman) {
         // Update conversation status to indicate review needed
-        await this.conversationManager.updateConversationStatus(conversation.id, 'needs_review');
+        await this.conversationManager.updateConversationStatus(conversation.id, 'assigned_human');
       }
     }
 
