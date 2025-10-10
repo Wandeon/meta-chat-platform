@@ -89,6 +89,17 @@ export interface TenantSettings {
       retentionDays: number;
     };
   };
+  // Confidence-based escalation settings
+  confidenceEscalation?: {
+    enabled: boolean;
+    mode: 'standard' | 'strict' | 'lenient';
+    immediateEscalationThreshold?: number; // 0-1, default: 0.3
+    suggestReviewThreshold?: number; // 0-1, default: 0.6
+    addDisclaimers?: boolean; // default: true
+    disclaimerText?: string;
+    selfAssessmentStrategy?: 'explicit_marker' | 'chain_of_thought' | 'uncertainty_acknowledgment';
+    highStakesDomains?: string[]; // Custom domains beyond default
+  };
 }
 
 // RAG types
