@@ -90,12 +90,14 @@ curl -X POST https://chat.genai.hr/api/tenants/cmgjuow6q0000g5jwvwyopzk6/api-key
         color: white;
         border: none;
         border-radius: 50px;
-        padding: 15px 25px;
-        font-size: 16px;
+        padding: 12px 20px;
+        font-size: 15px;
         font-weight: 600;
         cursor: pointer;
         box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         transition: transform 0.2s;
+        line-height: 1.4;
+        white-space: nowrap;
       }
 
       #meta-chat-button:hover {
@@ -103,7 +105,7 @@ curl -X POST https://chat.genai.hr/api/tenants/cmgjuow6q0000g5jwvwyopzk6/api-key
       }
 
       #meta-chat-window {
-        display: none;
+        display: none !important;
         position: fixed;
         ${config.position === 'bottom-right' ? 'right: 20px;' : 'left: 20px;'}
         bottom: 80px;
@@ -114,13 +116,13 @@ curl -X POST https://chat.genai.hr/api/tenants/cmgjuow6q0000g5jwvwyopzk6/api-key
         background: white;
         border-radius: 16px;
         box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-        display: flex;
         flex-direction: column;
         overflow: hidden;
+        z-index: 9998;
       }
 
       #meta-chat-window.open {
-        display: flex;
+        display: flex !important;
       }
 
       #meta-chat-header {
@@ -133,17 +135,25 @@ curl -X POST https://chat.genai.hr/api/tenants/cmgjuow6q0000g5jwvwyopzk6/api-key
       }
 
       #meta-chat-close {
-        background: none;
+        background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
-        font-size: 24px;
+        font-size: 28px;
         cursor: pointer;
         padding: 0;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s;
+        line-height: 1;
+        font-weight: 300;
+      }
+
+      #meta-chat-close:hover {
+        background: rgba(255, 255, 255, 0.3);
       }
 
       #meta-chat-messages {

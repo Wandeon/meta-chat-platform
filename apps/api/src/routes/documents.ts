@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
+import crypto from 'crypto';
 import { getPrismaClient } from '@meta-chat/database';
 import { authenticateAdmin } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
+import { processDocument, getEmbeddingConfig } from '../services/documentProcessor';
 
 const prisma = getPrismaClient();
 const router = Router();
@@ -15,24 +17,17 @@ const listQuerySchema = z.object({
 });
 
 const createDocumentSchema = z.object({
-  filename: z.string().min(1),
-  mimeType: z.string().min(1),
-  size: z.number().int().nonnegative(),
-  path: z.string().min(1),
-  checksum: z.string().min(1),
-  storageProvider: z.string().min(1).default('local'),
+  name: z.string().min(1),
+  source: z.string().optional(),
   metadata: metadataSchema.optional(),
 });
 
-const updateDocumentSchema = z
-  .object({
-    filename: z.string().min(1).optional(),
-    mimeType: z.string().min(1).optional(),
-    status: z.string().optional(),
-    version: z.number().int().positive().optional(),
-    metadata: metadataSchema.optional(),
-  })
-  .strict();
+const updateDocumentSchema = z.object({
+  name: z.string().min(1).optional(),
+  source: z.string().optional(),
+  metadata: metadataSchema.optional(),
+  status: z.string().optional(),
+});
 
 router.use(authenticateAdmin);
 
@@ -58,17 +53,46 @@ router.post(
   asyncHandler(async (req, res) => {
     const payload = parseWithSchema(createDocumentSchema.extend({ tenantId: z.string() }), req.body);
 
+    // Extract content from metadata
+    const content = payload.metadata?.content || '';
+    if (!content || typeof content !== 'string') {
+      throw createHttpError(400, 'Document content is required in metadata.content');
+    }
+
+    // Generate file storage details
+    const contentBuffer = Buffer.from(content, 'utf-8');
+    const checksum = crypto.createHash('sha256').update(contentBuffer).digest('hex');
+    const timestamp = Date.now();
+    const sanitizedName = payload.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const filename = `${sanitizedName}.txt`;
+    const path = `documents/${payload.tenantId}/${timestamp}-${filename}`;
+
+    // Determine mime type from metadata or default
+    const mimeType = (payload.metadata?.fileType as string) || 'text/plain';
+    const size = (payload.metadata?.fileSize as number) || contentBuffer.length;
+
     const document = await prisma.document.create({
       data: {
         tenantId: payload.tenantId,
-        filename: payload.filename,
-        mimeType: payload.mimeType,
-        size: payload.size,
-        path: payload.path,
-        checksum: payload.checksum,
-        storageProvider: payload.storageProvider ?? 'local',
-        metadata: payload.metadata ?? {},
+        filename: filename,
+        mimeType: mimeType,
+        size: size,
+        path: path,
+        checksum: checksum,
+        storageProvider: 'local',
+        status: 'pending',
+        metadata: {
+          ...payload.metadata,
+          name: payload.name,
+          source: payload.source,
+        },
       },
+    });
+
+    // Trigger document processing asynchronously
+    const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
+    processDocument(document.id, { embeddingConfig }).catch((error) => {
+      console.error(`Failed to process document ${document.id}:`, error);
     });
 
     respondCreated(res, document);
@@ -91,34 +115,53 @@ router.get(
   }),
 );
 
-router.put(
-  '/:documentId',
-  asyncHandler(async (req, res) => {
-    const { documentId } = req.params;
-    const payload = parseWithSchema(updateDocumentSchema, req.body);
+const updateDocumentHandler = asyncHandler(async (req, res) => {
+  const { documentId } = req.params;
+  const payload = parseWithSchema(updateDocumentSchema, req.body);
 
-    const existing = await prisma.document.findUnique({
-      where: { id: documentId },
-    });
+  const existing = await prisma.document.findUnique({
+    where: { id: documentId },
+  });
 
-    if (!existing) {
-      throw createHttpError(404, 'Document not found');
-    }
+  if (!existing) {
+    throw createHttpError(404, 'Document not found');
+  }
 
-    const document = await prisma.document.update({
-      where: { id: documentId },
-      data: {
-        filename: payload.filename ?? existing.filename,
-        mimeType: payload.mimeType ?? existing.mimeType,
-        status: payload.status ?? existing.status,
-        version: payload.version ?? existing.version,
-        metadata: payload.metadata ?? existing.metadata,
-      },
-    });
+  // If content is being updated, regenerate file details
+  let updatedData: any = {
+    status: payload.status ?? existing.status,
+    metadata: payload.metadata ? { ...existing.metadata, ...payload.metadata } : existing.metadata,
+  };
 
-    respondSuccess(res, document);
-  }),
-);
+  if (payload.name) {
+    const sanitizedName = payload.name.replace(/[^a-zA-Z0-9-_]/g, '_');
+    updatedData.filename = `${sanitizedName}.txt`;
+    updatedData.metadata = { ...updatedData.metadata, name: payload.name };
+  }
+
+  if (payload.source !== undefined) {
+    updatedData.metadata = { ...updatedData.metadata, source: payload.source };
+  }
+
+  // If content changed, update checksum and size
+  if (payload.metadata?.content) {
+    const content = payload.metadata.content as string;
+    const contentBuffer = Buffer.from(content, 'utf-8');
+    updatedData.checksum = crypto.createHash('sha256').update(contentBuffer).digest('hex');
+    updatedData.size = contentBuffer.length;
+    updatedData.version = existing.version + 1;
+  }
+
+  const document = await prisma.document.update({
+    where: { id: documentId },
+    data: updatedData,
+  });
+
+  respondSuccess(res, document);
+});
+
+router.put('/:documentId', updateDocumentHandler);
+router.patch('/:documentId', updateDocumentHandler);
 
 router.delete(
   '/:documentId',

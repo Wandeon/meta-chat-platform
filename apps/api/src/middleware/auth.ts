@@ -157,3 +157,38 @@ export async function authenticateAdmin(
 
   return next();
 }
+
+export async function authenticateAdminOrTenant(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const apiKey = req.header(ADMIN_HEADER) ?? req.header(AUTH_HEADER);
+  if (typeof apiKey !== 'string' || apiKey.length === 0) {
+    return next(createHttpError(401, 'Missing API key'));
+  }
+
+  // Try admin authentication first
+  const adminResolved = await resolveAdminByApiKey(apiKey);
+  if (adminResolved) {
+    req.adminUser = {
+      id: adminResolved.adminId,
+      role: adminResolved.role,
+    };
+    addToRequestContext({ adminId: adminResolved.adminId });
+    return next();
+  }
+
+  // Try tenant authentication
+  const tenantResolved = await resolveTenantByApiKey(apiKey);
+  if (tenantResolved) {
+    req.tenant = {
+      id: tenantResolved.tenantId,
+      apiKeyId: tenantResolved.apiKeyId,
+    };
+    addToRequestContext({ tenantId: tenantResolved.tenantId });
+    return next();
+  }
+
+  return next(createHttpError(401, 'Invalid API key'));
+}

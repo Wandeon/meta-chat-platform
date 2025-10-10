@@ -192,6 +192,7 @@ meta-chat-platform/
   - Feature toggles (RAG, function calling, human handoff)
   - Human handoff keywords
   - RAG configuration (top K, similarity threshold, hybrid weights)
+  - **MCP Tool Integrations**: Enable/disable MCP servers per tenant with simple toggles
 - **Channel Management**: Add/edit/delete channels with type-specific credential forms:
   - WhatsApp Business API configuration
   - Facebook Messenger configuration
@@ -208,6 +209,11 @@ meta-chat-platform/
   - Webhook secret configuration
   - Test webhook delivery
   - Toggle active/inactive per webhook
+- **MCP Server Management**: Global MCP server configuration:
+  - Add/edit/delete MCP servers (Google Calendar, GitHub, etc.)
+  - Configure command, arguments, and environment variables
+  - Enable/disable servers globally
+  - Per-tenant activation via simple ON/OFF toggles
 - **Shared Components**: Reusable tenant selector dropdown across all pages
 - **User Experience**:
   - Collapsible create/edit forms
@@ -216,7 +222,37 @@ meta-chat-platform/
   - Loading states and success notifications
 - **Documentation**: Comprehensive user guide at `apps/dashboard/DASHBOARD-GUIDE.md`
 
-### 12. **Testing & Quality Tooling** (PRs #24, #25, #26)
+### 12. **MCP Integration** (`apps/api`)
+- **Model Context Protocol Support**: Full MCP server integration for external tools
+- **MCP Server CRUD**: Complete REST API for managing global MCP servers
+  - Create/read/update/delete MCP servers
+  - Configure command, arguments, environment variables
+  - Enable/disable servers globally
+- **MCP Client Service**: Production-ready MCP client implementation
+  - JSON-RPC 2.0 over stdio communication
+  - Tool discovery via `tools/list` RPC call
+  - Tool execution via `tools/call` RPC call
+  - Connection pooling and lifecycle management
+  - Timeout handling and error recovery
+- **Multi-Provider Support**:
+  - **OpenAI**: Full function calling support (recommended)
+  - **DeepSeek**: Cost-effective alternative with function calling (~17x cheaper)
+  - **Ollama**: Local/free models with quick acknowledgment
+- **Smart Routing Logic**: Intelligent request routing based on:
+  - Tool availability detection
+  - Provider function calling capabilities
+  - Optional quick Ollama acknowledgment before tool execution
+  - Automatic fallback when no tools needed
+- **Per-Tenant Control**: Enable/disable MCP servers per tenant via dashboard
+- **Pre-built Integrations**: Support for official MCP servers:
+  - Google Calendar (events management)
+  - GitHub (repositories, issues, PRs)
+  - File System (read/write files)
+  - PostgreSQL (database queries)
+  - Custom MCP servers (your own tools)
+- **Documentation**: Complete guide at `MCP-INTEGRATION-GUIDE.md`
+
+### 13. **Testing & Quality Tooling** (PRs #24, #25, #26)
 - **Unit Tests**: Vitest setup with 31 passing tests across all packages
 - **Integration Tests**: Node.js test runner for RAG pipeline end-to-end testing
 - **Code Quality**: ESLint with 0 errors (was 17), TypeScript strict mode
@@ -229,19 +265,21 @@ meta-chat-platform/
 
 ## 📦 What Needs to Be Built
 
-### 13. **API Server REST Routes** (`apps/api`)
+### 14. **API Server REST Routes** (`apps/api`)
 ✅ **COMPLETE** - Full REST API implementation with admin authentication:
 - **Tenant Management**: Complete CRUD endpoints (GET, POST, PATCH, DELETE)
 - **Channel Management**: Full endpoints to add/edit/remove/toggle channels per tenant
 - **Document Management**: Upload/list/update/delete endpoints with metadata support
 - **Webhook Management**: Complete CRUD for outgoing webhook configurations
+- **MCP Server Management**: Complete CRUD endpoints for Model Context Protocol servers
 - **Conversation API**: List conversations, get messages, update status
+- **Chat Endpoint**: Smart routing with MCP tool integration and multi-provider support
 - **Health & Metrics**: Health check endpoint showing database, Redis, and RabbitMQ status
 - **Admin Authentication**: API key-based authentication with audit logging
 - **Request Logging**: Request/response logging with correlation IDs
 - **Error Handling**: Global error handler with consistent JSON error responses
 
-### 14. **Production Deployment** ✅ **COMPLETE**
+### 15. **Production Deployment** ✅ **COMPLETE**
 - **Docker Compose**: Complete stack running with PostgreSQL 16 + pgvector, Redis 7, RabbitMQ 3.13
 - **Health Checks**: All services monitored with health endpoints
 - **Nginx Configuration**: Reverse proxy configured for chat.genai.hr with SSL
@@ -409,11 +447,12 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 - ✅ RAG Engine: Document loaders, chunking, embeddings, hybrid retrieval
 - ✅ Channel Adapters: WhatsApp, Messenger, WebChat with full test coverage
 - ✅ Orchestrator: Message pipeline with LLM integration, RAG retrieval, function calling
-- ✅ REST API: Complete CRUD operations for tenants, channels, documents, webhooks
-- ✅ Admin Dashboard: Full management UI with visual configuration for all features
+- ✅ MCP Integration: Full Model Context Protocol support with multi-provider smart routing
+- ✅ REST API: Complete CRUD operations for tenants, channels, documents, webhooks, MCP servers
+- ✅ Admin Dashboard: Full management UI with MCP server management and per-tenant toggles
 - ✅ Production Deployment: Running on HTTPS at chat.genai.hr with SSL and monitoring
 - ✅ Quality: 31 unit tests passing, ESLint clean, 70% security vulnerability reduction
-- ✅ Documentation: Comprehensive guides for deployment and dashboard usage
+- ✅ Documentation: Comprehensive guides for deployment, dashboard usage, and MCP integration
 
 ### 🔄 In Progress (Milestone 4)
 1. **End-to-End Testing** - Integration tests across full message flow
