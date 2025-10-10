@@ -5,6 +5,7 @@ import '../styles/dashboard.css';
 
 const NAV_LINKS = [
   { to: '/tenants', label: 'Tenants' },
+  { to: '/mcp-servers', label: 'MCP Servers' },
   { to: '/channels', label: 'Channels' },
   { to: '/documents', label: 'Documents' },
   { to: '/conversations', label: 'Conversations' },

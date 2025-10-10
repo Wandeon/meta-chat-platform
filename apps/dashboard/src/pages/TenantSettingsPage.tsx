@@ -4,6 +4,34 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../api/client';
 import type { Tenant, UpdateTenantRequest } from '../api/types';
 
+// Tenant API Key structure
+interface TenantApiKey {
+  id: string;
+  label: string | null;
+  prefix: string;
+  lastFour: string;
+  active: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+  rotatedAt: string | null;
+}
+
+interface CreateApiKeyResponse {
+  id: string;
+  apiKey: string;
+  lastFour: string;
+  prefix: string;
+}
+
+// MCP Server types
+interface McpServer {
+  id: string;
+  name: string;
+  description: string | null;
+  command: string;
+  enabled: boolean;
+}
+
 // Tenant Settings structure
 interface TenantSettings {
   brandName: string;
@@ -13,6 +41,7 @@ interface TenantSettings {
   enableFunctionCalling: boolean;
   enableHumanHandoff: boolean;
   humanHandoffKeywords: string[];
+  enabledMcpServers?: string[]; // Array of MCP server IDs enabled for this tenant
   ragConfig?: {
     topK: number;
     minSimilarity: number;
@@ -41,6 +70,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
   enableFunctionCalling: false,
   enableHumanHandoff: false,
   humanHandoffKeywords: [],
+  enabledMcpServers: [],
   ragConfig: {
     topK: 5,
     minSimilarity: 0.5,
@@ -68,12 +98,27 @@ export function TenantSettingsPage() {
   const [settings, setSettings] = useState<TenantSettings>(DEFAULT_SETTINGS);
   const [keywordInput, setKeywordInput] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [newApiKeyLabel, setNewApiKeyLabel] = useState('');
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<CreateApiKeyResponse | null>(null);
 
   // Fetch tenant data
   const tenantQuery = useQuery({
     queryKey: ['tenant', tenantId],
     queryFn: () => api.get<Tenant>(`/api/tenants/${tenantId}`),
     enabled: !!tenantId,
+  });
+
+  // Fetch tenant API keys
+  const apiKeysQuery = useQuery({
+    queryKey: ['tenant-api-keys', tenantId],
+    queryFn: () => api.get<TenantApiKey[]>(`/api/security/tenants/${tenantId}/api-keys`),
+    enabled: !!tenantId,
+  });
+
+  // Fetch global MCP servers
+  const mcpServersQuery = useQuery({
+    queryKey: ['mcp-servers'],
+    queryFn: () => api.get<McpServer[]>('/api/mcp-servers'),
   });
 
   // Load settings from tenant data
@@ -98,6 +143,29 @@ export function TenantSettingsPage() {
     },
   });
 
+  // Create API key mutation
+  const createApiKey = useMutation({
+    mutationFn: (label: string) =>
+      api.post<CreateApiKeyResponse, { label: string }>(
+        `/api/security/tenants/${tenantId}/api-keys`,
+        { label }
+      ),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-api-keys', tenantId] });
+      setNewlyCreatedKey(data);
+      setNewApiKeyLabel('');
+    },
+  });
+
+  // Delete API key mutation
+  const deleteApiKey = useMutation({
+    mutationFn: (keyId: string) =>
+      api.delete(`/api/security/tenants/${tenantId}/api-keys/${keyId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-api-keys', tenantId] });
+    },
+  });
+
   const handleSave = () => {
     updateTenant.mutate({ settings: settings as unknown as Record<string, unknown> });
   };
@@ -117,6 +185,35 @@ export function TenantSettingsPage() {
       ...prev,
       humanHandoffKeywords: prev.humanHandoffKeywords.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleCreateApiKey = () => {
+    if (newApiKeyLabel.trim()) {
+      createApiKey.mutate(newApiKeyLabel.trim());
+    }
+  };
+
+  const handleDeleteApiKey = (keyId: string) => {
+    if (confirm('Are you sure you want to deactivate this API key? This action cannot be undone.')) {
+      deleteApiKey.mutate(keyId);
+    }
+  };
+
+  const handleCopyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    alert('API key copied to clipboard!');
+  };
+
+  // MCP Server toggle handler
+  const handleMcpToggle = (serverId: string, enabled: boolean) => {
+    setSettings((prev) => {
+      const enabledServers = prev.enabledMcpServers || [];
+      if (enabled) {
+        return { ...prev, enabledMcpServers: [...enabledServers, serverId] };
+      } else {
+        return { ...prev, enabledMcpServers: enabledServers.filter((id) => id !== serverId) };
+      }
+    });
   };
 
   if (tenantQuery.isLoading) {
@@ -168,7 +265,202 @@ export function TenantSettingsPage() {
         </div>
       )}
 
+      {/* New API Key Created */}
+      {newlyCreatedKey && (
+        <div style={{
+          background: '#fef3c7',
+          border: '2px solid #f59e0b',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '24px',
+        }}>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600, color: '#92400e' }}>
+            🔑 New API Key Created - Save This Now!
+          </h3>
+          <p style={{ margin: '0 0 12px 0', color: '#78350f', fontSize: '14px' }}>
+            This is the only time you'll see this key. Copy it and store it securely.
+          </p>
+          <div style={{
+            background: '#fff',
+            border: '1px solid #d97706',
+            borderRadius: '6px',
+            padding: '12px',
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            wordBreak: 'break-all',
+            marginBottom: '12px',
+          }}>
+            {newlyCreatedKey.apiKey}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => handleCopyKey(newlyCreatedKey.apiKey)}
+              className="primary-button"
+              style={{ fontSize: '14px' }}
+            >
+              📋 Copy to Clipboard
+            </button>
+            <button
+              onClick={() => setNewlyCreatedKey(null)}
+              className="secondary-button"
+              style={{ fontSize: '14px' }}
+            >
+              I've Saved It
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {/* API Keys Management */}
+        <div className="settings-section">
+          <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
+            API Keys for WordPress Integration
+          </h2>
+          <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
+            Create API keys to authenticate your WordPress website or other applications.
+            Use these keys in the WordPress widget code.
+          </p>
+
+          {/* Create New API Key */}
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '16px',
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>
+              Create New API Key
+            </h3>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={newApiKeyLabel}
+                  onChange={(e) => setNewApiKeyLabel(e.target.value)}
+                  placeholder="e.g., WordPress Production, My Blog, Contact Form"
+                  style={{ width: '100%' }}
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreateApiKey()}
+                />
+              </div>
+              <button
+                onClick={handleCreateApiKey}
+                disabled={createApiKey.isPending || !newApiKeyLabel.trim()}
+                className="primary-button"
+              >
+                {createApiKey.isPending ? 'Creating...' : '+ Create Key'}
+              </button>
+            </div>
+            {createApiKey.error && (
+              <p style={{ margin: '8px 0 0 0', color: '#dc2626', fontSize: '13px' }}>
+                Error: {createApiKey.error.message}
+              </p>
+            )}
+          </div>
+
+          {/* API Keys List */}
+          <div>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600 }}>
+              Existing API Keys
+            </h3>
+            {apiKeysQuery.isLoading && (
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Loading API keys...</p>
+            )}
+            {apiKeysQuery.error && (
+              <p style={{ color: '#dc2626', fontSize: '14px' }}>
+                Error loading API keys: {apiKeysQuery.error.message}
+              </p>
+            )}
+            {apiKeysQuery.data && apiKeysQuery.data.length === 0 && (
+              <p style={{ color: '#94a3b8', fontSize: '14px', fontStyle: 'italic' }}>
+                No API keys created yet. Create one above to get started.
+              </p>
+            )}
+            {apiKeysQuery.data && apiKeysQuery.data.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {apiKeysQuery.data.map((key) => (
+                  <div
+                    key={key.id}
+                    style={{
+                      background: key.active ? '#fff' : '#f1f5f9',
+                      border: `1px solid ${key.active ? '#e2e8f0' : '#cbd5e1'}`,
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      opacity: key.active ? 1 : 0.6,
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: 600, fontSize: '14px' }}>
+                          {key.label || 'Unnamed Key'}
+                        </span>
+                        {!key.active && (
+                          <span style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            background: '#fecaca',
+                            color: '#991b1b',
+                            borderRadius: '4px',
+                            fontWeight: 600,
+                          }}>
+                            INACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#64748b', fontFamily: 'monospace' }}>
+                        {key.prefix}_••••••••{key.lastFour}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                        Created: {new Date(key.createdAt).toLocaleDateString()}
+                        {key.lastUsedAt && ` • Last used: ${new Date(key.lastUsedAt).toLocaleDateString()}`}
+                      </div>
+                    </div>
+                    {key.active && (
+                      <button
+                        onClick={() => handleDeleteApiKey(key.id)}
+                        disabled={deleteApiKey.isPending}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid #dc2626',
+                          color: '#dc2626',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Deactivate
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{
+            background: '#eff6ff',
+            border: '1px solid #3b82f6',
+            borderRadius: '8px',
+            padding: '12px',
+            marginTop: '16px',
+          }}>
+            <p style={{ margin: 0, fontSize: '13px', color: '#1e40af' }}>
+              💡 <strong>Tip:</strong> For WordPress integration, copy your API key and paste it into the widget code.
+              See the{' '}
+              <a href="/WORDPRESS-INTEGRATION-GUIDE.md" target="_blank" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                WordPress Integration Guide
+              </a>{' '}
+              for detailed instructions.
+            </p>
+          </div>
+        </div>
+
         {/* Basic Configuration */}
         <div className="settings-section">
           <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
@@ -243,18 +535,14 @@ export function TenantSettingsPage() {
                   })
                 }
               >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="openai">OpenAI (Recommended)</option>
                 <option value="deepseek">DeepSeek (Cost-Effective)</option>
                 <option value="ollama">Ollama (Local/Free)</option>
-                <option value="azure-openai">Azure OpenAI</option>
               </select>
               <small style={{ color: '#64748b' }}>
-                {settings.llm?.provider === 'deepseek' && 'DeepSeek: ~17x cheaper than OpenAI GPT-4'}
-                {settings.llm?.provider === 'ollama' && 'Ollama: Free local models (requires installation)'}
-                {settings.llm?.provider === 'openai' && 'OpenAI: Best function calling, reliable'}
-                {settings.llm?.provider === 'anthropic' && 'Claude: Excellent reasoning, 200K context'}
-                {settings.llm?.provider === 'azure-openai' && 'Azure OpenAI: Enterprise grade'}
+                {settings.llm?.provider === 'openai' && 'OpenAI: Best function calling support, highly reliable ($2.50/1M tokens for GPT-4o)'}
+                {settings.llm?.provider === 'deepseek' && 'DeepSeek: ~17x cheaper than OpenAI GPT-4 ($0.14/1M tokens), supports function calling'}
+                {settings.llm?.provider === 'ollama' && 'Ollama: Free local models (requires installation, no function calling)'}
               </small>
             </label>
 
@@ -275,17 +563,7 @@ export function TenantSettingsPage() {
                     <option value="gpt-4o">GPT-4o (Best, $2.50/1M tokens)</option>
                     <option value="gpt-4o-mini">GPT-4o Mini (Fast, $0.15/1M tokens)</option>
                     <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheap)</option>
-                  </>
-                )}
-
-                {/* Anthropic Models */}
-                {settings.llm?.provider === 'anthropic' && (
-                  <>
-                    <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet (Best)</option>
-                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (20241022)</option>
-                    <option value="claude-3-haiku-20240307">Claude 3 Haiku (Fast & Cheap)</option>
-                    <option value="claude-3-opus-latest">Claude 3 Opus (Most Capable)</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheapest)</option>
                   </>
                 )}
 
@@ -310,15 +588,6 @@ export function TenantSettingsPage() {
                     <option value="codellama:7b">CodeLlama 7B (For Code)</option>
                   </>
                 )}
-
-                {/* Azure OpenAI */}
-                {settings.llm?.provider === 'azure-openai' && (
-                  <>
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="gpt-4">GPT-4</option>
-                    <option value="gpt-35-turbo">GPT-3.5 Turbo</option>
-                  </>
-                )}
               </select>
               <small style={{ color: '#64748b' }}>
                 Select the AI model to use for this tenant
@@ -326,12 +595,9 @@ export function TenantSettingsPage() {
             </label>
 
             {/* API Key field - show for providers that need it */}
-            {(settings.llm?.provider === 'openai' ||
-              settings.llm?.provider === 'anthropic' ||
-              settings.llm?.provider === 'deepseek' ||
-              settings.llm?.provider === 'azure-openai') && (
+            {(settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && (
               <label>
-                API Key {settings.llm?.provider === 'deepseek' && '(Get it from platform.deepseek.com)'}
+                API Key
                 <input
                   type="password"
                   value={settings.llm?.apiKey || ''}
@@ -343,14 +609,13 @@ export function TenantSettingsPage() {
                   }
                   placeholder={
                     settings.llm?.provider === 'openai' ? 'sk-proj-...' :
-                    settings.llm?.provider === 'anthropic' ? 'sk-ant-...' :
                     settings.llm?.provider === 'deepseek' ? 'sk-...' :
                     'Enter API key'
                   }
                 />
                 <small style={{ color: '#64748b' }}>
-                  {settings.llm?.provider === 'deepseek' && 'Optional: Leave empty to use system default. Get your key at platform.deepseek.com'}
-                  {settings.llm?.provider !== 'deepseek' && 'Optional: Leave empty to use system default API key'}
+                  {settings.llm?.provider === 'openai' && 'Optional: Leave empty to use system default. Get your key from platform.openai.com'}
+                  {settings.llm?.provider === 'deepseek' && 'Optional: Leave empty to use system default. Get your key from platform.deepseek.com'}
                 </small>
               </label>
             )}
@@ -448,8 +713,10 @@ export function TenantSettingsPage() {
           <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
             System Prompt & Guardrails
           </h2>
-          <label>
-            Custom System Prompt
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+              Custom System Prompt
+            </label>
             <textarea
               value={settings.llm?.systemPrompt || ''}
               onChange={(e) =>
@@ -460,13 +727,23 @@ export function TenantSettingsPage() {
               }
               rows={12}
               placeholder="Enter custom instructions for the AI assistant..."
-              style={{ fontFamily: 'monospace', fontSize: '13px' }}
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                width: '100%',
+                display: 'block',
+                padding: '12px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                resize: 'vertical',
+                lineHeight: '1.5',
+              }}
             />
-            <small style={{ color: '#64748b' }}>
+            <small style={{ color: '#64748b', display: 'block', marginTop: '8px' }}>
               Additional instructions and guardrails for the AI. This will be combined with brand
               name, tone, and locale settings above.
             </small>
-          </label>
+          </div>
 
           <div style={{
             background: '#f1f5f9',
@@ -538,6 +815,120 @@ export function TenantSettingsPage() {
               Transfer conversations to human agents when triggered
             </small>
           </div>
+        </div>
+
+        {/* MCP Servers */}
+        <div className="settings-section">
+          <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
+            MCP Tool Integrations
+          </h2>
+          <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
+            Enable Model Context Protocol (MCP) servers for this tenant. These provide tools like Google Calendar, GitHub, and other integrations.
+          </p>
+
+          {mcpServersQuery.isLoading && (
+            <p style={{ color: '#64748b', fontSize: '14px' }}>Loading MCP servers...</p>
+          )}
+
+          {mcpServersQuery.error && (
+            <div style={{
+              background: '#fee2e2',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '16px',
+            }}>
+              <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+                Error loading MCP servers: {mcpServersQuery.error.message}
+              </p>
+            </div>
+          )}
+
+          {mcpServersQuery.data && mcpServersQuery.data.length === 0 && (
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '16px',
+            }}>
+              <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
+                No MCP servers configured yet.
+              </p>
+              <button
+                onClick={() => navigate('/mcp-servers')}
+                className="secondary-button"
+                style={{ fontSize: '13px' }}
+              >
+                Go to MCP Servers Settings
+              </button>
+            </div>
+          )}
+
+          {mcpServersQuery.data && mcpServersQuery.data.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {mcpServersQuery.data
+                .filter((server) => server.enabled)
+                .map((server) => {
+                  const isEnabled = (settings.enabledMcpServers || []).includes(server.id);
+                  return (
+                    <div
+                      key={server.id}
+                      style={{
+                        background: '#f8fafc',
+                        border: `1px solid ${isEnabled ? '#3b82f6' : '#e2e8f0'}`,
+                        borderRadius: '8px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
+                          {server.name}
+                        </div>
+                        {server.description && (
+                          <div style={{ fontSize: '13px', color: '#64748b' }}>
+                            {server.description}
+                          </div>
+                        )}
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginLeft: '16px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isEnabled}
+                          onChange={(e) => handleMcpToggle(server.id, e.target.checked)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                          {isEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </label>
+                    </div>
+                  );
+                })}
+
+              {mcpServersQuery.data.filter((s) => s.enabled).length === 0 && (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '16px',
+                }}>
+                  <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
+                    All MCP servers are globally disabled. Enable them first in MCP Servers settings.
+                  </p>
+                  <button
+                    onClick={() => navigate('/mcp-servers')}
+                    className="secondary-button"
+                    style={{ fontSize: '13px' }}
+                  >
+                    Go to MCP Servers Settings
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Human Handoff Keywords */}

@@ -24,6 +24,16 @@ export function DocumentsPage() {
     queryFn: () => api.get<Document[]>('/api/documents'),
   });
 
+  const tenantsQuery = useQuery({
+    queryKey: ['tenants'],
+    queryFn: () => api.get<any[]>('/api/tenants'),
+  });
+
+  const getTenantName = (tenantId: string) => {
+    const tenant = tenantsQuery.data?.find((t: any) => t.id === tenantId);
+    return tenant?.name || tenantId.slice(0, 8) + '...';
+  };
+
   const createDocument = useMutation({
     mutationFn: (data: CreateDocumentRequest) =>
       api.post<Document, CreateDocumentRequest>('/api/documents', data),
@@ -58,10 +68,11 @@ export function DocumentsPage() {
   };
 
   const startEdit = (document: Document) => {
+    const docName = (document.metadata as any)?.name || document.name || document.filename || '';
     setForm({
       tenantId: document.tenantId,
-      name: document.name,
-      source: document.source,
+      name: docName,
+      source: document.source || '',
       metadata: document.metadata || {},
     });
     setEditingId(document.id);
@@ -271,16 +282,17 @@ export function DocumentsPage() {
           <tbody>
             {documentsQuery.data.map((document) => {
               const statusStyle = getStatusColor(document.status);
+              const docName = (document.metadata as any)?.name || document.filename || 'Unnamed Document';
               return (
                 <tr key={document.id}>
                   <td>
-                    <strong>{document.name}</strong>
+                    <strong>{docName}</strong>
                   </td>
                   <td>
-                    <code style={{ fontSize: '12px' }}>{document.tenantId.slice(0, 8)}...</code>
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>{getTenantName(document.tenantId)}</span>
                   </td>
                   <td style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {document.source || 'Uploaded'}
+                    {((document.metadata as any)?.source || document.source || 'Uploaded')}
                   </td>
                   <td>
                     <span style={{
@@ -305,7 +317,7 @@ export function DocumentsPage() {
                         ✏️ Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(document.id, document.name)}
+                        onClick={() => handleDelete(document.id, docName)}
                         disabled={deleteDocument.isPending}
                         style={{
                           fontSize: '13px',

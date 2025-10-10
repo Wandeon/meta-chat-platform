@@ -156,6 +156,37 @@ router.post('/admin/users/:adminId/api-keys/:keyId/rotation/confirm', async (req
   }
 });
 
+router.get('/tenants/:tenantId/api-keys', async (req, res, next) => {
+  try {
+    assertSuperAdmin(req);
+    const { tenantId } = req.params;
+
+    const keys = await prisma.tenantApiKey.findMany({
+      where: {
+        tenantId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    const sanitizedKeys = keys.map((key: any) => ({
+      id: key.id,
+      label: key.label,
+      prefix: key.prefix,
+      lastFour: key.lastFour,
+      active: key.active,
+      createdAt: key.createdAt,
+      lastUsedAt: key.lastUsedAt,
+      rotatedAt: key.rotatedAt,
+    }));
+
+    res.json(sanitizedKeys);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/tenants/:tenantId/api-keys', async (req, res, next) => {
   try {
     assertSuperAdmin(req);
@@ -278,6 +309,34 @@ router.post('/tenants/:tenantId/api-keys/:keyId/rotation/confirm', async (req, r
       lastFour: metadata.lastFour,
       prefix: metadata.prefix,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/tenants/:tenantId/api-keys/:keyId', async (req, res, next) => {
+  try {
+    assertSuperAdmin(req);
+    const { tenantId, keyId } = req.params;
+
+    const key = await prisma.tenantApiKey.findFirst({
+      where: {
+        id: keyId,
+        tenantId,
+      },
+    });
+
+    if (!key) {
+      throw createHttpError(404, 'Tenant API key not found');
+    }
+
+    // Soft delete by marking as inactive
+    await prisma.tenantApiKey.update({
+      where: { id: keyId },
+      data: { active: false },
+    });
+
+    res.json({ success: true, message: 'API key deactivated' });
   } catch (error) {
     next(error);
   }

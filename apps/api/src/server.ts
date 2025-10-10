@@ -23,6 +23,7 @@ import documentRouter from './routes/documents';
 import conversationRouter from './routes/conversations';
 import webhookRouter from './routes/webhooks';
 import chatRouter from './routes/chat';
+import mcpServerRouter from './routes/mcpServers';
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
 import { metricsRegistry, httpRequestDuration } from './metrics';
 import { TenantQueuePublisher } from './queues/task-publisher';
@@ -209,6 +210,7 @@ function registerRoutes(
   app.use('/api/conversations', conversationRouter);
   app.use('/api/webhooks', webhookRouter);
   app.use('/api/chat', chatRouter);
+  app.use('/api/mcp-servers', mcpServerRouter);
   app.use('/api/integrations', createWebhookIntegrationsRouter(deps));
 
   app.use((req, _res, next) => {

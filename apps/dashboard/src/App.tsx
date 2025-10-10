@@ -10,6 +10,7 @@ import { ConversationsPage } from './pages/ConversationsPage';
 import { WebhooksPage } from './pages/WebhooksPage';
 import { HealthPage } from './pages/HealthPage';
 import { TestingPage } from './pages/TestingPage';
+import { McpServersPage } from './pages/McpServersPage';
 
 export function App() {
   const { apiKey } = useAuth();
@@ -29,6 +30,7 @@ export function App() {
         <Route index element={<Navigate to="/tenants" replace />} />
         <Route path="/tenants" element={<TenantsPage />} />
         <Route path="/tenants/:tenantId/settings" element={<TenantSettingsPage />} />
+        <Route path="/mcp-servers" element={<McpServersPage />} />
         <Route path="/channels" element={<ChannelsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/conversations" element={<ConversationsPage />} />

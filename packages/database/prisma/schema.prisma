@@ -129,7 +129,7 @@ model Chunk {
   tenantId   String
   documentId String
   content    String                        @db.Text
-  embedding  Unsupported("vector(1536)")?
+  embedding  Unsupported("vector(1024)")?  // mxbai-embed-large produces 1024-dim vectors
   metadata   Json                          @default("{}")
   position   Int // Order within document
   createdAt  DateTime                      @default(now())
@@ -353,4 +353,20 @@ model AdminApiKey {
 enum AdminRole {
   SUPER
   STANDARD
+}
+
+// ============= MCP (Model Context Protocol) Servers =============
+
+model McpServer {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  command     String   // e.g., "npx", "node", "python"
+  args        Json     @default("[]") // Command arguments as array
+  env         Json     @default("{}") // Environment variables
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("mcp_servers")
 }

@@ -78,8 +78,12 @@ export type DocumentStatus = 'pending' | 'processing' | 'indexed' | 'failed';
 export interface Document {
   id: string;
   tenantId: string;
-  name: string;
+  name?: string;
+  filename: string;
   source: string;
+  mimeType: string;
+  size: number;
+  path: string;
   status: DocumentStatus;
   metadata?: Record<string, unknown>;
   createdAt: string;
