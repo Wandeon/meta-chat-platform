@@ -29,7 +29,14 @@ interface McpServer {
   name: string;
   description: string | null;
   command: string;
+  requiredEnv: string[];
   enabled: boolean;
+}
+
+interface McpConfig {
+  serverId: string;
+  enabled: boolean;
+  credentials: Record<string, string>;
 }
 
 // Tenant Settings structure
@@ -41,7 +48,7 @@ interface TenantSettings {
   enableFunctionCalling: boolean;
   enableHumanHandoff: boolean;
   humanHandoffKeywords: string[];
-  enabledMcpServers?: string[]; // Array of MCP server IDs enabled for this tenant
+  mcpConfigs?: McpConfig[]; // Per-tenant MCP configurations with credentials
   ragConfig?: {
     topK: number;
     minSimilarity: number;
@@ -70,7 +77,7 @@ const DEFAULT_SETTINGS: TenantSettings = {
   enableFunctionCalling: false,
   enableHumanHandoff: false,
   humanHandoffKeywords: [],
-  enabledMcpServers: [],
+  mcpConfigs: [],
   ragConfig: {
     topK: 5,
     minSimilarity: 0.5,
@@ -204,14 +211,58 @@ export function TenantSettingsPage() {
     alert('API key copied to clipboard!');
   };
 
-  // MCP Server toggle handler
+  // MCP Server handlers
   const handleMcpToggle = (serverId: string, enabled: boolean) => {
     setSettings((prev) => {
-      const enabledServers = prev.enabledMcpServers || [];
-      if (enabled) {
-        return { ...prev, enabledMcpServers: [...enabledServers, serverId] };
+      const configs = prev.mcpConfigs || [];
+      const existingConfig = configs.find((c) => c.serverId === serverId);
+
+      if (existingConfig) {
+        // Update existing config
+        return {
+          ...prev,
+          mcpConfigs: configs.map((c) =>
+            c.serverId === serverId ? { ...c, enabled } : c
+          ),
+        };
+      } else if (enabled) {
+        // Add new config
+        return {
+          ...prev,
+          mcpConfigs: [...configs, { serverId, enabled: true, credentials: {} }],
+        };
+      }
+      return prev;
+    });
+  };
+
+  const handleMcpCredentialChange = (
+    serverId: string,
+    key: string,
+    value: string
+  ) => {
+    setSettings((prev) => {
+      const configs = prev.mcpConfigs || [];
+      const existingConfig = configs.find((c) => c.serverId === serverId);
+
+      if (existingConfig) {
+        return {
+          ...prev,
+          mcpConfigs: configs.map((c) =>
+            c.serverId === serverId
+              ? { ...c, credentials: { ...c.credentials, [key]: value } }
+              : c
+          ),
+        };
       } else {
-        return { ...prev, enabledMcpServers: enabledServers.filter((id) => id !== serverId) };
+        // Create new config with credential
+        return {
+          ...prev,
+          mcpConfigs: [
+            ...configs,
+            { serverId, enabled: false, credentials: { [key]: value } },
+          ],
+        };
       }
     });
   };
@@ -865,45 +916,95 @@ export function TenantSettingsPage() {
           )}
 
           {mcpServersQuery.data && mcpServersQuery.data.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {mcpServersQuery.data
                 .filter((server) => server.enabled)
                 .map((server) => {
-                  const isEnabled = (settings.enabledMcpServers || []).includes(server.id);
+                  const mcpConfig = (settings.mcpConfigs || []).find((c) => c.serverId === server.id);
+                  const isEnabled = mcpConfig?.enabled || false;
+                  const credentials = mcpConfig?.credentials || {};
+
                   return (
                     <div
                       key={server.id}
                       style={{
-                        background: '#f8fafc',
-                        border: `1px solid ${isEnabled ? '#3b82f6' : '#e2e8f0'}`,
+                        background: '#fff',
+                        border: `2px solid ${isEnabled ? '#3b82f6' : '#e2e8f0'}`,
                         borderRadius: '8px',
-                        padding: '12px 16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                        padding: '16px',
                       }}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
-                          {server.name}
-                        </div>
-                        {server.description && (
-                          <div style={{ fontSize: '13px', color: '#64748b' }}>
-                            {server.description}
+                      {/* Header with toggle */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>
+                            {server.name}
                           </div>
-                        )}
+                          {server.description && (
+                            <div style={{ fontSize: '13px', color: '#64748b' }}>
+                              {server.description}
+                            </div>
+                          )}
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={isEnabled}
+                            onChange={(e) => handleMcpToggle(server.id, e.target.checked)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                            {isEnabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </label>
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginLeft: '16px' }}>
-                        <input
-                          type="checkbox"
-                          checked={isEnabled}
-                          onChange={(e) => handleMcpToggle(server.id, e.target.checked)}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                          {isEnabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </label>
+
+                      {/* Credentials section (only if server has requiredEnv) */}
+                      {server.requiredEnv.length > 0 && (
+                        <div style={{
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '12px',
+                          marginTop: '12px',
+                        }}>
+                          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px', color: '#475569' }}>
+                            Required Credentials:
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {server.requiredEnv.map((envVar) => (
+                              <div key={envVar}>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px', color: '#64748b' }}>
+                                  {envVar}
+                                </label>
+                                <input
+                                  type="password"
+                                  value={credentials[envVar] || ''}
+                                  onChange={(e) => handleMcpCredentialChange(server.id, envVar, e.target.value)}
+                                  placeholder={`Enter ${envVar}`}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '6px',
+                                    fontSize: '13px',
+                                    fontFamily: 'monospace',
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                            💡 These credentials are specific to your account and encrypted in the database.
+                          </p>
+                        </div>
+                      )}
+
+                      {server.requiredEnv.length === 0 && (
+                        <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                          No credentials required for this server.
+                        </p>
+                      )}
                     </div>
                   );
                 })}
