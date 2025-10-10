@@ -67,6 +67,16 @@ interface TenantSettings {
     maxTokens?: number;
     systemPrompt?: string;
   };
+  confidenceEscalation?: {
+    enabled: boolean;
+    mode: 'standard' | 'strict' | 'lenient';
+    immediateEscalationThreshold?: number;
+    suggestReviewThreshold?: number;
+    addDisclaimers?: boolean;
+    disclaimerText?: string;
+    selfAssessmentStrategy?: 'explicit_marker' | 'chain_of_thought' | 'uncertainty_acknowledgment';
+    highStakesDomains?: string[];
+  };
 }
 
 const DEFAULT_SETTINGS: TenantSettings = {
@@ -1032,15 +1042,278 @@ export function TenantSettingsPage() {
           )}
         </div>
 
+        {/* Confidence-Based Escalation */}
+        {settings.enableHumanHandoff && (
+          <div className="settings-section">
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
+              🤖 Confidence-Based Escalation (AI Uncertainty Detection)
+            </h2>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
+              Intelligently escalate to human agents when the AI is uncertain about its response,
+              instead of relying only on keywords. The AI analyzes its own confidence and escalates
+              when it's not sure it can help properly.
+            </p>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '16px' }}>
+              <input
+                type="checkbox"
+                checked={settings.confidenceEscalation?.enabled || false}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    confidenceEscalation: {
+                      ...(settings.confidenceEscalation || { mode: 'standard' }),
+                      enabled: e.target.checked,
+                    },
+                  })
+                }
+              />
+              <span style={{ fontWeight: 500 }}>Enable Confidence-Based Escalation</span>
+            </label>
+
+            {settings.confidenceEscalation?.enabled && (
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '16px',
+              }}>
+                {/* Mode Selection */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontWeight: 500, marginBottom: '8px' }}>
+                    Escalation Mode
+                  </label>
+                  <select
+                    value={settings.confidenceEscalation?.mode || 'standard'}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        confidenceEscalation: {
+                          ...settings.confidenceEscalation!,
+                          mode: e.target.value as 'standard' | 'strict' | 'lenient',
+                        },
+                      })
+                    }
+                    style={{ width: '100%' }}
+                  >
+                    <option value="lenient">Lenient - Trust AI More (Escalate less often)</option>
+                    <option value="standard">Standard - Balanced (Recommended)</option>
+                    <option value="strict">Strict - Be Cautious (Escalate more often)</option>
+                  </select>
+                  <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                    {settings.confidenceEscalation?.mode === 'strict' && '⚠️ Best for medical, legal, or financial domains. Escalates when confidence <50%.'}
+                    {settings.confidenceEscalation?.mode === 'standard' && '✅ Good for general support. Escalates when confidence <30%.'}
+                    {settings.confidenceEscalation?.mode === 'lenient' && '💬 Best for casual chat. Escalates when confidence <20%.'}
+                  </small>
+                </div>
+
+                {/* Self-Assessment Strategy */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontWeight: 500, marginBottom: '8px' }}>
+                    Self-Assessment Strategy
+                  </label>
+                  <select
+                    value={settings.confidenceEscalation?.selfAssessmentStrategy || 'explicit_marker'}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        confidenceEscalation: {
+                          ...settings.confidenceEscalation!,
+                          selfAssessmentStrategy: e.target.value as any,
+                        },
+                      })
+                    }
+                    style={{ width: '100%' }}
+                  >
+                    <option value="explicit_marker">Explicit Marker (Recommended)</option>
+                    <option value="chain_of_thought">Chain of Thought</option>
+                    <option value="uncertainty_acknowledgment">Uncertainty Acknowledgment</option>
+                  </select>
+                  <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                    How the AI should express its confidence level in responses
+                  </small>
+                </div>
+
+                {/* Add Disclaimers */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={settings.confidenceEscalation?.addDisclaimers !== false}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          confidenceEscalation: {
+                            ...settings.confidenceEscalation!,
+                            addDisclaimers: e.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    <span style={{ fontWeight: 500 }}>Add disclaimers to uncertain responses</span>
+                  </label>
+                </div>
+
+                {/* Custom Disclaimer Text */}
+                {settings.confidenceEscalation?.addDisclaimers !== false && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontWeight: 500, marginBottom: '8px' }}>
+                      Custom Disclaimer Text (optional)
+                    </label>
+                    <textarea
+                      value={settings.confidenceEscalation?.disclaimerText || ''}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          confidenceEscalation: {
+                            ...settings.confidenceEscalation!,
+                            disclaimerText: e.target.value,
+                          },
+                        })
+                      }
+                      rows={3}
+                      placeholder="Leave empty to use default disclaimer"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                    <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                      Default: "⚠️ Note: I may not have complete information about this topic. Please verify with an expert if this is important."
+                    </small>
+                  </div>
+                )}
+
+                {/* Advanced Thresholds (collapsible) */}
+                <details style={{ marginTop: '16px' }}>
+                  <summary style={{ cursor: 'pointer', fontWeight: 500, color: '#475569', fontSize: '14px' }}>
+                    Advanced Settings (Optional)
+                  </summary>
+                  <div style={{ marginTop: '16px', paddingLeft: '12px', borderLeft: '2px solid #cbd5e1' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontWeight: 500, marginBottom: '8px', fontSize: '13px' }}>
+                        Immediate Escalation Threshold: {(settings.confidenceEscalation?.immediateEscalationThreshold ?? (
+                          settings.confidenceEscalation?.mode === 'strict' ? 0.5 :
+                          settings.confidenceEscalation?.mode === 'lenient' ? 0.2 : 0.3
+                        ) * 100).toFixed(0)}%
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={settings.confidenceEscalation?.immediateEscalationThreshold ?? (
+                          settings.confidenceEscalation?.mode === 'strict' ? 0.5 :
+                          settings.confidenceEscalation?.mode === 'lenient' ? 0.2 : 0.3
+                        )}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            confidenceEscalation: {
+                              ...settings.confidenceEscalation!,
+                              immediateEscalationThreshold: parseFloat(e.target.value),
+                            },
+                          })
+                        }
+                      />
+                      <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                        Below this confidence, don't send AI response (immediate escalation)
+                      </small>
+                    </div>
+
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', fontWeight: 500, marginBottom: '8px', fontSize: '13px' }}>
+                        Suggest Review Threshold: {(settings.confidenceEscalation?.suggestReviewThreshold ?? (
+                          settings.confidenceEscalation?.mode === 'strict' ? 0.75 :
+                          settings.confidenceEscalation?.mode === 'lenient' ? 0.4 : 0.6
+                        ) * 100).toFixed(0)}%
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={settings.confidenceEscalation?.suggestReviewThreshold ?? (
+                          settings.confidenceEscalation?.mode === 'strict' ? 0.75 :
+                          settings.confidenceEscalation?.mode === 'lenient' ? 0.4 : 0.6
+                        )}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            confidenceEscalation: {
+                              ...settings.confidenceEscalation!,
+                              suggestReviewThreshold: parseFloat(e.target.value),
+                            },
+                          })
+                        }
+                      />
+                      <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                        Below this confidence, send AI response but notify human for review
+                      </small>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 500, marginBottom: '8px', fontSize: '13px' }}>
+                        Additional High-Stakes Domains
+                      </label>
+                      <input
+                        type="text"
+                        value={(settings.confidenceEscalation?.highStakesDomains || []).join(', ')}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            confidenceEscalation: {
+                              ...settings.confidenceEscalation!,
+                              highStakesDomains: e.target.value
+                                .split(',')
+                                .map((s) => s.trim())
+                                .filter(Boolean),
+                            },
+                          })
+                        }
+                        placeholder="e.g., prescription, surgery, investment"
+                        style={{ width: '100%' }}
+                      />
+                      <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                        Comma-separated keywords for stricter thresholds (beyond default: medical, legal, financial)
+                      </small>
+                    </div>
+                  </div>
+                </details>
+
+                {/* Info box */}
+                <div style={{
+                  background: '#eff6ff',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '6px',
+                  padding: '12px',
+                  marginTop: '16px',
+                }}>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
+                    💡 <strong>How it works:</strong> The AI analyzes its own confidence using multiple signals
+                    (self-assessment, uncertain language, response quality). When confidence is low, it automatically
+                    escalates to a human agent. This catches edge cases that keyword matching would miss.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Human Handoff Keywords */}
         {settings.enableHumanHandoff && (
           <div className="settings-section">
             <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
-              Human Handoff Keywords
+              Human Handoff Keywords (Traditional)
             </h2>
             <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
               When users say these words or phrases, the conversation will be escalated to a human
-              agent
+              agent (works alongside confidence-based escalation)
             </p>
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
