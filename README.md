@@ -10,6 +10,21 @@ A production-grade conversational AI platform that synthesizes the best patterns
 
 ---
 
+
+## 📚 Documentation
+
+**[Complete Documentation](docs/README.md)** - Comprehensive guides, API reference, and operations manual.
+
+Quick links:
+- [System Architecture](docs/current/architecture/system-design.md) - Overall system design and data flow
+- [API Reference](docs/current/api/endpoints.md) - REST API endpoints and schemas
+- [Deployment Guide](docs/current/deployment/production.md) - Production deployment on VPS-00
+- [RAG System](docs/current/features/rag-system.md) - Knowledge base and vector search
+- [Confidence Escalation](docs/current/features/confidence-escalation.md) - AI uncertainty detection
+- [Troubleshooting](docs/current/operations/troubleshooting.md) - Common issues and solutions
+
+---
+
 ## 🏗️ Architecture
 
 ### Technology Stack
@@ -467,54 +482,6 @@ eventManager.on(EventType.MESSAGE_RECEIVED, async (event) => {
 5. **Production Hardening** - Error handling, retry logic, circuit breakers
 6. **API Documentation** - OpenAPI/Swagger documentation for REST endpoints
 7. **Go-Live** - Production launch with monitoring and on-call procedures
-
----
-
-## 📖 Reference Documentation
-
-### API Endpoints (Planned)
-
-#### Tenants
-- `POST /api/tenants` - Create tenant
-- `GET /api/tenants/:id` - Get tenant
-- `PUT /api/tenants/:id` - Update tenant
-- `DELETE /api/tenants/:id` - Delete tenant
-
-#### Channels
-- `POST /api/tenants/:id/channels` - Add channel
-- `GET /api/tenants/:id/channels` - List channels
-- `PUT /api/tenants/:id/channels/:channelId` - Update channel
-- `DELETE /api/tenants/:id/channels/:channelId` - Remove channel
-
-#### Documents
-- `POST /api/tenants/:id/documents` - Upload document
-- `GET /api/tenants/:id/documents` - List documents
-- `DELETE /api/tenants/:id/documents/:docId` - Delete document
-- `POST /api/tenants/:id/documents/:docId/reindex` - Trigger reindexing
-
-#### Webhooks
-- `POST /webhooks/whatsapp` - WhatsApp Cloud API webhook
-- `POST /webhooks/messenger` - Messenger Platform webhook
-
-### Database Schema
-
-See `packages/database/prisma/schema.prisma` for the complete schema.
-
-### Data Retention & Partitioning
-
-- `messages` and `api_logs` are partitioned by month for faster pruning and queries
-- Background jobs archive/delete data based on tenant retention policies
-- Retention windows are configurable per tenant via the `TenantSettings.retention` object
-
-Key models:
-- **Tenant**: Multi-tenant isolation root
-- **Channel**: Per-tenant channel configurations
-- **Conversation**: Ongoing conversations
-- **Message**: Individual messages
-- **Document**: Uploaded files for RAG
-- **Chunk**: Text chunks with vector embeddings
-- **Webhook**: Outgoing webhook configurations
-- **Event**: Event log for debugging
 
 ---
 
