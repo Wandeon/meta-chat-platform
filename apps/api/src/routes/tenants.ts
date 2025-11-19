@@ -110,4 +110,23 @@ router.patch(
   }),
 );
 
+router.delete(
+  '/:tenantId',
+  asyncHandler(async (req, res) => {
+    const { tenantId } = req.params;
+
+    const existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!existing) {
+      throw createHttpError(404, 'Tenant not found');
+    }
+
+    // Delete the tenant (cascade will handle related records due to schema)
+    await prisma.tenant.delete({
+      where: { id: tenantId },
+    });
+
+    respondSuccess(res, { id: tenantId, deleted: true });
+  }),
+);
+
 export default router;

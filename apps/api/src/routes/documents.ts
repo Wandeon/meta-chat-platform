@@ -128,7 +128,7 @@ const updateDocumentHandler = asyncHandler(async (req, res) => {
   }
 
   // If content is being updated, regenerate file details
-  let updatedData: any = {
+  const updatedData: any = {
     status: payload.status ?? existing.status,
     metadata: payload.metadata ? { ...existing.metadata, ...payload.metadata } : existing.metadata,
   };

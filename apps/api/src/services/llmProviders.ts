@@ -210,7 +210,8 @@ export async function callDeepSeek(
  */
 export async function callOllama(
   config: LlmConfig,
-  messages: LlmMessage[]
+  messages: LlmMessage[],
+  tools?: McpTool[]
 ): Promise<LlmResponse> {
   const startTime = Date.now();
   const baseUrl = config.baseUrl;
@@ -220,25 +221,54 @@ export async function callOllama(
   }
 
   // Convert messages to Ollama format
-  const ollamaMessages = messages
-    .filter((m) => m.role !== 'tool') // Ollama doesn't support tool messages
-    .map((m) => ({
+  const ollamaMessages = messages.map((m) => {
+    if (m.role === 'tool') {
+      // Tool response format for Ollama
+      return {
+        role: 'tool',
+        content: m.content,
+      };
+    }
+    return {
       role: m.role === 'system' ? 'system' : m.role === 'user' ? 'user' : 'assistant',
       content: m.content,
-    }));
+      // Include tool_calls if this was an assistant message with tool calls
+      ...(m.role === 'assistant' && (m as any).tool_calls ? { tool_calls: (m as any).tool_calls } : {}),
+    };
+  });
+
+  // Convert MCP tools to Ollama format (OpenAI-compatible)
+  const ollamaTools = tools?.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description || '',
+      parameters: tool.inputSchema || {
+        type: 'object',
+        properties: {},
+      },
+    },
+  }));
+
+  const requestBody: any = {
+    model: config.model,
+    messages: ollamaMessages,
+    stream: false,
+    options: {
+      temperature: config.temperature ?? 0.7,
+      num_predict: config.maxTokens ?? 2000,
+    },
+  };
+
+  // Add tools if provided
+  if (ollamaTools && ollamaTools.length > 0) {
+    requestBody.tools = ollamaTools;
+  }
 
   const response = await fetch(`${baseUrl}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: config.model,
-      messages: ollamaMessages,
-      stream: false,
-      options: {
-        temperature: config.temperature ?? 0.7,
-        num_predict: config.maxTokens ?? 2000,
-      },
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
@@ -248,10 +278,22 @@ export async function callOllama(
   const data: any = await response.json();
   const latency = Date.now() - startTime;
 
+  // Parse tool calls from response (Ollama uses OpenAI-compatible format)
+  let toolCalls: LlmToolCall[] | undefined;
+  if (data.message?.tool_calls && Array.isArray(data.message.tool_calls)) {
+    toolCalls = data.message.tool_calls.map((tc: any) => ({
+      id: tc.id || `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: tc.function?.name || '',
+      arguments: typeof tc.function?.arguments === 'string'
+        ? JSON.parse(tc.function.arguments)
+        : tc.function?.arguments || {},
+    }));
+  }
+
   return {
     message: data.message?.content || '',
-    toolCalls: undefined, // Ollama doesn't support function calling
-    finishReason: 'stop',
+    toolCalls,
+    finishReason: data.message?.tool_calls ? 'tool_calls' : 'stop',
     metadata: {
       model: config.model,
       tokens: {
@@ -278,7 +320,7 @@ export async function callLlm(
     case 'deepseek':
       return callDeepSeek(config, messages, tools);
     case 'ollama':
-      return callOllama(config, messages);
+      return callOllama(config, messages, tools); // Now supports tools!
     default:
       throw new Error(`Unsupported LLM provider: ${config.provider}`);
   }
