@@ -15,9 +15,11 @@ import {
   buildEscalationConfigFromTenant,
   isConfidenceEscalationEnabled
 } from '@meta-chat/orchestrator';
+import { AnalyticsService } from '../services/AnalyticsService';
 
 const prisma = getPrismaClient();
 const router = Router();
+const analyticsService = new AnalyticsService(prisma);
 
 const chatRequestSchema = z.object({
   tenantId: z.string(),
@@ -89,6 +91,7 @@ router.post(
 
     // If RAG is enabled, search for relevant context
     let contextUsed = false;
+    let searchResults: any[] = [];
     if (enableRag) {
       try {
         const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
@@ -378,6 +381,37 @@ router.post(
       where: { id: conversation.id },
       data: { lastMessageAt: new Date() },
     });
+
+    // Track analytics metrics
+    try {
+      const responseAt = new Date();
+      const ragSimilarity = searchResults && searchResults.length > 0
+        ? searchResults[0].similarity
+        : undefined;
+      const ragChunks = searchResults ? searchResults.length : undefined;
+      const ragTopDoc = searchResults && searchResults.length > 0 && searchResults[0].chunk
+        ? searchResults[0].chunk.documentId
+        : undefined;
+
+      await analyticsService.trackMessageMetric({
+        conversationId: conversation.id,
+        messageId: `${conversation.id}-${now.getTime()}`,
+        tenantId: payload.tenantId,
+        sentAt: now,
+        responseAt,
+        ragUsed: contextUsed,
+        ragSimilarity,
+        ragChunksRetrieved: ragChunks,
+        ragTopDocumentId: ragTopDoc,
+        confidenceScore: escalationDecision?.analysis.overallScore,
+        escalated: confidenceEscalated,
+        errorOccurred: false,
+        userMessage: payload.message,
+      });
+    } catch (analyticsError) {
+      console.error('[Analytics] Failed to track metrics:', analyticsError);
+      // Don't fail the request if analytics tracking fails
+    }
 
     const response = {
       message: responseToSend,
