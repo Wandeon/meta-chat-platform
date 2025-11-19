@@ -20,9 +20,10 @@ export interface SearchOptions {
   limit?: number; // Number of results to return
   minSimilarity?: number; // Minimum cosine similarity threshold (0-1)
   documentIds?: string[]; // Optional: limit search to specific documents
+  languageFilter?: string; // Optional: filter by document language (ISO 639-1 code)
 }
 
-const DEFAULT_OPTIONS: Required<Omit<SearchOptions, 'documentIds'>> = {
+const DEFAULT_OPTIONS: Required<Omit<SearchOptions, 'documentIds' | 'languageFilter'>> = {
   limit: 5,
   minSimilarity: 0.5,
 };
@@ -51,6 +52,12 @@ export async function searchChunks(
     ? `AND "documentId" = ANY(ARRAY[${options.documentIds.map((id) => `'${id}'`).join(',')}])`
     : '';
 
+  // Build the WHERE clause for language filtering
+  // Filter by language in chunk metadata, or allow chunks with no language set
+  const languageFilter = options.languageFilter
+    ? `AND (metadata->>'language' = '${options.languageFilter}' OR metadata->>'language' IS NULL)`
+    : '';
+
   // Perform vector similarity search using cosine distance
   // Note: pgvector uses <=> for cosine distance (0 = identical, 2 = opposite)
   // We convert to similarity score: 1 - (distance / 2) = similarity in range [0, 1]
@@ -66,6 +73,7 @@ export async function searchChunks(
     WHERE "tenantId" = $2
       AND embedding IS NOT NULL
       ${documentFilter}
+      ${languageFilter}
     ORDER BY embedding <=> $1::vector
     LIMIT $3
   `;

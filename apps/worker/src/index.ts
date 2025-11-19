@@ -3,6 +3,7 @@ import { getPrismaClient } from '@meta-chat/database';
 import { MessageOrchestrator, ChannelAdapterRegistry } from '@meta-chat/orchestrator';
 import { MessagePipelineWithEscalation } from '@meta-chat/orchestrator';
 import { createLogger, ChannelType } from '@meta-chat/shared';
+import { WhatsAppAdapterWrapper, MessengerAdapterWrapper } from './channel-adapters';
 
 const logger = createLogger('Worker');
 const prisma = getPrismaClient();
@@ -23,9 +24,12 @@ const config: WorkerConfig = {
 
 const orchestrators: MessageOrchestrator[] = [];
 
-// Create channel adapter registry
-// TODO: Register actual channel adapters (WhatsApp, Messenger, etc.) here
+// Create and configure channel adapter registry
 const channelAdapterRegistry = new ChannelAdapterRegistry();
+channelAdapterRegistry.register('whatsapp', new WhatsAppAdapterWrapper());
+channelAdapterRegistry.register('messenger', new MessengerAdapterWrapper());
+
+logger.info('Registered channel adapters: whatsapp, messenger');
 
 /**
  * Start orchestrators for all active tenants and their enabled channels

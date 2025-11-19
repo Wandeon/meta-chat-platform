@@ -21,6 +21,11 @@ interface ChatResponse {
       total?: number;
     };
     latency?: number;
+    ragEnabled?: boolean;
+    contextUsed?: boolean;
+    toolsUsed?: boolean;
+    mcpEnabled?: boolean;
+    debug?: any;
   };
 }
 
@@ -290,7 +295,7 @@ export function TestingPage() {
           </div>
 
           {/* Info Sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '600px' }}>
             <div style={{
               padding: 16,
               background: '#f8fafc',
@@ -322,6 +327,21 @@ export function TestingPage() {
                       </div>
                     </div>
                   )}
+                  {lastMetadata.ragEnabled !== undefined && (
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>RAG Enabled:</strong> {lastMetadata.ragEnabled ? 'Yes' : 'No'}
+                    </div>
+                  )}
+                  {lastMetadata.contextUsed !== undefined && (
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>RAG Context Used:</strong> {lastMetadata.contextUsed ? 'Yes' : 'No'}
+                    </div>
+                  )}
+                  {lastMetadata.toolsUsed !== undefined && (
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Tools Used:</strong> {lastMetadata.toolsUsed ? 'Yes' : 'No'}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>
@@ -329,6 +349,172 @@ export function TestingPage() {
                 </p>
               )}
             </div>
+
+            {/* Debug Information */}
+            {lastMetadata?.debug && (
+              <div style={{
+                padding: 16,
+                background: '#fef3c7',
+                border: '1px solid #fbbf24',
+                borderRadius: 12,
+              }}>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600, color: '#92400e' }}>
+                  🔍 Debug Information
+                </h3>
+                <div style={{ fontSize: '12px', lineHeight: '1.6', color: '#78350f' }}>
+                  {/* System Prompt */}
+                  {lastMetadata.debug.systemPrompt && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        System Prompt ({lastMetadata.debug.systemPrompt.length} chars)
+                      </summary>
+                      <pre style={{
+                        background: '#fff',
+                        padding: 8,
+                        borderRadius: 6,
+                        fontSize: '11px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}>
+                        {lastMetadata.debug.systemPrompt.fullPrompt}
+                      </pre>
+                    </details>
+                  )}
+
+                  {/* Messages Sent to LLM */}
+                  {lastMetadata.debug.messages && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        Messages Array ({lastMetadata.debug.messages.messageCount} messages)
+                      </summary>
+                      <div style={{ background: '#fff', padding: 8, borderRadius: 6, fontSize: '11px' }}>
+                        {lastMetadata.debug.messages.fullMessages.map((msg: any, idx: number) => (
+                          <div key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }}>
+                            <div style={{ fontWeight: 600, color: '#1e40af' }}>
+                              [{idx}] {msg.role}
+                            </div>
+                            <pre style={{
+                              margin: '4px 0 0 0',
+                              whiteSpace: 'pre-wrap',
+                              wordWrap: 'break-word',
+                            }}>
+                              {msg.content}
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+
+                  {/* RAG Context */}
+                  {lastMetadata.debug.ragContext && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        RAG Context
+                      </summary>
+                      <pre style={{
+                        background: '#fff',
+                        padding: 8,
+                        borderRadius: 6,
+                        fontSize: '11px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}>
+                        {JSON.stringify(lastMetadata.debug.ragContext, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+
+                  {/* MCP Tools */}
+                  {lastMetadata.debug.mcpTools && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        MCP Tools ({lastMetadata.debug.mcpTools.toolCount} tools)
+                      </summary>
+                      <pre style={{
+                        background: '#fff',
+                        padding: 8,
+                        borderRadius: 6,
+                        fontSize: '11px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}>
+                        {JSON.stringify(lastMetadata.debug.mcpTools, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+
+                  {/* LLM Configuration */}
+                  {lastMetadata.debug.llmConfig && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        LLM Configuration
+                      </summary>
+                      <pre style={{
+                        background: '#fff',
+                        padding: 8,
+                        borderRadius: 6,
+                        fontSize: '11px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}>
+                        {JSON.stringify(lastMetadata.debug.llmConfig, null, 2)}
+                      </pre>
+                    </details>
+                  )}
+
+                  {/* LLM Response */}
+                  {lastMetadata.debug.llmResponse && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        Raw LLM Response
+                      </summary>
+                      <pre style={{
+                        background: '#fff',
+                        padding: 8,
+                        borderRadius: 6,
+                        fontSize: '11px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}>
+                        {lastMetadata.debug.llmResponse.fullMessage}
+                      </pre>
+                    </details>
+                  )}
+
+                  {/* Final Response */}
+                  {lastMetadata.debug.finalResponse && (
+                    <details style={{ marginBottom: 12 }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
+                        Final Response to User
+                      </summary>
+                      <pre style={{
+                        background: '#fff',
+                        padding: 8,
+                        borderRadius: 6,
+                        fontSize: '11px',
+                        overflow: 'auto',
+                        maxHeight: '200px',
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word',
+                      }}>
+                        {lastMetadata.debug.finalResponse.fullMessage}
+                      </pre>
+                    </details>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div style={{
               padding: 16,

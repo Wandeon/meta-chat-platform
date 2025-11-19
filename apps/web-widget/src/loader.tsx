@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { MetaChatWidget } from './MetaChatWidget';
 import type { WidgetConfig, WidgetOptions } from './types';
 
-const DEFAULT_CONFIG_ENDPOINT = '/api/public/widgets/config';
+const DEFAULT_CONFIG_ENDPOINT = '/api/public/widget/config';
 
 async function fetchConfig(options: WidgetOptions): Promise<WidgetConfig> {
   if (options.config) {
