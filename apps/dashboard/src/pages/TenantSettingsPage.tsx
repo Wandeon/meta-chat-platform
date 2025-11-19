@@ -44,6 +44,7 @@ interface TenantSettings {
   brandName: string;
   tone: string;
   locale: string[];
+  language?: string; // Preferred language for AI responses (ISO 639-1 code)
   enableRag: boolean;
   enableFunctionCalling: boolean;
   enableHumanHandoff: boolean;
@@ -117,6 +118,7 @@ export function TenantSettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [newApiKeyLabel, setNewApiKeyLabel] = useState('');
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<CreateApiKeyResponse | null>(null);
+  const [apiKeyConfirmed, setApiKeyConfirmed] = useState(false);
 
   // Fetch tenant data
   const tenantQuery = useQuery({
@@ -138,6 +140,32 @@ export function TenantSettingsPage() {
     queryFn: () => api.get<McpServer[]>('/api/mcp-servers'),
   });
 
+  // Fetch available Ollama models (when baseUrl is set)
+  const ollamaModelsQuery = useQuery({
+    queryKey: ['ollama-models', settings.llm?.baseUrl],
+    queryFn: () =>
+      api.get<{ models: Array<{ name: string; size: number }> }>(
+        `/api/ollama/models?baseUrl=${encodeURIComponent(settings.llm?.baseUrl || '')}`
+      ),
+    enabled: !!settings.llm?.baseUrl && settings.llm?.provider === 'ollama',
+    staleTime: 60000, // Cache for 1 minute
+  });
+
+  // Fetch available OpenAI models (when API key is confirmed)
+  const openaiModelsQuery = useQuery({
+    queryKey: ['openai-models', settings.llm?.apiKey, apiKeyConfirmed],
+    queryFn: () => {
+      console.log('[OpenAI Models] Fetching with API key:', settings.llm?.apiKey ? `${settings.llm.apiKey.substring(0, 10)}...` : 'EMPTY');
+      console.log('[OpenAI Models] Provider:', settings.llm?.provider);
+      return api.get<{ models: Array<{ id: string; name: string; created: number }> }>(
+        '/api/ollama/openai-models',
+        { apiKey: settings.llm?.apiKey || '' }
+      );
+    },
+    enabled: settings.llm?.provider === 'openai' && !!settings.llm?.apiKey && apiKeyConfirmed,
+    staleTime: 300000, // Cache for 5 minutes (OpenAI models change less frequently)
+  });
+
   // Load settings from tenant data
   useEffect(() => {
     if (tenantQuery.data?.settings) {
@@ -147,6 +175,14 @@ export function TenantSettingsPage() {
       });
     }
   }, [tenantQuery.data]);
+
+  // Reset API key confirmation when provider changes
+  useEffect(() => {
+    const provider = settings.llm?.provider;
+
+    // Reset confirmation when provider changes
+    setApiKeyConfirmed(false);
+  }, [settings.llm?.provider]);
 
   // Update tenant mutation
   const updateTenant = useMutation({
@@ -576,6 +612,36 @@ export function TenantSettingsPage() {
                 Comma-separated list of preferred languages (e.g., en-US, es-ES, fr-FR)
               </small>
             </label>
+
+            <label>
+              Preferred Language
+              <select
+                value={settings.language || 'en'}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    language: e.target.value,
+                  })
+                }
+              >
+                <option value="en">English</option>
+                <option value="hr">Hrvatski (Croatian)</option>
+                <option value="de">Deutsch (German)</option>
+                <option value="fr">Français (French)</option>
+                <option value="es">Español (Spanish)</option>
+                <option value="it">Italiano (Italian)</option>
+                <option value="pt">Português (Portuguese)</option>
+                <option value="nl">Nederlands (Dutch)</option>
+                <option value="pl">Polski (Polish)</option>
+                <option value="ru">Русский (Russian)</option>
+                <option value="cs">Čeština (Czech)</option>
+                <option value="sl">Slovenščina (Slovenian)</option>
+                <option value="sr">Српски (Serbian)</option>
+              </select>
+              <small style={{ color: '#64748b' }}>
+                Primary language for AI responses and RAG context templates. Used to filter knowledge base documents by language.
+              </small>
+            </label>
           </div>
         </div>
 
@@ -607,6 +673,57 @@ export function TenantSettingsPage() {
               </small>
             </label>
 
+            {/* API Key field - show for providers that need it */}
+            {(settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && (
+              <label>
+                API Key
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <input
+                    type="password"
+                    value={settings.llm?.apiKey || ''}
+                    onChange={(e) => {
+                      const newKey = e.target.value;
+                      console.log('[API Key] Changed, length:', newKey.length, 'provider:', settings.llm?.provider);
+                      setSettings({
+                        ...settings,
+                        llm: { ...settings.llm, apiKey: newKey },
+                      });
+                      // Reset confirmation when key changes
+                      setApiKeyConfirmed(false);
+                    }}
+                    placeholder={
+                      settings.llm?.provider === 'openai' ? 'sk-proj-...' :
+                      settings.llm?.provider === 'deepseek' ? 'sk-...' :
+                      'Enter API key'
+                    }
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log('[API Key] Confirming API key for provider:', settings.llm?.provider);
+                      setApiKeyConfirmed(true);
+                    }}
+                    disabled={!settings.llm?.apiKey || settings.llm.apiKey.length === 0}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '18px',
+                      whiteSpace: 'nowrap',
+                      cursor: (!settings.llm?.apiKey || settings.llm.apiKey.length === 0) ? 'not-allowed' : 'pointer',
+                      opacity: (!settings.llm?.apiKey || settings.llm.apiKey.length === 0) ? 0.5 : 1,
+                    }}
+                    title="Confirm API key"
+                  >
+                    ✓
+                  </button>
+                </div>
+                <small style={{ color: '#64748b' }}>
+                  {settings.llm?.provider === 'openai' && 'Enter your OpenAI API key from platform.openai.com, then click ✓ to confirm'}
+                  {settings.llm?.provider === 'deepseek' && 'Enter your DeepSeek API key from platform.deepseek.com, then click ✓ to confirm (or leave empty to use system default)'}
+                </small>
+              </label>
+            )}
+
             <label>
               Model
               <select
@@ -617,69 +734,92 @@ export function TenantSettingsPage() {
                     llm: { ...settings.llm, model: e.target.value },
                   })
                 }
+                disabled={(settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && !apiKeyConfirmed}
+                style={{
+                  cursor: (settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && !apiKeyConfirmed ? 'not-allowed' : 'pointer',
+                  opacity: (settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && !apiKeyConfirmed ? 0.6 : 1,
+                }}
               >
-                {/* OpenAI Models */}
-                {settings.llm?.provider === 'openai' && (
+                {/* Show placeholder when waiting for confirmation */}
+                {!apiKeyConfirmed && (settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && (
+                  <option value="">Please confirm your API key above</option>
+                )}
+
+                {/* OpenAI Models - Dynamically loaded from OpenAI API */}
+                {settings.llm?.provider === 'openai' && apiKeyConfirmed && (
                   <>
-                    <option value="gpt-4o">GPT-4o (Best, $2.50/1M tokens)</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini (Fast, $0.15/1M tokens)</option>
-                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheapest)</option>
+                    {openaiModelsQuery.isLoading && (
+                      <option value="">Loading models from OpenAI...</option>
+                    )}
+                    {openaiModelsQuery.error && (
+                      <>
+                        <option value="">⚠️ Error loading models - check API key</option>
+                        {/* Fallback to default models on error */}
+                        <option value="gpt-4o">GPT-4o (Best, ~$2.50/1M tokens)</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini (Fast, ~$0.15/1M tokens)</option>
+                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheapest)</option>
+                        <option value="o1">o1 (Reasoning)</option>
+                        <option value="o1-mini">o1-mini (Reasoning, Fast)</option>
+                      </>
+                    )}
+                    {!openaiModelsQuery.isLoading && !openaiModelsQuery.error && openaiModelsQuery.data?.models && openaiModelsQuery.data.models.length > 0 && (
+                      openaiModelsQuery.data.models.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))
+                    )}
+                    {!openaiModelsQuery.isLoading && !openaiModelsQuery.error && (!openaiModelsQuery.data?.models || openaiModelsQuery.data.models.length === 0) && (
+                      <>
+                        <option value="gpt-4o">GPT-4o (Best, ~$2.50/1M tokens)</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini (Fast, ~$0.15/1M tokens)</option>
+                        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheapest)</option>
+                        <option value="o1">o1 (Reasoning)</option>
+                        <option value="o1-mini">o1-mini (Reasoning, Fast)</option>
+                      </>
+                    )}
                   </>
                 )}
 
                 {/* DeepSeek Models */}
-                {settings.llm?.provider === 'deepseek' && (
+                {settings.llm?.provider === 'deepseek' && apiKeyConfirmed && (
                   <>
                     <option value="deepseek-chat">DeepSeek Chat (General, $0.14/1M tokens)</option>
                     <option value="deepseek-coder">DeepSeek Coder (For Code)</option>
                   </>
                 )}
 
-                {/* Ollama Models */}
+                {/* Ollama Models - Dynamically loaded from server */}
                 {settings.llm?.provider === 'ollama' && (
                   <>
-                    <option value="llama3.1:8b">Llama 3.1 8B (Recommended)</option>
-                    <option value="llama3.1:70b">Llama 3.1 70B (Best Quality)</option>
-                    <option value="llama3.2:3b">Llama 3.2 3B (Fast)</option>
-                    <option value="mistral:7b">Mistral 7B</option>
-                    <option value="phi3:3.8b">Phi 3 3.8B (Small)</option>
-                    <option value="gemma2:9b">Gemma 2 9B</option>
-                    <option value="qwen2.5:7b">Qwen 2.5 7B</option>
-                    <option value="codellama:7b">CodeLlama 7B (For Code)</option>
+                    {ollamaModelsQuery.isLoading && (
+                      <option value="">Loading models from Ollama...</option>
+                    )}
+                    {ollamaModelsQuery.error && (
+                      <option value="">Error loading models - check Base URL</option>
+                    )}
+                    {ollamaModelsQuery.data?.models && ollamaModelsQuery.data.models.length > 0 ? (
+                      ollamaModelsQuery.data.models.map((model) => (
+                        <option key={model.name} value={model.name}>
+                          {model.name}
+                          {model.size && ` (${(model.size / 1024 / 1024 / 1024).toFixed(1)}GB)`}
+                        </option>
+                      ))
+                    ) : !ollamaModelsQuery.isLoading && !ollamaModelsQuery.error ? (
+                      <option value="">No models found - check Base URL or pull models</option>
+                    ) : null}
                   </>
                 )}
               </select>
               <small style={{ color: '#64748b' }}>
-                Select the AI model to use for this tenant
+                {(settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && !apiKeyConfirmed
+                  ? 'Enter and confirm your API key above to enable model selection'
+                  : 'Select the AI model to use for this tenant'
+                }
               </small>
             </label>
-
-            {/* API Key field - show for providers that need it */}
-            {(settings.llm?.provider === 'openai' || settings.llm?.provider === 'deepseek') && (
-              <label>
-                API Key
-                <input
-                  type="password"
-                  value={settings.llm?.apiKey || ''}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      llm: { ...settings.llm, apiKey: e.target.value },
-                    })
-                  }
-                  placeholder={
-                    settings.llm?.provider === 'openai' ? 'sk-proj-...' :
-                    settings.llm?.provider === 'deepseek' ? 'sk-...' :
-                    'Enter API key'
-                  }
-                />
-                <small style={{ color: '#64748b' }}>
-                  {settings.llm?.provider === 'openai' && 'Optional: Leave empty to use system default. Get your key from platform.openai.com'}
-                  {settings.llm?.provider === 'deepseek' && 'Optional: Leave empty to use system default. Get your key from platform.deepseek.com'}
-                </small>
-              </label>
-            )}
 
             {/* Base URL field - show for DeepSeek and Ollama */}
             {(settings.llm?.provider === 'deepseek' || settings.llm?.provider === 'ollama') && (
@@ -696,13 +836,13 @@ export function TenantSettingsPage() {
                   }
                   placeholder={
                     settings.llm?.provider === 'deepseek' ? 'https://api.deepseek.com/v1' :
-                    settings.llm?.provider === 'ollama' ? 'http://ArtemiPC:11434' :
+                    settings.llm?.provider === 'ollama' ? 'http://gpu-01.taildb94e1.ts.net:11434' :
                     ''
                   }
                 />
                 <small style={{ color: '#64748b' }}>
                   {settings.llm?.provider === 'deepseek' && 'DeepSeek API endpoint (default: https://api.deepseek.com/v1)'}
-                  {settings.llm?.provider === 'ollama' && 'Ollama server URL (e.g., http://ArtemiPC:11434 or http://localhost:11434)'}
+                  {settings.llm?.provider === 'ollama' && 'Ollama server URL (e.g., http://gpu-01.taildb94e1.ts.net:11434 or http://localhost:11434)'}
                 </small>
               </label>
             )}
@@ -878,169 +1018,165 @@ export function TenantSettingsPage() {
           </div>
         </div>
 
-        {/* MCP Servers */}
-        <div className="settings-section">
-          <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
-            MCP Tool Integrations
-          </h2>
-          <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
-            Enable Model Context Protocol (MCP) servers for this tenant. These provide tools like Google Calendar, GitHub, and other integrations.
-          </p>
+        {/* MCP Servers - Only show if Function Calling is enabled */}
+        {settings.enableFunctionCalling && (
+          <div className="settings-section">
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600 }}>
+              MCP Tool Integrations
+            </h2>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '14px' }}>
+              Enable Model Context Protocol (MCP) servers for this tenant. These provide tools like Google Calendar, GitHub, and other integrations.
+            </p>
 
-          {mcpServersQuery.isLoading && (
-            <p style={{ color: '#64748b', fontSize: '14px' }}>Loading MCP servers...</p>
-          )}
+            {mcpServersQuery.isLoading && (
+              <p style={{ color: '#64748b', fontSize: '14px' }}>Loading MCP servers...</p>
+            )}
 
-          {mcpServersQuery.error && (
-            <div style={{
-              background: '#fee2e2',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              padding: '12px',
-              marginBottom: '16px',
-            }}>
-              <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
-                Error loading MCP servers: {mcpServersQuery.error.message}
-              </p>
-            </div>
-          )}
+            {mcpServersQuery.error && (
+              <div style={{
+                background: '#fee2e2',
+                border: '1px solid #ef4444',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '16px',
+              }}>
+                <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+                  Error loading MCP servers: {mcpServersQuery.error.message}
+                </p>
+              </div>
+            )}
 
-          {mcpServersQuery.data && mcpServersQuery.data.length === 0 && (
-            <div style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '16px',
-            }}>
-              <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
-                No MCP servers configured yet.
-              </p>
-              <button
-                onClick={() => navigate('/mcp-servers')}
-                className="secondary-button"
-                style={{ fontSize: '13px' }}
-              >
-                Go to MCP Servers Settings
-              </button>
-            </div>
-          )}
+            {mcpServersQuery.data && mcpServersQuery.data.length === 0 && (
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '16px',
+              }}>
+                <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
+                  No MCP servers configured yet.
+                </p>
+                <button
+                  onClick={() => navigate('/mcp-servers')}
+                  className="secondary-button"
+                  style={{ fontSize: '13px' }}
+                >
+                  Go to MCP Servers Settings
+                </button>
+              </div>
+            )}
 
-          {mcpServersQuery.data && mcpServersQuery.data.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {mcpServersQuery.data
-                .filter((server) => server.enabled)
-                .map((server) => {
-                  const mcpConfig = (settings.mcpConfigs || []).find((c) => c.serverId === server.id);
-                  const isEnabled = mcpConfig?.enabled || false;
-                  const credentials = mcpConfig?.credentials || {};
+            {mcpServersQuery.data && mcpServersQuery.data.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {mcpServersQuery.data
+                  .filter((server) => server.enabled) // Only show globally enabled servers
+                  .map((server) => {
+                    const mcpConfig = (settings.mcpConfigs || []).find((c) => c.serverId === server.id);
+                    const isEnabled = mcpConfig?.enabled || false;
+                    const credentials = mcpConfig?.credentials || {};
 
-                  return (
-                    <div
-                      key={server.id}
-                      style={{
-                        background: '#fff',
-                        border: `2px solid ${isEnabled ? '#3b82f6' : '#e2e8f0'}`,
-                        borderRadius: '8px',
-                        padding: '16px',
-                      }}
-                    >
-                      {/* Header with toggle */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>
-                            {server.name}
-                          </div>
-                          {server.description && (
-                            <div style={{ fontSize: '13px', color: '#64748b' }}>
-                              {server.description}
+                    return (
+                      <div
+                        key={server.id}
+                        style={{
+                          background: '#fff',
+                          border: `2px solid ${isEnabled ? '#3b82f6' : '#e2e8f0'}`,
+                          borderRadius: '8px',
+                          padding: '16px',
+                        }}
+                      >
+                        {/* Header with toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isEnabled && server.requiredEnv.length > 0 ? '12px' : '0' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>
+                              {server.name}
                             </div>
-                          )}
-                        </div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                          <input
-                            type="checkbox"
-                            checked={isEnabled}
-                            onChange={(e) => handleMcpToggle(server.id, e.target.checked)}
-                            style={{ cursor: 'pointer' }}
-                          />
-                          <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                            {isEnabled ? 'Enabled' : 'Disabled'}
-                          </span>
-                        </label>
-                      </div>
-
-                      {/* Credentials section (only if server has requiredEnv) */}
-                      {server.requiredEnv.length > 0 && (
-                        <div style={{
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          padding: '12px',
-                          marginTop: '12px',
-                        }}>
-                          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px', color: '#475569' }}>
-                            Required Credentials:
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {server.requiredEnv.map((envVar) => (
-                              <div key={envVar}>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px', color: '#64748b' }}>
-                                  {envVar}
-                                </label>
-                                <input
-                                  type="password"
-                                  value={credentials[envVar] || ''}
-                                  onChange={(e) => handleMcpCredentialChange(server.id, envVar, e.target.value)}
-                                  placeholder={`Enter ${envVar}`}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '6px',
-                                    fontSize: '13px',
-                                    fontFamily: 'monospace',
-                                  }}
-                                />
+                            {server.description && (
+                              <div style={{ fontSize: '13px', color: '#64748b' }}>
+                                {server.description}
                               </div>
-                            ))}
+                            )}
                           </div>
-                          <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                            💡 These credentials are specific to your account and encrypted in the database.
-                          </p>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginLeft: '16px' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>
+                              {isEnabled ? 'ON' : 'OFF'}
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={isEnabled}
+                              onChange={(e) => handleMcpToggle(server.id, e.target.checked)}
+                              style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                            />
+                          </label>
                         </div>
-                      )}
 
-                      {server.requiredEnv.length === 0 && (
-                        <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
-                          No credentials required for this server.
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+                        {/* Credentials section - Only show when enabled and has requiredEnv */}
+                        {isEnabled && server.requiredEnv.length > 0 && (
+                          <div style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            padding: '12px',
+                            marginTop: '12px',
+                          }}>
+                            <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px', color: '#475569' }}>
+                              Required Credentials:
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {server.requiredEnv.map((envVar) => (
+                                <div key={envVar}>
+                                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px', color: '#64748b' }}>
+                                    {envVar}
+                                  </label>
+                                  <input
+                                    type="password"
+                                    value={credentials[envVar] || ''}
+                                    onChange={(e) => handleMcpCredentialChange(server.id, envVar, e.target.value)}
+                                    placeholder={`Enter ${envVar}`}
+                                    style={{
+                                      width: '100%',
+                                      padding: '8px',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '6px',
+                                      fontSize: '13px',
+                                      fontFamily: 'monospace',
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                              💡 These credentials are specific to your account and encrypted in the database.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
 
-              {mcpServersQuery.data.filter((s) => s.enabled).length === 0 && (
-                <div style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
-                  padding: '16px',
-                }}>
-                  <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
-                    All MCP servers are globally disabled. Enable them first in MCP Servers settings.
-                  </p>
-                  <button
-                    onClick={() => navigate('/mcp-servers')}
-                    className="secondary-button"
-                    style={{ fontSize: '13px' }}
-                  >
-                    Go to MCP Servers Settings
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                {mcpServersQuery.data.filter((s) => s.enabled).length === 0 && (
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '16px',
+                  }}>
+                    <p style={{ margin: '0 0 12px 0', color: '#64748b', fontSize: '14px' }}>
+                      All MCP servers are globally disabled. Enable them first in MCP Servers settings.
+                    </p>
+                    <button
+                      onClick={() => navigate('/mcp-servers')}
+                      className="secondary-button"
+                      style={{ fontSize: '13px' }}
+                    >
+                      Go to MCP Servers Settings
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Confidence-Based Escalation */}
         {settings.enableHumanHandoff && (

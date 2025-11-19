@@ -6,6 +6,7 @@ import { getPrismaClient } from '@meta-chat/database';
 import { chunkDocument, type ChunkingOptions } from './chunking';
 import { generateEmbeddingsBatch, type EmbeddingConfig } from './embedding';
 import { createId } from '@paralleldrive/cuid2';
+import { detectLanguage } from './languageDetection';
 
 const prisma = getPrismaClient();
 
@@ -45,6 +46,10 @@ export async function processDocument(
       throw new Error('Document content not found in metadata');
     }
 
+    // Detect document language
+    const detectedLanguage = detectLanguage(content);
+    console.log(`[DocumentProcessor] Detected language: ${detectedLanguage}`);
+
     console.log(`[DocumentProcessor] Chunking document (${content.length} chars)`);
 
     // Chunk the document
@@ -82,6 +87,12 @@ export async function processDocument(
       const embeddingStr = `[${embedding.join(',')}]`;
       const chunkId = createId();
 
+      // Add language to chunk metadata for filtering during RAG search
+      const chunkMetadata = {
+        ...chunk.metadata,
+        language: detectedLanguage,
+      };
+
       await prisma.$executeRaw`
         INSERT INTO "chunks" (
           id, "tenantId", "documentId", content, embedding, metadata, position, "createdAt"
@@ -91,7 +102,7 @@ export async function processDocument(
           ${documentId},
           ${chunk.content},
           ${embeddingStr}::vector,
-          ${JSON.stringify(chunk.metadata)}::jsonb,
+          ${JSON.stringify(chunkMetadata)}::jsonb,
           ${chunk.position},
           NOW()
         )
@@ -109,6 +120,8 @@ export async function processDocument(
           chunkCount: chunks.length,
           embeddingModel: options.embeddingConfig.model,
           embeddingDimensions: embeddings[0].dimensions,
+          language: detectedLanguage, // Auto-detected language (ISO 639-1)
+          languageDetectionMethod: 'auto',
         },
       },
     });
