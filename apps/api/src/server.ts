@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { createServer as createHttpServer, Server as HttpServer } from 'http';
 import { AddressInfo } from 'net';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
-import amqp from 'amqplib';
+import amqp, { Channel } from 'amqplib';
 import Redis from 'ioredis';
 import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer } from 'socket.io';
@@ -42,6 +42,11 @@ type RawBodyRequest = Request & { rawBody?: Buffer };
 
 const prisma = getPrismaClient();
 const logger = createLogger('ApiServer');
+const HEALTH_CHECK_CACHE_TTL_MS =
+  Number.parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS ?? '', 10) || 3000;
+
+let cachedHealthCheck: { value: HealthCheck; expiresAt: number } | null = null;
+let inFlightHealthCheck: Promise<HealthCheck> | null = null;
 
 interface SocketServer {
   io: SocketIOServer;
@@ -144,7 +149,34 @@ function registerLogging(app: express.Express): void {
   });
 }
 
-async function checkHealth(redisClients: { publisher: Redis | null; subscriber: Redis | null }): Promise<HealthCheck> {
+async function getHealthStatus(
+  redisClients: { publisher: Redis | null; subscriber: Redis | null },
+  deps: { publisher: TenantQueuePublisher; ackStrategy: WebhookAckStrategy },
+): Promise<HealthCheck> {
+  const now = Date.now();
+  if (cachedHealthCheck && cachedHealthCheck.expiresAt > now) {
+    return cachedHealthCheck.value;
+  }
+
+  if (!inFlightHealthCheck) {
+    inFlightHealthCheck = checkHealth(redisClients, deps).then((result) => {
+      cachedHealthCheck = {
+        value: result,
+        expiresAt: Date.now() + HEALTH_CHECK_CACHE_TTL_MS,
+      };
+      return result;
+    }).finally(() => {
+      inFlightHealthCheck = null;
+    });
+  }
+
+  return inFlightHealthCheck;
+}
+
+async function checkHealth(
+  redisClients: { publisher: Redis | null; subscriber: Redis | null },
+  deps: { publisher: TenantQueuePublisher; ackStrategy: WebhookAckStrategy },
+): Promise<HealthCheck> {
   const services: HealthCheck['services'] = {
     database: 'down',
     redis: 'down',
@@ -175,9 +207,24 @@ async function checkHealth(redisClients: { publisher: Redis | null; subscriber: 
     services.rabbitmq = 'up';
   } else {
     try {
-      const connection = await amqp.connect(rabbitUrl);
-      await connection.close();
-      services.rabbitmq = 'up';
+      await deps.publisher.init();
+      const connection = deps.publisher.getConnection();
+      if (!connection) {
+        throw new Error('RabbitMQ connection unavailable');
+      }
+
+      let channel: Channel | null = null;
+      try {
+        channel = await connection.createChannel();
+        await channel.assertQueue('', { exclusive: true, autoDelete: true });
+        services.rabbitmq = 'up';
+      } finally {
+        if (channel) {
+          await channel.close().catch((error) => {
+            logger.warn('Failed to close health check channel', error);
+          });
+        }
+      }
     } catch (error) {
       logger.error('RabbitMQ health check failed', error);
     }
@@ -201,7 +248,7 @@ function registerRoutes(
   redisClients: { publisher: Redis | null; subscriber: Redis | null },
 ): void {
   app.get('/health', async (_req, res) => {
-    const health = await checkHealth(redisClients);
+    const health = await getHealthStatus(redisClients, deps);
     res.json(health);
   });
 
