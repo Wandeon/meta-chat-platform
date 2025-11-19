@@ -12,6 +12,8 @@ import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import createHttpError from 'http-errors';
+import { httpsRedirect, hstsHeader } from './middleware/httpsRedirect';
+import { securityHeaders } from './middleware/securityHeaders';
 
 import { getPrismaClient } from '@meta-chat/database';
 import { createLogger, ensureCorrelationId, withRequestContext } from '@meta-chat/shared';
@@ -482,6 +484,10 @@ export async function createApp() {
   const app = express();
   app.set('trust proxy', 1);
 
+n  // Apply security middleware FIRST (before all routes)
+  app.use(hstsHeader);
+  app.use(httpsRedirect);
+  app.use(securityHeaders);
   registerRequestContext(app);
   registerCors(app);
   registerBodyParsers(app);
