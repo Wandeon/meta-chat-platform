@@ -421,25 +421,6 @@ enum AdminRole {
 }
 
 
-model VerificationToken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique
-  adminId   String   @map("admin_id")
-  expiresAt DateTime @map("expires_at")
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([adminId])
-  @@map("verification_tokens")
-}
-
-// ============= MCP (Model Context Protocol) Servers =============
-
-model McpServer {
-  id           String   @id @default(cuid())
   name         String   @unique
   description  String?
   command      String   // e.g., "npx", "node", "python"
