@@ -390,6 +390,46 @@ async function createSocketServer(httpServer: HttpServer): Promise<SocketServer>
       userId,
     });
 
+    // Handle incoming messages from widget
+    socket.on('message', async (payload: any) => {
+      try {
+        const { messageId, clientMessageId, content, metadata } = payload;
+        const msgId = clientMessageId || messageId;
+
+        if (!content || !tenantId) {
+          socketLogger.warn('Invalid message payload', { payload, tenantId });
+          return;
+        }
+
+        socketLogger.info('Received widget message', {
+          socketId: socket.id,
+          tenantId,
+          userId,
+          messageId: msgId,
+          contentLength: content.length,
+        });
+
+        // Echo back the messageId to acknowledge receipt and allow client to update pending message
+        socket.emit('message', {
+          type: 'message',
+          clientMessageId: msgId,
+          messageId: msgId,
+          id: msgId,
+          role: 'user',
+          content,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Here you would typically process the message and send AI response
+        // For now, we just acknowledge. In full implementation, call chat service/LLM here
+        // Example: const response = await processChatMessage(tenantId, userId, content);
+        // socket.emit('message', { type: 'message', id: generateId(), role: 'assistant', content: response, ... });
+
+      } catch (error) {
+        socketLogger.error('Error handling widget message', error);
+      }
+    });
+
     socket.on('disconnect', (reason) => {
       socketLogger.info('Socket client disconnected', {
         socketId: socket.id,
