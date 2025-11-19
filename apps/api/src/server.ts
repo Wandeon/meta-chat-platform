@@ -57,16 +57,31 @@ interface SocketServer {
   };
 }
 
-function parseOrigins(): (string | RegExp)[] | boolean {
+function parseOrigins(): (string | RegExp)[] | ((origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => void) {
   const origins = process.env.API_CORS_ORIGINS;
-  if (!origins) {
-    return true;
-  }
+  
+  // Default to localhost for development if not specified
+  // SECURITY: Never use wildcard '*' - always use explicit origin whitelist
+  const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+  
+  const allowedOrigins = origins 
+    ? origins.split(',').map((origin) => origin.trim()).filter(Boolean)
+    : defaultOrigins;
 
-  return origins
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  // Return a validation function for explicit origin checking
+  return (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn('CORS request blocked', { origin, allowedOrigins });
+      callback(new Error('Not allowed by CORS'));
+    }
+  };
 }
 
 function registerRequestContext(app: express.Express): void {
@@ -102,6 +117,10 @@ function registerCors(app: express.Express): void {
     cors({
       origin: origins,
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'x-correlation-id'],
+      exposedHeaders: ['x-request-id', 'x-correlation-id'],
+      maxAge: 86400, // 24 hours
     }),
   );
 }
