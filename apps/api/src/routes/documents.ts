@@ -103,8 +103,18 @@ router.get(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
-    const document = await prisma.document.findUnique({
-      where: { id: documentId },
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      throw createHttpError(400, 'tenantId is required');
+    }
+
+    // Use findFirst with tenantId to enforce tenant isolation
+    const document = await prisma.document.findFirst({
+      where: {
+        id: documentId,
+        tenantId: String(tenantId),
+      },
     });
 
     if (!document) {
@@ -117,10 +127,19 @@ router.get(
 
 const updateDocumentHandler = asyncHandler(async (req, res) => {
   const { documentId } = req.params;
+  const { tenantId } = req.query;
   const payload = parseWithSchema(updateDocumentSchema, req.body);
 
-  const existing = await prisma.document.findUnique({
-    where: { id: documentId },
+  if (!tenantId) {
+    throw createHttpError(400, 'tenantId is required');
+  }
+
+  // Use findFirst with tenantId to enforce tenant isolation
+  const existing = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      tenantId: String(tenantId),
+    },
   });
 
   if (!existing) {
@@ -167,16 +186,23 @@ router.delete(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
+    const { tenantId } = req.query;
 
-    const existing = await prisma.document.findUnique({
-      where: { id: documentId },
-    });
-
-    if (!existing) {
-      throw createHttpError(404, 'Document not found');
+    if (!tenantId) {
+      throw createHttpError(400, 'tenantId is required');
     }
 
-    await prisma.document.delete({ where: { id: documentId } });
+    // Use deleteMany with tenantId to enforce tenant isolation
+    const result = await prisma.document.deleteMany({
+      where: {
+        id: documentId,
+        tenantId: String(tenantId),
+      },
+    });
+
+    if (result.count === 0) {
+      throw createHttpError(404, 'Document not found');
+    }
 
     respondSuccess(res, { id: documentId, deleted: true });
   }),
