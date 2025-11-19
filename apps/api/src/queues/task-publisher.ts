@@ -96,6 +96,10 @@ export class TenantQueuePublisher {
     this.ensuredKeys.clear();
   }
 
+  getConnection(): ChannelModel | null {
+    return this.connection;
+  }
+
   private reset(): void {
     this.channel = null;
     this.connection = null;
