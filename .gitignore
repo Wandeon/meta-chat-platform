@@ -55,3 +55,40 @@ uploads/
 tmp/
 temp/
 *.tsbuildinfo
+
+# Agent delivery reports and temporary files
+*_DELIVERY_REPORT.md
+*_IMPLEMENTATION_SUMMARY.md
+*_COMPLETE.md
+*_SUMMARY.txt
+*_COMMANDS.sh
+*_SETUP.md
+*_README.md
+*_INDEX.md
+*_GUIDE.md
+FILES_CREATED*.txt
+*_FILES*.txt
+DELIVERY_SUMMARY.txt
+CONFIGURATION_FILES_REFERENCE.md
+CURL_COMMANDS.md
+IMPLEMENTATION_COMPLETE.md
+PRODUCTION_SETUP_SUMMARY.txt
+TESTING_COMMANDS.sh
+TESTING_SETUP.md
+
+# Backup files
+*.backup
+*.backup-*
+
+# Temporary scripts
+check-*.cjs
+run-*.cjs
+test-*.cjs
+
+# Test reports
+playwright-report/
+test-results/
+
+# Environment files (keep production env private)
+apps/api/.env.production
+apps/api/.env.production.backup
