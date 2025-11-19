@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
-import { emailService } from '../../services/EmailService';
+import { signupTransaction } from '../../services/authService';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -25,6 +23,7 @@ const signupSchema = z.object({
 /**
  * POST /api/auth/signup
  * Self-service signup endpoint with email verification
+ * Uses transactional approach to prevent orphaned records
  */
 router.post('/signup', async (req: Request, res: Response) => {
   try {
@@ -52,95 +51,36 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(409).json({
         success: false,
         error: 'User with this email already exists',
+        code: 'EMAIL_EXISTS',
       });
     }
 
-    // Hash password with bcrypt (12 rounds)
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    // Create user (email_verified=false by default from migration)
-    const user = await prisma.adminUser.create({
-      data: {
-        email,
-        name,
-        role: 'STANDARD',
-        // Note: We're not storing password in the schema yet
-        // You'll need to add a password field to the AdminUser model
-      },
+    // Execute transactional signup
+    // This creates the admin user and verification token in a single transaction
+    // If any step fails, all changes are automatically rolled back
+    const result = await signupTransaction({
+      email,
+      password,
+      name,
+      companyName,
     });
-
-    // Generate verification token (32 bytes = 64 hex characters)
-    const token = crypto.randomBytes(32).toString('hex');
-
-    // Token expires in 24 hours
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24);
-
-    // Store verification token in database
-    await prisma.$executeRaw`
-      INSERT INTO verification_tokens (token, admin_id, expires_at, used)
-      VALUES (${token}, ${user.id}, ${expiresAt}, false)
-    `;
-
-    // Send verification email
-    try {
-      await emailService.sendVerificationEmail(email, token);
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
-      // Rollback user creation if email fails
-      await prisma.adminUser.delete({ where: { id: user.id } });
-      await prisma.$executeRaw`DELETE FROM verification_tokens WHERE token = ${token}`;
-
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to send verification email. Please try again.',
-      });
-    }
-
-    // Store password hash temporarily (we'll need to add this to the schema)
-    // For now, we'll store it in metadata or create a separate table
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS admin_user_passwords (
-        admin_id VARCHAR(30) PRIMARY KEY REFERENCES admin_users(id) ON DELETE CASCADE,
-        password_hash TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `;
-
-    await prisma.$executeRaw`
-      INSERT INTO admin_user_passwords (admin_id, password_hash)
-      VALUES (${user.id}, ${passwordHash})
-      ON CONFLICT (admin_id) DO UPDATE SET password_hash = ${passwordHash}
-    `;
-
-    // Also store company name for later tenant creation
-    await prisma.$executeRaw`
-      CREATE TABLE IF NOT EXISTS pending_tenant_setups (
-        admin_id VARCHAR(30) PRIMARY KEY REFERENCES admin_users(id) ON DELETE CASCADE,
-        company_name VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `;
-
-    await prisma.$executeRaw`
-      INSERT INTO pending_tenant_setups (admin_id, company_name)
-      VALUES (${user.id}, ${companyName})
-      ON CONFLICT (admin_id) DO UPDATE SET company_name = ${companyName}
-    `;
 
     res.status(201).json({
       success: true,
       message: 'Account created successfully. Please check your email to verify your address.',
       data: {
-        email: user.email,
-        name: user.name,
+        email: result.admin.email,
+        name: result.admin.name,
       },
     });
   } catch (error) {
     console.error('Signup error:', error);
+    
+    // Don't expose internal errors to the client
     res.status(500).json({
       success: false,
       error: 'An error occurred during signup. Please try again.',
+      code: 'SIGNUP_FAILED',
     });
   }
 });
