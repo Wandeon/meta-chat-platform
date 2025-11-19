@@ -43,10 +43,18 @@ async function request<TResponse, TBody = unknown>(
   if (!response.ok) {
     let errorMessage: string;
     try {
-      const errorData: ApiError = await response.json();
-      errorMessage = errorData.error?.message || `Request failed with status ${response.status}`;
+      // Clone the response so we can try multiple parse methods if needed
+      const clonedResponse = response.clone();
+      try {
+        const errorData: ApiError = await response.json();
+        errorMessage = errorData.error?.message || `Request failed with status ${response.status}`;
+      } catch {
+        // If JSON parsing fails, try text on the cloned response
+        const errorText = await clonedResponse.text();
+        errorMessage = errorText || `Request failed with status ${response.status}`;
+      }
     } catch {
-      errorMessage = await response.text() || `Request failed with status ${response.status}`;
+      errorMessage = `Request failed with status ${response.status}`;
     }
     throw new Error(errorMessage);
   }

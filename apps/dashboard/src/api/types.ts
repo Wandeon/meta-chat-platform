@@ -25,6 +25,7 @@ export interface Tenant {
   slug: string;
   active: boolean;
   settings?: Record<string, unknown>;
+  widgetConfig?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +45,7 @@ export interface UpdateTenantRequest {
   name?: string;
   active?: boolean;
   settings?: Record<string, unknown>;
+  widgetConfig?: Record<string, unknown>;
 }
 
 // Channel types
@@ -56,6 +58,8 @@ export interface Channel {
   name: string;
   config: Record<string, unknown>;
   active: boolean;
+  settings?: Record<string, unknown>;
+  widgetConfig?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -146,6 +150,8 @@ export interface Webhook {
   events: string[];
   headers?: Record<string, string>;
   active: boolean;
+  settings?: Record<string, unknown>;
+  widgetConfig?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

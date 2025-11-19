@@ -29,6 +29,7 @@
     "qa:collect": "node scripts/collect-quality-report.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/node": "^20.11.0",
     "@types/node-cron": "^3.0.11",
     "@types/supertest": "^2.0.12",
