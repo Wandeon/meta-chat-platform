@@ -7,6 +7,9 @@ import { getPlanByStripePrice } from '../../config/plans';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Extend Request type to include rawBody
+type RawBodyRequest = Request & { rawBody?: Buffer };
+
 /**
  * Get or create StripeService instance
  * Lazy initialization to avoid errors if Stripe key is not configured
@@ -21,17 +24,31 @@ function getStripeService(): StripeService {
 
 /**
  * POST /api/webhooks/stripe
- * Handle Stripe webhook events
- * 
- * IMPORTANT: This endpoint must use raw body parsing, not JSON parsing
+ * Handle Stripe webhook events with signature verification
+ *
+ * SECURITY: This endpoint verifies Stripe webhook signatures to prevent forged events
+ * The raw body is required for signature verification (stored by express.json verify callback)
  */
-router.post('/stripe', async (req: Request, res: Response) => {
+router.post('/stripe', async (req: RawBodyRequest, res: Response) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (!sig || !webhookSecret) {
-    console.error('Missing signature or webhook secret');
-    return res.status(400).send('Webhook Error: Missing signature or secret');
+  // Validate required parameters
+  if (!sig) {
+    console.error('Missing stripe-signature header');
+    return res.status(400).send('Webhook Error: Missing signature header');
+  }
+
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET not configured');
+    return res.status(500).send('Webhook Error: Webhook secret not configured');
+  }
+
+  // Use raw body for signature verification (set by express.json verify callback)
+  const rawBody = req.rawBody;
+  if (!rawBody) {
+    console.error('Raw body not available for signature verification');
+    return res.status(400).send('Webhook Error: Raw body required for signature verification');
   }
 
   let event: Stripe.Event;
@@ -40,14 +57,16 @@ router.post('/stripe', async (req: Request, res: Response) => {
     // Get Stripe service
     const stripeService = getStripeService();
 
-    // Verify webhook signature
+    // Verify webhook signature using raw body
     event = stripeService.verifyWebhookSignature(
-      req.body,
+      rawBody,
       sig as string,
       webhookSecret
     );
+
+    console.log(`✅ Webhook signature verified for event: ${event.type}`);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err);
+    console.error('❌ Webhook signature verification failed:', err);
     return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 
