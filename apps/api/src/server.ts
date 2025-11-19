@@ -6,7 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { createServer as createHttpServer, Server as HttpServer } from 'http';
 import { AddressInfo } from 'net';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
-import amqp, { Channel } from 'amqplib';
+import { Channel } from 'amqplib';
 import Redis from 'ioredis';
 import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer } from 'socket.io';
