@@ -7,6 +7,7 @@ interface MessageListProps {
   messages: ChatMessage[];
 }
 
+// Auto-scroll threshold: scrolling within 16px of bottom triggers auto-scroll for new messages
 const SCROLL_EPSILON = 16;
 
 const MessageListComponent = ({ messages }: MessageListProps) => {
@@ -69,7 +70,7 @@ const MessageListComponent = ({ messages }: MessageListProps) => {
   );
 
   return (
-    <div className="meta-chat-body" role="log" aria-live="polite" ref={parentRef}>
+    <div className="meta-chat-body" role="log" aria-live="polite" aria-rowcount={messages.length} ref={parentRef}>
       <div style={{ height: totalSize, position: 'relative' }}>
         {virtualItems.map((virtualRow) => {
           const message = messages[virtualRow.index];
@@ -80,6 +81,7 @@ const MessageListComponent = ({ messages }: MessageListProps) => {
               key={message.id}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
+              aria-rowindex={virtualRow.index + 1}
               className={clsx('meta-chat-message', message.role)}
               data-role={message.role}
               style={{
