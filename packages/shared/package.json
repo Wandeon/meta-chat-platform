@@ -10,7 +10,7 @@
     "test": "vitest --config vitest.config.ts --run --coverage"
   },
   "dependencies": {
-    "pino": "^8.17.0"
+    "pino": "^10.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

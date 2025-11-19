@@ -146,7 +146,7 @@ export async function executeMcpTool(
   toolName: string,
   args: Record<string, any>
 ): Promise<McpToolResult> {
-  let connection = activeConnections.get(connectionKey);
+  const connection = activeConnections.get(connectionKey);
 
   if (!connection) {
     // Connection should already exist from tool discovery
