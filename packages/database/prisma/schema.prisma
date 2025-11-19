@@ -19,7 +19,15 @@ model Tenant {
   settings  Json     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  enabled   Boolean  @default(true)
+  enabled      Boolean  @default(true)
+  widgetConfig Json     @default("{}")  @map("widget_config")
+  
+  // Stripe Billing Fields
+  stripeCustomerId     String?   @map("stripe_customer_id")
+  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  subscriptionStatus   String    @default("free") @map("subscription_status")
+  currentPlanId        String    @default("free") @map("current_plan_id")
+  subscriptionEndDate  DateTime? @map("subscription_end_date")
 
   channels      Channel[]
   conversations Conversation[]
@@ -30,7 +38,12 @@ model Tenant {
   apiKeys       TenantApiKey[]
   messages      Message[]
   chunks        Chunk[]
+  invoices      Invoice[]
+  usageTracking UsageTracking[]
 
+  @@index([stripeCustomerId], map: "idx_tenants_stripe_customer_id")
+  @@index([stripeSubscriptionId], map: "idx_tenants_stripe_subscription_id")
+  @@index([subscriptionStatus], map: "idx_tenants_subscription_status")
   @@map("tenants")
 }
 
@@ -209,6 +222,51 @@ model ChannelSecret {
   @@unique([channelId])
   @@index([keyId])
   @@map("channel_secrets")
+}
+
+// ============= Billing & Subscriptions =============
+
+model Invoice {
+  id                 Int      @id @default(autoincrement())
+  tenantId           String   @map("tenant_id")
+  stripeInvoiceId    String   @unique @map("stripe_invoice_id")
+  amountPaid         Int      @map("amount_paid")
+  currency           String   @default("eur")
+  status             String
+  invoicePdf         String?  @map("invoice_pdf")
+  hostedInvoiceUrl   String?  @map("hosted_invoice_url")
+  periodStart        DateTime? @map("period_start")
+  periodEnd          DateTime? @map("period_end")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId], map: "idx_invoices_tenant_id")
+  @@index([stripeInvoiceId], map: "idx_invoices_stripe_invoice_id")
+  @@index([createdAt(sort: Desc)], map: "idx_invoices_created_at")
+  @@map("invoices")
+}
+
+model UsageTracking {
+  id                  Int      @id @default(autoincrement())
+  tenantId            String   @map("tenant_id")
+  periodStart         DateTime @map("period_start")
+  periodEnd           DateTime @map("period_end")
+  conversationsCount  Int      @default(0) @map("conversations_count")
+  documentsCount      Int      @default(0) @map("documents_count")
+  teamMembersCount    Int      @default(0) @map("team_members_count")
+  messagesCount       Int      @default(0) @map("messages_count")
+  apiCallsCount       Int      @default(0) @map("api_calls_count")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, periodStart], map: "idx_usage_tracking_tenant_period")
+  @@index([tenantId], map: "idx_usage_tracking_tenant_id")
+  @@index([tenantId, periodStart, periodEnd], map: "idx_usage_tracking_period")
+  @@map("usage_tracking")
 }
 
 // ============= Analytics & Logs =============
