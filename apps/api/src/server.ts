@@ -32,6 +32,7 @@ import stripeWebhookRouter from "./routes/webhooks/stripe";
 import analyticsRouter from "./routes/analytics";
 
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
+import healthRouter from './routes/health';
 import { metricsRegistry, httpRequestDuration } from './metrics';
 import { TenantQueuePublisher } from './queues/task-publisher';
 import { WebhookAckStrategy } from './webhooks/ack-strategy';
@@ -275,6 +276,9 @@ function registerRoutes(
     res.setHeader('Content-Type', metricsRegistry.contentType);
     res.send(await metricsRegistry.metrics());
   });
+
+  // Health check endpoints (no auth required)
+  app.use('/api', healthRouter);
 
   app.use('/api/security', apiKeyRouter);
   app.use('/api/auth', authRouter);
