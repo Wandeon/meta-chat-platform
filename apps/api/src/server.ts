@@ -24,6 +24,13 @@ import conversationRouter from './routes/conversations';
 import webhookRouter from './routes/webhooks';
 import chatRouter from './routes/chat';
 import mcpServerRouter from './routes/mcpServers';
+import ollamaRouter from './routes/ollama';
+import widgetConfigRouter from './routes/public/widget-config';
+import authRouter from './routes/auth';
+import billingRouter from "./routes/billing";
+import stripeWebhookRouter from "./routes/webhooks/stripe";
+import analyticsRouter from "./routes/analytics";
+
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
 import { metricsRegistry, httpRequestDuration } from './metrics';
 import { TenantQueuePublisher } from './queues/task-publisher';
@@ -204,6 +211,7 @@ function registerRoutes(
   });
 
   app.use('/api/security', apiKeyRouter);
+  app.use('/api/auth', authRouter);
   app.use('/api/tenants', tenantRouter);
   app.use('/api/channels', channelRouter);
   app.use('/api/documents', documentRouter);
@@ -211,7 +219,12 @@ function registerRoutes(
   app.use('/api/webhooks', webhookRouter);
   app.use('/api/chat', chatRouter);
   app.use('/api/mcp-servers', mcpServerRouter);
+  app.use('/api/ollama', ollamaRouter);
   app.use('/api/integrations', createWebhookIntegrationsRouter(deps));
+  app.use('/api/public/widget', widgetConfigRouter);
+  app.use("/api/billing", billingRouter);
+  app.use("/api/analytics", analyticsRouter);
+  app.use("/api/webhooks", stripeWebhookRouter);
 
   app.use((req, _res, next) => {
     next(createHttpError(404, `Route not found: ${req.method} ${req.originalUrl}`));
