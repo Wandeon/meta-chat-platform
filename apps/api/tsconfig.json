@@ -1,26 +1,17 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
+    "outDir": "./dist",
     "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "baseUrl": "./",
-    "paths": {
-      "@meta-chat/shared": ["../../packages/shared/src"],
-      "@meta-chat/shared/*": ["../../packages/shared/src/*"],
-      "@meta-chat/database": ["../../packages/database/src"],
-      "@meta-chat/database/*": ["../../packages/database/src/*"],
-      "@meta-chat/events": ["../../packages/events/src"],
-      "@meta-chat/events/*": ["../../packages/events/src/*"],
-      "@meta-chat/orchestrator": ["../../packages/orchestrator/src"],
-      "@meta-chat/orchestrator/*": ["../../packages/orchestrator/src/*"]
-    }
+    "types": ["node"],
+    "lib": ["ES2022"]
   },
   "include": ["src/**/*"],
-  "references": [
-    { "path": "../../packages/shared" },
-    { "path": "../../packages/database" },
-    { "path": "../../packages/events" },
-    { "path": "../../packages/orchestrator" }
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/__tests__/**"
   ]
 }
