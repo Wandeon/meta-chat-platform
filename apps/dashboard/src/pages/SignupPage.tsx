@@ -5,7 +5,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
 export function SignupPage() {
   const [formData, setFormData] = useState({
-    company: '',
+    name: '',
+    companyName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -33,6 +34,9 @@ export function SignupPage() {
     if (!/[0-9]/.test(password)) {
       return { valid: false, message: 'Password must contain at least one number' };
     }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return { valid: false, message: 'Password must contain at least one special character' };
+    }
     return { valid: true };
   };
 
@@ -41,7 +45,12 @@ export function SignupPage() {
     setError(null);
 
     // Client-side validation
-    if (!formData.company.trim()) {
+    if (!formData.name.trim()) {
+      setError('Name is required');
+      return;
+    }
+
+    if (!formData.companyName.trim()) {
       setError('Company name is required');
       return;
     }
@@ -81,7 +90,8 @@ export function SignupPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          company: formData.company.trim(),
+          name: formData.name.trim(),
+          companyName: formData.companyName.trim(),
           email: formData.email.trim(),
           password: formData.password,
         }),
@@ -91,7 +101,7 @@ export function SignupPage() {
         let errorMessage: string;
         try {
           const errorData = await response.json();
-          errorMessage = errorData.error?.message || `Signup failed with status ${response.status}`;
+          errorMessage = errorData.error || `Signup failed with status ${response.status}`;
         } catch {
           errorMessage = `Signup failed with status ${response.status}`;
         }
@@ -186,11 +196,35 @@ export function SignupPage() {
         </div>
 
         <label style={{ display: 'grid', gap: 8 }}>
+          <span style={{ fontWeight: 500, fontSize: '14px' }}>Full Name</span>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder="John Doe"
+            autoComplete="name"
+            disabled={isSubmitting}
+            style={{
+              font: 'inherit',
+              fontSize: '16px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              padding: '10px 12px',
+              outline: 'none',
+              transition: 'border-color 0.2s',
+              opacity: isSubmitting ? 0.6 : 1,
+            }}
+            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
+            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
+          />
+        </label>
+
+        <label style={{ display: 'grid', gap: 8 }}>
           <span style={{ fontWeight: 500, fontSize: '14px' }}>Company Name</span>
           <input
             type="text"
-            value={formData.company}
-            onChange={(e) => handleChange('company', e.target.value)}
+            value={formData.companyName}
+            onChange={(e) => handleChange('companyName', e.target.value)}
             placeholder="Your Company"
             autoComplete="organization"
             disabled={isSubmitting}
@@ -255,6 +289,9 @@ export function SignupPage() {
             onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
             onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
           />
+          <span style={{ fontSize: '12px', color: '#64748b' }}>
+            Must include uppercase, lowercase, number, and special character
+          </span>
         </label>
 
         <label style={{ display: 'grid', gap: 8 }}>
