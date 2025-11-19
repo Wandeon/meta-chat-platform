@@ -41,7 +41,8 @@ function generateMessageId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-  return `local-${Date.now()}`;
+  // Fallback with better entropy
+  return `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions) {
@@ -127,7 +128,10 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
     };
 
     ws.onclose = () => {
+      // DON'T clear pending IDs on disconnect - keep them for reconnection
+      // Only clear after max retries exhausted
       if (retryCount.current >= MAX_RETRIES) {
+        pendingMessageIds.current.clear();
         dispatch({
           type: 'connection',
           connection: {
@@ -166,7 +170,7 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
         clearTimeout(retryTimeout.current);
       }
       wsRef.current?.close();
-      pendingMessageIds.current.clear();
+      // Don't clear pending IDs here - they're cleared after max retries in onclose
     };
   }, [config, connect, onEvent]);
 
