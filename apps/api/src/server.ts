@@ -484,7 +484,6 @@ export async function createApp() {
   const app = express();
   app.set('trust proxy', 1);
 
-n  // Apply security middleware FIRST (before all routes)
   app.use(hstsHeader);
   app.use(httpsRedirect);
   app.use(securityHeaders);

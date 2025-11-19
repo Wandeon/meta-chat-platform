@@ -4,7 +4,7 @@ import { authenticateAdminOrTenant } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 import createHttpError from 'http-errors';
-import { searchChunks, buildContext } from '../services/vectorSearch';
+import { searchSimilarChunks } from '../services/vectorSearch';
 import { getEmbeddingConfig } from '../services/documentProcessor';
 import { getAvailableMcpTools, executeMcpTool } from '../services/mcpClient';
 import { callLlm, LlmMessage, LlmConfig } from '../services/llmProviders';
@@ -106,28 +106,6 @@ router.post(
     if (enableRag) {
       try {
         const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
-        const searchResults = await searchChunks(
-          payload.message,
-          payload.tenantId,
-          embeddingConfig,
-          {
-            limit: ragConfig.topK || 5,
-            minSimilarity: ragConfig.minSimilarity || 0.5,
-          }
-        );
-
-        if (searchResults.length > 0) {
-          const context = buildContext(searchResults, 2000);
-          systemPrompt = `${systemPrompt}\n\n## Knowledge Base Context\nUse the following information from the knowledge base to answer the user's question. If the information is not relevant, you can ignore it.\n\n${context}`;
-          contextUsed = true;
-        }
-      } catch (error) {
-        console.error('[Chat] RAG search error:', error);
-        // Continue without RAG if there's an error
-      }
-    }
-
-    // Build messages array with conversation history
     const messages: LlmMessage[] = [];
 
     // Add system prompt
@@ -434,14 +412,6 @@ router.post(
         toolsUsed,
         mcpEnabled: hasTools,
         confidenceEscalation: enableConfidenceEscalation
-          ? {
-              enabled: true,
-              escalated: confidenceEscalated,
-              action: escalationDecision?.action,
-              confidenceScore: escalationDecision?.analysis.overallScore,
-              confidenceLevel: escalationDecision?.analysis.level,
-            }
-          : undefined,
       },
     };
 
