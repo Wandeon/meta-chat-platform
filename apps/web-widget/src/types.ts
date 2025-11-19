@@ -22,6 +22,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   pending?: boolean;
+  clientMessageId?: string;
 }
 
 export interface WidgetOptions {

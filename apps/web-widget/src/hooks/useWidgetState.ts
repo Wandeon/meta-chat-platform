@@ -37,11 +37,20 @@ function widgetReducer(state: WidgetState, action: Action): WidgetState {
 
 const MAX_RETRIES = 5;
 
+function generateMessageId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `local-${Date.now()}`;
+}
+
 export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions) {
   const [state, dispatch] = useReducer(widgetReducer, initialState);
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
+  const pendingMessageIds = useRef<Set<string>>(new Set());
+  const initialMessageInserted = useRef(false);
 
   const connect = useCallback(() => {
     if (!config) return;
@@ -63,7 +72,7 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
       retryCount.current = 0;
       dispatch({ type: 'connection', connection: { status: 'open', retryCount: 0 } });
       onEvent?.({ type: 'connection-state', state: { status: 'open', retryCount: 0 } });
-      if (config.initialMessage) {
+      if (config.initialMessage && !initialMessageInserted.current) {
         const message: ChatMessage = {
           id: `initial-${Date.now()}`,
           role: 'system',
@@ -71,6 +80,7 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
           timestamp: new Date().toISOString(),
         };
         dispatch({ type: 'messages', update: (messages) => [message, ...messages] });
+        initialMessageInserted.current = true;
       }
     };
 
@@ -78,14 +88,34 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
       try {
         const payload = JSON.parse(event.data);
         if (payload.type === 'message') {
+          const clientMessageId =
+            payload.clientMessageId ??
+            payload.client_message_id ??
+            payload.messageId ??
+            payload.message_id ??
+            undefined;
           const message: ChatMessage = {
-            id: payload.id ?? `server-${Date.now()}`,
+            id: payload.id ?? payload.messageId ?? `server-${Date.now()}`,
             role: payload.role ?? 'assistant',
             content: payload.content,
             timestamp: payload.timestamp ?? new Date().toISOString(),
             pending: false,
+            clientMessageId,
           };
-          dispatch({ type: 'messages', update: (messages) => [...messages, message] });
+          if (clientMessageId && pendingMessageIds.current.has(clientMessageId)) {
+            pendingMessageIds.current.delete(clientMessageId);
+            dispatch({
+              type: 'messages',
+              update: (messages) =>
+                messages.map((existing) =>
+                  existing.clientMessageId === clientMessageId || existing.id === clientMessageId
+                    ? { ...message, clientMessageId }
+                    : existing,
+                ),
+            });
+          } else {
+            dispatch({ type: 'messages', update: (messages) => [...messages, message] });
+          }
           onEvent?.({ type: 'message-received', message });
         } else if (payload.type === 'typing') {
           dispatch({ type: 'typing', value: Boolean(payload.isTyping) });
@@ -136,8 +166,13 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
         clearTimeout(retryTimeout.current);
       }
       wsRef.current?.close();
+      pendingMessageIds.current.clear();
     };
   }, [config, connect, onEvent]);
+
+  useEffect(() => {
+    initialMessageInserted.current = false;
+  }, [config?.initialMessage, config?.widgetId]);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -145,18 +180,22 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         throw new Error('Connection not ready');
       }
+      const clientMessageId = generateMessageId();
+      pendingMessageIds.current.add(clientMessageId);
       const message: ChatMessage = {
-        id: `local-${Date.now()}`,
+        id: clientMessageId,
         role: 'user',
         content,
         timestamp: new Date().toISOString(),
         pending: true,
+        clientMessageId,
       };
       ws.send(
         JSON.stringify({
           type: 'message',
           content,
           metadata: config?.metadata ?? {},
+          messageId: clientMessageId,
         }),
       );
       dispatch({ type: 'messages', update: (messages) => [...messages, message] });
