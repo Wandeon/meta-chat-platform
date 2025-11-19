@@ -6,12 +6,14 @@ import rateLimit from 'express-rate-limit';
 import { createServer as createHttpServer, Server as HttpServer } from 'http';
 import { AddressInfo } from 'net';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
-import amqp from 'amqplib';
+import { Channel } from 'amqplib';
 import Redis from 'ioredis';
 import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import createHttpError from 'http-errors';
+import { httpsRedirect, hstsHeader } from './middleware/httpsRedirect';
+import { securityHeaders } from './middleware/securityHeaders';
 
 import { getPrismaClient } from '@meta-chat/database';
 import { createLogger, ensureCorrelationId, withRequestContext } from '@meta-chat/shared';
@@ -32,6 +34,7 @@ import stripeWebhookRouter from "./routes/webhooks/stripe";
 import analyticsRouter from "./routes/analytics";
 
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
+import healthRouter from './routes/health';
 import { metricsRegistry, httpRequestDuration } from './metrics';
 import { TenantQueuePublisher } from './queues/task-publisher';
 import { WebhookAckStrategy } from './webhooks/ack-strategy';
@@ -42,6 +45,11 @@ type RawBodyRequest = Request & { rawBody?: Buffer };
 
 const prisma = getPrismaClient();
 const logger = createLogger('ApiServer');
+const HEALTH_CHECK_CACHE_TTL_MS =
+  Number.parseInt(process.env.HEALTH_CHECK_CACHE_TTL_MS ?? '', 10) || 3000;
+
+let cachedHealthCheck: { value: HealthCheck; expiresAt: number } | null = null;
+let inFlightHealthCheck: Promise<HealthCheck> | null = null;
 
 interface SocketServer {
   io: SocketIOServer;
@@ -52,16 +60,31 @@ interface SocketServer {
   };
 }
 
-function parseOrigins(): (string | RegExp)[] | boolean {
+function parseOrigins(): (string | RegExp)[] | ((origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => void) {
   const origins = process.env.API_CORS_ORIGINS;
-  if (!origins) {
-    return true;
-  }
+  
+  // Default to localhost for development if not specified
+  // SECURITY: Never use wildcard '*' - always use explicit origin whitelist
+  const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+  
+  const allowedOrigins = origins 
+    ? origins.split(',').map((origin) => origin.trim()).filter(Boolean)
+    : defaultOrigins;
 
-  return origins
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  // Return a validation function for explicit origin checking
+  return (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn('CORS request blocked', { origin, allowedOrigins });
+      callback(new Error('Not allowed by CORS'));
+    }
+  };
 }
 
 function registerRequestContext(app: express.Express): void {
@@ -97,6 +120,10 @@ function registerCors(app: express.Express): void {
     cors({
       origin: origins,
       credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id', 'x-correlation-id'],
+      exposedHeaders: ['x-request-id', 'x-correlation-id'],
+      maxAge: 86400, // 24 hours
     }),
   );
 }
@@ -144,7 +171,34 @@ function registerLogging(app: express.Express): void {
   });
 }
 
-async function checkHealth(redisClients: { publisher: Redis | null; subscriber: Redis | null }): Promise<HealthCheck> {
+async function getHealthStatus(
+  redisClients: { publisher: Redis | null; subscriber: Redis | null },
+  deps: { publisher: TenantQueuePublisher; ackStrategy: WebhookAckStrategy },
+): Promise<HealthCheck> {
+  const now = Date.now();
+  if (cachedHealthCheck && cachedHealthCheck.expiresAt > now) {
+    return cachedHealthCheck.value;
+  }
+
+  if (!inFlightHealthCheck) {
+    inFlightHealthCheck = checkHealth(redisClients, deps).then((result) => {
+      cachedHealthCheck = {
+        value: result,
+        expiresAt: Date.now() + HEALTH_CHECK_CACHE_TTL_MS,
+      };
+      return result;
+    }).finally(() => {
+      inFlightHealthCheck = null;
+    });
+  }
+
+  return inFlightHealthCheck;
+}
+
+async function checkHealth(
+  redisClients: { publisher: Redis | null; subscriber: Redis | null },
+  deps: { publisher: TenantQueuePublisher; ackStrategy: WebhookAckStrategy },
+): Promise<HealthCheck> {
   const services: HealthCheck['services'] = {
     database: 'down',
     redis: 'down',
@@ -175,9 +229,24 @@ async function checkHealth(redisClients: { publisher: Redis | null; subscriber: 
     services.rabbitmq = 'up';
   } else {
     try {
-      const connection = await amqp.connect(rabbitUrl);
-      await connection.close();
-      services.rabbitmq = 'up';
+      await deps.publisher.init();
+      const connection = deps.publisher.getConnection();
+      if (!connection) {
+        throw new Error('RabbitMQ connection unavailable');
+      }
+
+      let channel: Channel | null = null;
+      try {
+        channel = await connection.createChannel();
+        await channel.assertQueue('', { exclusive: true, autoDelete: true });
+        services.rabbitmq = 'up';
+      } finally {
+        if (channel) {
+          await channel.close().catch((error) => {
+            logger.warn('Failed to close health check channel', error);
+          });
+        }
+      }
     } catch (error) {
       logger.error('RabbitMQ health check failed', error);
     }
@@ -201,7 +270,7 @@ function registerRoutes(
   redisClients: { publisher: Redis | null; subscriber: Redis | null },
 ): void {
   app.get('/health', async (_req, res) => {
-    const health = await checkHealth(redisClients);
+    const health = await getHealthStatus(redisClients, deps);
     res.json(health);
   });
 
@@ -209,6 +278,9 @@ function registerRoutes(
     res.setHeader('Content-Type', metricsRegistry.contentType);
     res.send(await metricsRegistry.metrics());
   });
+
+  // Health check endpoints (no auth required)
+  app.use('/api', healthRouter);
 
   app.use('/api/security', apiKeyRouter);
   app.use('/api/auth', authRouter);
@@ -412,6 +484,10 @@ export async function createApp() {
   const app = express();
   app.set('trust proxy', 1);
 
+n  // Apply security middleware FIRST (before all routes)
+  app.use(hstsHeader);
+  app.use(httpsRedirect);
+  app.use(securityHeaders);
   registerRequestContext(app);
   registerCors(app);
   registerBodyParsers(app);

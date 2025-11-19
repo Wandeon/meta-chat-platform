@@ -377,10 +377,11 @@ model AdminUser {
   id                 String              @id @default(cuid())
   email              String              @unique
   name               String?
+  password           String?
+  emailVerified      Boolean             @default(false) @map("email_verified")
   role               AdminRole           @default(STANDARD)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  emailVerified      Boolean             @default(false) @map("email_verified")
   apiKeys            AdminApiKey[]
   verificationTokens VerificationToken[]
 
@@ -417,6 +418,22 @@ model AdminApiKey {
 enum AdminRole {
   SUPER
   STANDARD
+}
+
+
+model VerificationToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  adminId   String   @map("admin_id")
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([adminId])
+  @@map("verification_tokens")
 }
 
 // ============= MCP (Model Context Protocol) Servers =============

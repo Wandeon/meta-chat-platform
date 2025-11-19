@@ -95,7 +95,7 @@ export class AnalyticsService {
         FROM message_metrics
         WHERE tenant_id = ${tenantId}
         AND response_time_ms IS NOT NULL
-        AND "createdAt" >= NOW() - INTERVAL '7 days'
+        AND created_at >= NOW() - INTERVAL '7 days'
       `;
 
       const avgMs = avgResponseTime[0]?.avg || 0;
@@ -128,7 +128,7 @@ export class AnalyticsService {
         WHERE "tenantId" = ${tenantId}
         AND "createdAt" >= ${startDate}
         AND "createdAt" <= ${endDate}
-        GROUP BY DATE(created_at)
+        GROUP BY DATE("createdAt")
         ORDER BY date ASC
       `;
 
@@ -157,7 +157,7 @@ export class AnalyticsService {
         WHERE "tenantId" = ${tenantId}
         AND "createdAt" >= ${startDate}
         AND "createdAt" <= ${endDate}
-        GROUP BY DATE(created_at)
+        GROUP BY DATE("createdAt")
         ORDER BY date ASC
       `;
 
@@ -191,8 +191,8 @@ export class AnalyticsService {
         FROM message_metrics
         WHERE tenant_id = ${tenantId}
         AND rag_used = true
-        AND "createdAt" >= ${startDate}
-        AND "createdAt" <= ${endDate}
+        AND created_at >= ${startDate}
+        AND created_at <= ${endDate}
       `;
 
       // Calculate hit rate (queries with similarity > 0.7)
@@ -202,8 +202,8 @@ export class AnalyticsService {
         WHERE tenant_id = ${tenantId}
         AND rag_used = true
         AND rag_similarity >= 0.7
-        AND "createdAt" >= ${startDate}
-        AND "createdAt" <= ${endDate}
+        AND created_at >= ${startDate}
+        AND created_at <= ${endDate}
       `;
 
       // Get top documents by query count
@@ -220,8 +220,8 @@ export class AnalyticsService {
         WHERE tenant_id = ${tenantId}
         AND rag_used = true
         AND rag_top_document_id IS NOT NULL
-        AND "createdAt" >= ${startDate}
-        AND "createdAt" <= ${endDate}
+        AND created_at >= ${startDate}
+        AND created_at <= ${endDate}
         GROUP BY rag_top_document_id
         ORDER BY queries DESC
         LIMIT 10
@@ -301,7 +301,7 @@ export class AnalyticsService {
         WHERE tenant_id = ${tenantId}
         AND user_message IS NOT NULL
         AND user_message != ''
-        AND "createdAt" >= NOW() - INTERVAL '30 days'
+        AND created_at >= NOW() - INTERVAL '30 days'
         GROUP BY user_message
         ORDER BY count DESC
         LIMIT ${limit}
@@ -342,8 +342,8 @@ export class AnalyticsService {
         FROM message_metrics
         WHERE tenant_id = ${tenantId}
         AND response_time_ms IS NOT NULL
-        AND "createdAt" >= ${startDate}
-        AND "createdAt" <= ${endDate}
+        AND created_at >= ${startDate}
+        AND created_at <= ${endDate}
       `;
 
       // Get by-day stats
@@ -353,14 +353,14 @@ export class AnalyticsService {
         p95: number;
       }>>`
         SELECT
-          DATE("createdAt") as date,
+          DATE(created_at) as date,
           AVG(response_time_ms) as avg,
           PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms) as p95
         FROM message_metrics
         WHERE tenant_id = ${tenantId}
         AND response_time_ms IS NOT NULL
-        AND "createdAt" >= ${startDate}
-        AND "createdAt" <= ${endDate}
+        AND created_at >= ${startDate}
+        AND created_at <= ${endDate}
         GROUP BY DATE(created_at)
         ORDER BY date ASC
       `;

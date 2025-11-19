@@ -2,9 +2,11 @@ import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
 import { asyncHandler, respondSuccess } from '../../utils/http';
+import { widgetConfigLimiter } from '../../middleware/rateLimiting';
 
 const prisma = getPrismaClient();
 const router = Router();
+router.use(widgetConfigLimiter);
 
 /**
  * Public endpoint to fetch widget configuration by widget ID or tenant ID

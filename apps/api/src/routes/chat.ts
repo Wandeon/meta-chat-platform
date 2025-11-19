@@ -15,6 +15,7 @@ import {
   buildEscalationConfigFromTenant,
   isConfidenceEscalationEnabled
 } from '@meta-chat/orchestrator';
+import { chatLimiter } from '../middleware/rateLimiting';
 import { AnalyticsService } from '../services/AnalyticsService';
 
 const prisma = getPrismaClient();
@@ -28,6 +29,7 @@ const chatRequestSchema = z.object({
 });
 
 router.use(authenticateAdminOrTenant);
+router.use(chatLimiter);
 
 router.post(
   '/',
@@ -62,8 +64,12 @@ router.post(
     // Create or find conversation
     let conversation;
     if (payload.conversationId) {
-      conversation = await prisma.conversation.findUnique({
-        where: { id: payload.conversationId },
+      // Use findFirst with tenantId to enforce tenant isolation
+      conversation = await prisma.conversation.findFirst({
+        where: {
+          id: payload.conversationId,
+          tenantId: payload.tenantId,
+        },
         include: {
           messages: {
             orderBy: { timestamp: 'asc' },
@@ -71,6 +77,11 @@ router.post(
           },
         },
       });
+
+      // If conversation exists but doesn't belong to this tenant, treat as not found
+      if (!conversation && payload.conversationId) {
+        throw createHttpError(404, 'Conversation not found or does not belong to this tenant');
+      }
     }
 
     if (!conversation) {
