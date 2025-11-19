@@ -58,9 +58,11 @@ export async function mountMetaChatWidget(options: WidgetOptions = {}) {
     );
     return root;
   } catch (error) {
-    target.innerHTML = `<div style="font-family: system-ui; padding: 16px; border: 1px solid #fee2e2; background:#fef2f2; color:#b91c1c; border-radius: 12px;">${
-      error instanceof Error ? error.message : 'Unable to mount Meta Chat widget.'
-    }</div>`;
+    // Use DOM APIs instead of innerHTML to prevent XSS from error messages
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = 'font-family: system-ui; padding: 16px; border: 1px solid #fee2e2; background: #fef2f2; color: #b91c1c; border-radius: 12px;';
+    errorDiv.textContent = error instanceof Error ? error.message : 'Unable to mount Meta Chat widget.';
+    target.appendChild(errorDiv);
     throw error;
   }
 }
