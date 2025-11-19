@@ -70,8 +70,18 @@ router.get(
   '/:conversationId',
   asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
+    const { tenantId } = req.query;
+
+    if (!tenantId) {
+      throw createHttpError(400, 'tenantId is required');
+    }
+
+    // Use findFirst with tenantId to enforce tenant isolation
+    const conversation = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        tenantId: String(tenantId),
+      },
       include: {
         messages: {
           orderBy: { timestamp: 'asc' },
@@ -92,10 +102,19 @@ router.put(
   '/:conversationId',
   asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
+    const { tenantId } = req.query;
     const payload = parseWithSchema(updateConversationSchema, req.body);
 
-    const existing = await prisma.conversation.findUnique({
-      where: { id: conversationId },
+    if (!tenantId) {
+      throw createHttpError(400, 'tenantId is required');
+    }
+
+    // Use findFirst with tenantId to enforce tenant isolation
+    const existing = await prisma.conversation.findFirst({
+      where: {
+        id: conversationId,
+        tenantId: String(tenantId),
+      },
     });
 
     if (!existing) {
