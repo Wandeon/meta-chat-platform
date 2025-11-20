@@ -67,9 +67,18 @@ function parseOrigins(): (string | RegExp)[] | ((origin: string | undefined, cal
   // SECURITY: Never use wildcard '*' - always use explicit origin whitelist
   const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
   
-  const allowedOrigins = origins 
-    ? origins.split(',').map((origin) => origin.trim()).filter(Boolean)
+  const allowedOrigins = origins
+    ? origins
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
     : defaultOrigins;
+
+  if (allowedOrigins.includes('*')) {
+    const error = new Error('Wildcard CORS origins (*) are not allowed');
+    logger.error('Invalid CORS configuration', { origins: allowedOrigins });
+    throw error;
+  }
 
   // Return a validation function for explicit origin checking
   return (origin, callback) => {
