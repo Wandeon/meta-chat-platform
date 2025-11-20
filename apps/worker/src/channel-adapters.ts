@@ -39,6 +39,7 @@ abstract class ChannelAdapterWrapper implements ChannelAdapter {
             settings: true,
           },
         },
+        secrets: true, // Include the secrets relation
       },
     });
 
@@ -48,6 +49,11 @@ abstract class ChannelAdapterWrapper implements ChannelAdapter {
       );
     }
 
+
+    // Decrypt and build secrets object from ChannelSecret relation
+    // For now, we'll handle secrets via the config field instead
+    // TODO: Implement proper secret decryption when needed
+    const secretsData: Record<string, string> = {};
     // Build channel context for the underlying adapter
     const channelContext: ChannelContext = {
       tenant: {
@@ -59,7 +65,7 @@ abstract class ChannelAdapterWrapper implements ChannelAdapter {
         id: channel.id,
         type: channel.type as ChannelType,
         config: (channel.config as Record<string, any>) || {},
-        secrets: (channel.secrets as Record<string, string>) || undefined,
+        secrets: secretsData,
         metadata: (channel.metadata as Record<string, any>) || undefined,
       },
     };

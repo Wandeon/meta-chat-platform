@@ -51,11 +51,15 @@ export class WebhookEmitter {
     }
 
     // Emit to all webhooks in parallel
-    const promises = webhooks.map((webhookRecord: TenantWebhookRecord) =>
-      this.sendWebhook(webhookRecord, event).catch(error => {
+    const promises = webhooks.map((webhookRecord) => {
+      const typedWebhook: TenantWebhookRecord = {
+        ...webhookRecord,
+        headers: webhookRecord.headers as Record<string, string> | null
+      };
+      return this.sendWebhook(typedWebhook, event).catch(error => {
         logger.error(`Webhook delivery failed: ${webhookRecord.url}`, error);
-      })
-    );
+      });
+    });
 
     await Promise.allSettled(promises);
   }

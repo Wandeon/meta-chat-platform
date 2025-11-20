@@ -2,13 +2,7 @@ import { Request } from 'express';
 import { Prisma } from '@prisma/client';
 import createHttpError from 'http-errors';
 
-// Type for requests with tenant context
-export interface TenantRequest extends Request {
-  tenant?: {
-    id: string;
-    name: string;
-  };
-}
+export type TenantRequest = Request;
 
 // Ensure a query includes tenant filtering
 export function withTenantScope<T extends { where?: any }>(

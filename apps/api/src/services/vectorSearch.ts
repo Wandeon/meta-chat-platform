@@ -1,5 +1,7 @@
 import { PrismaClient } from '@meta-chat/database';
-import { logger } from '@meta-chat/shared';
+import { createLogger } from '@meta-chat/shared';
+
+const logger = createLogger('VectorSearch');
 import { Prisma } from '@prisma/client';
 
 export interface VectorSearchOptions {
