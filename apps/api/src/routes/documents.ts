@@ -2,10 +2,11 @@ import { Router } from 'express';
 import createHttpError from 'http-errors';
 import crypto from 'crypto';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenant } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 import { processDocument, getEmbeddingConfig } from '../services/documentProcessor';
+import { requireTenant, withTenantScope } from '../utils/tenantScope';
 
 const prisma = getPrismaClient();
 const router = Router();
@@ -29,20 +30,21 @@ const updateDocumentSchema = z.object({
   status: z.string().optional(),
 });
 
-router.use(authenticateAdmin);
+router.use(authenticateTenant);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    const tenantId = requireTenant(req);
     const query = parseWithSchema(listQuerySchema, req.query);
-    const { tenantId } = req.query;
-    const documents = await prisma.document.findMany({
-      where: {
-        ...(tenantId ? { tenantId: String(tenantId) } : {}),
-        ...(query.status ? { status: query.status } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const documents = await prisma.document.findMany(
+      withTenantScope(tenantId, {
+        where: {
+          ...(query.status ? { status: query.status } : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    );
 
     respondSuccess(res, documents);
   }),
@@ -51,7 +53,8 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createDocumentSchema.extend({ tenantId: z.string() }), req.body);
+    const tenantId = requireTenant(req);
+    const payload = parseWithSchema(createDocumentSchema, req.body);
 
     // Extract content from metadata
     const content = payload.metadata?.content || '';
@@ -65,7 +68,7 @@ router.post(
     const timestamp = Date.now();
     const sanitizedName = payload.name.replace(/[^a-zA-Z0-9-_]/g, '_');
     const filename = `${sanitizedName}.txt`;
-    const path = `documents/${payload.tenantId}/${timestamp}-${filename}`;
+    const path = `documents/${tenantId}/${timestamp}-${filename}`;
 
     // Determine mime type from metadata or default
     const mimeType = (payload.metadata?.fileType as string) || 'text/plain';
@@ -73,7 +76,7 @@ router.post(
 
     const document = await prisma.document.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId,
         filename: filename,
         mimeType: mimeType,
         size: size,
@@ -90,7 +93,7 @@ router.post(
     });
 
     // Trigger document processing asynchronously
-    const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
+    const embeddingConfig = await getEmbeddingConfig(tenantId);
     processDocument(document.id, { embeddingConfig }).catch((error) => {
       console.error(`Failed to process document ${document.id}:`, error);
     });
@@ -103,19 +106,16 @@ router.get(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    const tenantId = requireTenant(req);
 
     // Use findFirst with tenantId to enforce tenant isolation
-    const document = await prisma.document.findFirst({
-      where: {
-        id: documentId,
-        tenantId: String(tenantId),
-      },
-    });
+    const document = await prisma.document.findFirst(
+      withTenantScope(tenantId, {
+        where: {
+          id: documentId,
+        },
+      }),
+    );
 
     if (!document) {
       throw createHttpError(404, 'Document not found');
@@ -127,20 +127,17 @@ router.get(
 
 const updateDocumentHandler = asyncHandler(async (req, res) => {
   const { documentId } = req.params;
-  const { tenantId } = req.query;
+  const tenantId = requireTenant(req);
   const payload = parseWithSchema(updateDocumentSchema, req.body);
 
-  if (!tenantId) {
-    throw createHttpError(400, 'tenantId is required');
-  }
-
   // Use findFirst with tenantId to enforce tenant isolation
-  const existing = await prisma.document.findFirst({
-    where: {
-      id: documentId,
-      tenantId: String(tenantId),
-    },
-  });
+  const existing = await prisma.document.findFirst(
+    withTenantScope(tenantId, {
+      where: {
+        id: documentId,
+      },
+    }),
+  );
 
   if (!existing) {
     throw createHttpError(404, 'Document not found');
@@ -186,11 +183,7 @@ router.delete(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    const tenantId = requireTenant(req);
 
     // Use deleteMany with tenantId to enforce tenant isolation
     const result = await prisma.document.deleteMany({

@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenant } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
+import { requireTenant, withTenantScope } from '../utils/tenantScope';
 
 const prisma = getPrismaClient();
 const router = Router();
@@ -18,17 +19,18 @@ const createChannelSchema = z.object({
 
 const updateChannelSchema = createChannelSchema.partial();
 
-router.use(authenticateAdmin);
+router.use(authenticateTenant);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.query;
+    const tenantId = requireTenant(req);
 
-    const channels = await prisma.channel.findMany({
-      where: tenantId ? { tenantId: String(tenantId) } : undefined,
-      orderBy: { createdAt: 'desc' },
-    });
+    const channels = await prisma.channel.findMany(
+      withTenantScope(tenantId, {
+        orderBy: { createdAt: 'desc' },
+      }),
+    );
 
     respondSuccess(res, channels);
   }),
@@ -37,11 +39,12 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createChannelSchema.extend({ tenantId: z.string() }), req.body);
+    const tenantId = requireTenant(req);
+    const payload = parseWithSchema(createChannelSchema, req.body);
 
     const channel = await prisma.channel.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId,
         type: payload.type,
         config: payload.config ?? {},
         enabled: payload.enabled ?? true,
@@ -56,11 +59,14 @@ router.patch(
   '/:channelId',
   asyncHandler(async (req, res) => {
     const { channelId } = req.params;
+    const tenantId = requireTenant(req);
     const payload = parseWithSchema(updateChannelSchema, req.body);
 
-    const existing = await prisma.channel.findUnique({
-      where: { id: channelId },
-    });
+    const existing = await prisma.channel.findFirst(
+      withTenantScope(tenantId, {
+        where: { id: channelId },
+      }),
+    );
 
     if (!existing) {
       throw createHttpError(404, 'Channel not found');
@@ -83,10 +89,13 @@ router.delete(
   '/:channelId',
   asyncHandler(async (req, res) => {
     const { channelId } = req.params;
+    const tenantId = requireTenant(req);
 
-    const existing = await prisma.channel.findUnique({
-      where: { id: channelId },
-    });
+    const existing = await prisma.channel.findFirst(
+      withTenantScope(tenantId, {
+        where: { id: channelId },
+      }),
+    );
 
     if (!existing) {
       throw createHttpError(404, 'Channel not found');
