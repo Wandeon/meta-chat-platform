@@ -1,4 +1,4 @@
-require('dotenv').config({ path: './apps/api/.env.production' });
+require('dotenv').config({ path: './apps/api/.env' });
 
 module.exports = {
   apps: [
@@ -10,7 +10,7 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: process.env.PORT || 3007,
         DATABASE_URL: process.env.DATABASE_URL || 'postgresql://metachat:QDpBLzzgyRbp_tU*^-RM6%GcctYoCFKe@localhost:5432/metachat?schema=public',
         REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379/0',
         RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://metachat:vxY%25prw5pBLEAL%3D%26F%23wqvXHN@localhost:5672',
@@ -24,6 +24,14 @@ module.exports = {
         STRIPE_PRICE_PRO: process.env.STRIPE_PRICE_PRO || "",
         STRIPE_SUCCESS_URL: process.env.STRIPE_SUCCESS_URL || "https://chat.genai.hr/billing/success",
         STRIPE_CANCEL_URL: process.env.STRIPE_CANCEL_URL || "https://chat.genai.hr/billing",
+        SMTP_HOST: process.env.SMTP_HOST || "localhost",
+        SMTP_PORT: process.env.SMTP_PORT || "587",
+        SMTP_SECURE: process.env.SMTP_SECURE || "false",
+        SMTP_USER: process.env.SMTP_USER || "",
+        SMTP_PASS: process.env.SMTP_PASS || "",
+        FROM_EMAIL: process.env.FROM_EMAIL || "noreply@meta-chat-platform.com",
+        BASE_URL: process.env.BASE_URL || "https://chat.genai.hr",
+        API_CORS_ORIGINS: process.env.API_CORS_ORIGINS || 'https://chat.genai.hr',
         API_URL: 'https://chat.genai.hr',
         STORAGE_PATH: './storage',
         LOG_LEVEL: 'info',
