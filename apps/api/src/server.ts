@@ -12,7 +12,7 @@ import jwt from 'jsonwebtoken';
 import { Server as SocketIOServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import createHttpError from 'http-errors';
-import { httpsRedirect, hstsHeader } from './middleware/httpsRedirect';
+import { httpsRedirect } from './middleware/httpsRedirect';
 import { securityHeaders } from './middleware/securityHeaders';
 
 import { getPrismaClient } from '@meta-chat/database';
@@ -484,7 +484,7 @@ export async function createApp() {
   const app = express();
   app.set('trust proxy', 1);
 
-  app.use(hstsHeader);
+  app.use(securityHeaders);
   app.use(httpsRedirect);
   app.use(securityHeaders);
   registerRequestContext(app);

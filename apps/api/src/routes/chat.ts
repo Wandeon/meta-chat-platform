@@ -107,6 +107,13 @@ router.post(
       try {
         const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
     const messages: LlmMessage[] = [];
+      } catch (error) {
+        console.error("[RAG] Error getting embedding config:", error);
+        // Continue without RAG if embedding config fails
+      }
+    }
+    const messages: LlmMessage[] = [];
+
 
     // Add system prompt
     if (systemPrompt) {
@@ -416,7 +423,6 @@ router.post(
     };
 
     respondSuccess(res, response);
-  }),
-);
+  }));
 
 export default router;

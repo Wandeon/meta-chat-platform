@@ -27,7 +27,7 @@ export async function aggregateAnalytics(prisma: PrismaClient, targetDate?: Date
         await aggregateTenantDay(prisma, tenant.id, dateStr);
         logger.info(`✓ Aggregated analytics for tenant ${tenant.id}`);
       } catch (error) {
-        logger.error(`✗ Failed to aggregate tenant ${tenant.id}:`, error);
+        logger.error(`✗ Failed to aggregate tenant ${tenant.id}:`, error as Error);
         // Continue with other tenants
       }
     }
@@ -44,7 +44,7 @@ export async function aggregateAnalytics(prisma: PrismaClient, targetDate?: Date
     logger.info(`Cleaned up ${deleted} old message_metrics records`);
     logger.info('Daily analytics aggregation completed successfully');
   } catch (error) {
-    logger.error('Daily analytics aggregation failed:', error);
+    logger.error('Daily analytics aggregation failed:', error as Error);
     throw error;
   }
 }
