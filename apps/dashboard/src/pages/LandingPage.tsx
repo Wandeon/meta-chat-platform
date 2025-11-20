@@ -5,7 +5,7 @@ export function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+    <div className="relative min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 overflow-hidden">
       {/* Navigation */}
       <nav className="relative z-50 px-6 py-4">
         <div className="container mx-auto flex items-center justify-between">
@@ -20,21 +20,44 @@ export function LandingPage() {
             <a href="#features" className="text-gray-200 hover:text-white transition">Features</a>
             <a href="#pricing" className="text-gray-200 hover:text-white transition">Pricing</a>
             <a href="#integration" className="text-gray-200 hover:text-white transition">Integration</a>
-            <Link to="/login" className="px-6 py-2 bg-gradient-to-r from-cyan-400 to-purple-500 text-white rounded-full hover:shadow-lg transition">
+            <Link to="/signup" className="px-6 py-2 bg-gradient-to-r from-cyan-400 to-purple-500 text-white rounded-full hover:shadow-lg transition">
               Get Started
             </Link>
           </div>
-          
+
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-white">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
+
+        {isMenuOpen && (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/50 backdrop-blur px-6 py-4 md:hidden">
+            <div className="flex flex-col space-y-4 text-white">
+              <a href="#features" className="hover:text-cyan-200 transition" onClick={() => setIsMenuOpen(false)}>
+                Features
+              </a>
+              <a href="#pricing" className="hover:text-cyan-200 transition" onClick={() => setIsMenuOpen(false)}>
+                Pricing
+              </a>
+              <a href="#integration" className="hover:text-cyan-200 transition" onClick={() => setIsMenuOpen(false)}>
+                Integration
+              </a>
+              <Link
+                to="/signup"
+                className="inline-flex w-full justify-center rounded-full bg-gradient-to-r from-cyan-400 to-purple-500 px-6 py-3 font-semibold shadow-lg transition hover:shadow-xl"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-6 pt-20 pb-32 text-center">
+      <section className="relative container mx-auto px-6 pt-20 pb-32 text-center">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Transform Your Business with{' '}
@@ -203,7 +226,8 @@ export function LandingPage() {
                 )}
                 <h3 className="text-2xl font-semibold text-white mb-2">{plan.name}</h3>
                 <div className="text-4xl font-bold text-white mb-6">
-                  {plan.price}<span className="text-lg font-normal text-gray-300">/month</span>
+                  {plan.price === 'Custom' ? plan.price : `$${plan.price}`}
+                  {plan.price !== 'Custom' && <span className="text-lg font-normal text-gray-300">/month</span>}
                 </div>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature, i) => (
@@ -256,9 +280,9 @@ export function LandingPage() {
               <span className="text-white font-semibold">Meta Chat Platform</span>
             </div>
             <div className="flex space-x-6 text-gray-400">
-              <a href="#" className="hover:text-white transition">Privacy</a>
-              <a href="#" className="hover:text-white transition">Terms</a>
-              <a href="#" className="hover:text-white transition">Contact</a>
+              <a href="#features" className="hover:text-white transition">Features</a>
+              <a href="#pricing" className="hover:text-white transition">Pricing</a>
+              <a href="mailto:support@meta.chat" className="hover:text-white transition">Contact</a>
             </div>
           </div>
           <div className="text-center text-gray-400 mt-8">
