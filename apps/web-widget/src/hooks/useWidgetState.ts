@@ -14,6 +14,8 @@ const initialState: WidgetState = {
   isTyping: false,
 };
 
+const STORAGE_KEY_PREFIX = 'meta-chat-widget:';
+
 type Action =
   | { type: 'config'; config: WidgetConfig }
   | { type: 'messages'; update: (messages: ChatMessage[]) => ChatMessage[] }
@@ -37,6 +39,31 @@ function widgetReducer(state: WidgetState, action: Action): WidgetState {
 
 const MAX_RETRIES = 5;
 
+function getStorageKey(widgetId: string) {
+  return `${STORAGE_KEY_PREFIX}${widgetId}:messages`;
+}
+
+function loadPersistedMessages(widgetId?: string): ChatMessage[] {
+  if (!widgetId || typeof localStorage === 'undefined') return [];
+
+  try {
+    const stored = localStorage.getItem(getStorageKey(widgetId));
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter(
+        (item): item is ChatMessage =>
+          Boolean(item && typeof item.id === 'string' && typeof item.content === 'string'),
+      )
+      .map((message) => ({ ...message, pending: false }));
+  } catch (error) {
+    console.warn('[MetaChat] Failed to restore messages from storage', error);
+    return [];
+  }
+}
+
 function generateMessageId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
@@ -51,6 +78,7 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
   const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
   const pendingMessageIds = useRef<Set<string>>(new Set());
+  const seenMessageIds = useRef<Set<string>>(new Set());
   const initialMessageInserted = useRef(false);
 
   const connect = useCallback(() => {
@@ -114,9 +142,20 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
                     : existing,
                 ),
             });
-          } else {
+            seenMessageIds.current.add(message.id);
+          } else if (seenMessageIds.current.has(message.id)) {
+            dispatch({
+              type: 'messages',
+              update: (messages) =>
+                messages.map((existing) =>
+                  existing.id === message.id ? { ...existing, ...message, pending: false } : existing,
+                ),
+            });
+          }
+          if (!seenMessageIds.current.has(message.id)) {
             dispatch({ type: 'messages', update: (messages) => [...messages, message] });
           }
+          seenMessageIds.current.add(message.id);
           onEvent?.({ type: 'message-received', message });
         } else if (payload.type === 'typing') {
           dispatch({ type: 'typing', value: Boolean(payload.isTyping) });
@@ -162,6 +201,20 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
 
   useEffect(() => {
     if (!config) return undefined;
+    const persistedMessages = loadPersistedMessages(config.widgetId);
+    seenMessageIds.current = new Set(persistedMessages.map((message) => message.id));
+    if (persistedMessages.length) {
+      dispatch({ type: 'messages', update: () => persistedMessages });
+      initialMessageInserted.current = Boolean(
+        config.initialMessage &&
+          persistedMessages.some(
+            (message) => message.role === 'system' && message.content === config.initialMessage,
+          ),
+      );
+    } else {
+      initialMessageInserted.current = false;
+      seenMessageIds.current.clear();
+    }
     dispatch({ type: 'config', config });
     onEvent?.({ type: 'config-loaded', config });
     connect();
@@ -175,8 +228,19 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
   }, [config, connect, onEvent]);
 
   useEffect(() => {
-    initialMessageInserted.current = false;
-  }, [config?.initialMessage, config?.widgetId]);
+    seenMessageIds.current = new Set(state.messages.map((message) => message.id));
+  }, [state.messages]);
+
+  useEffect(() => {
+    const widgetId = state.config?.widgetId;
+    if (!widgetId || typeof localStorage === 'undefined') return;
+
+    try {
+      localStorage.setItem(getStorageKey(widgetId), JSON.stringify(state.messages));
+    } catch (error) {
+      console.warn('[MetaChat] Failed to persist messages', error);
+    }
+  }, [state.config?.widgetId, state.messages]);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -194,6 +258,7 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
         pending: true,
         clientMessageId,
       };
+      seenMessageIds.current.add(clientMessageId);
       ws.send(
         JSON.stringify({
           type: 'message',
