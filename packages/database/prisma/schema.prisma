@@ -56,6 +56,7 @@ model Channel {
   type      String // whatsapp, messenger, webchat
   config    Json // Channel-specific credentials
   enabled   Boolean  @default(true)
+  metadata  Json?    // Optional channel metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -170,6 +171,7 @@ model Webhook {
   events    String[] // Array of event types to subscribe to
   headers   Json     @default("{}") // Custom headers
   enabled   Boolean  @default(true)
+  metadata  Json?    // Optional channel metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
