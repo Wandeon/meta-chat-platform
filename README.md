@@ -10,6 +10,33 @@ A production-grade conversational AI platform that synthesizes the best patterns
 
 ---
 
+## 🚨 IMPORTANT: Production Deployment & Remediation Project
+
+**This application is deployed on VPS-00** (Tailscale network). Production instance runs at **https://chat.genai.hr:3007**.
+
+### Active Remediation Project
+
+Following an extensive code review (76 PRs analyzed), we've identified **33 issues** across security, functionality, stability, and operations. A comprehensive **5-week remediation plan** is now in progress.
+
+**📊 Project Status**: 0% Complete (41 total tasks including emergency fixes)
+
+**Key Documents**:
+- **[REMEDIATION_TRACKER.md](./REMEDIATION_TRACKER.md)** - **⭐ START HERE** - Complete issue tracking with detailed fix requirements, validation steps, and progress tracking for all 41 tasks
+- [MASTER_ISSUE_REGISTRY.md](./MASTER_ISSUE_REGISTRY.md) - Consolidated view of all 33 issues with severity, effort, and dependencies
+- [REMEDIATION_ROADMAP.md](./REMEDIATION_ROADMAP.md) - 5-week phased recovery plan with timeline and resource allocation
+- [VPS00_VALIDATION_REPORT.md](./VPS00_VALIDATION_REPORT.md) - Production validation results
+
+**🚨 Emergency Blocker (Day 0)**: Worker process down on VPS-00 due to missing npm dependency. Must be fixed before proceeding with other work.
+
+**Severity Distribution**:
+- 🔴 Critical: 9 issues (22%)
+- 🟠 High: 16 issues (39%)
+- 🟡 Medium: 13 issues (32%)
+- 🟢 Low: 3 issues (7%)
+
+**For Development Team**: All fixes must be applied to **`/home/deploy/meta-chat-platform/`** on VPS-00. The REMEDIATION_TRACKER.md provides detailed requirements, validation steps, and tracking fields for each issue.
+
+---
 
 ## 📚 Documentation
 
