@@ -11,6 +11,7 @@ export default defineConfig({
     { extends: './packages/llm/vitest.config.ts' },
     { extends: './packages/database/vitest.config.ts' },
     { extends: './apps/api/vitest.config.ts' },
+    { extends: './apps/web-widget/vitest.config.ts' },
     { extends: './tests/integration/vitest.config.ts' },
   ],
 });
