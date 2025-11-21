@@ -1,0 +1,17 @@
+# Logrotate configuration for Meta Chat Platform
+# This is a fallback/secondary rotation mechanism for application logs
+# Primary rotation is handled by pm2-logrotate
+
+/home/deploy/meta-chat-platform/logs/*.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    missingok
+    create 0644 admin admin
+    sharedscripts
+    postrotate
+        pm2 reloadLogs 2>/dev/null || true
+    endscript
+}
