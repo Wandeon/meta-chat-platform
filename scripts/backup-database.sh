@@ -13,9 +13,13 @@
 #   ./scripts/backup-database.sh                    # Manual backup
 #   ./scripts/backup-database.sh --verify-only      # Verify latest backup
 #   ./scripts/backup-database.sh --cleanup-only     # Remove old backups
+#   ./scripts/backup-database.sh --with-full-test   # Backup with full restoration test
 #
-# Cron setup (daily at 2 AM):
-#   0 2 * * * /home/deploy/meta-chat-platform/scripts/backup-database.sh >> /var/log/metachat/backup.log 2>&1
+# Cron setup:
+#   Daily backup at 2 AM:
+#     0 2 * * * /home/deploy/meta-chat-platform/scripts/backup-database.sh >> /var/log/metachat/backup.log 2>&1
+#   Weekly full verification on Sunday at 3 AM:
+#     0 3 * * 0 /home/deploy/meta-chat-platform/scripts/verify-backup.sh --weekly-full >> /var/log/metachat/verification.log 2>&1
 
 set -euo pipefail
 
@@ -287,6 +291,52 @@ main() {
 
                 log "========================================================================="
                 success "Backup completed successfully!"
+                log "========================================================================="
+
+                # Optional: Run full restoration test after backup
+                if [ "${RUN_FULL_VERIFICATION:-false}" = "true" ]; then
+                    log "Running full restoration test..."
+                    if [ -x "$SCRIPT_DIR/verify-backup.sh" ]; then
+                        "$SCRIPT_DIR/verify-backup.sh" --weekly-full "$BACKUP_FILE"
+                    else
+                        warning "verify-backup.sh not found or not executable"
+                    fi
+                fi
+            else
+                error "Backup verification failed!"
+                send_notification "Backup Verification Failed" "Backup was created but failed verification"
+                exit 1
+            fi
+            ;;
+        --with-full-test)
+            setup_backup_dir
+            parse_database_url
+
+            # Create backup
+            backup_database
+
+            # Verify backup (quick)
+            if verify_backup; then
+                # Upload to S3
+                upload_to_s3
+
+                # Run full restoration test
+                log "Running full restoration test..."
+                if [ -x "$SCRIPT_DIR/verify-backup.sh" ]; then
+                    "$SCRIPT_DIR/verify-backup.sh" --weekly-full "$BACKUP_FILE"
+                else
+                    error "verify-backup.sh not found or not executable"
+                    exit 1
+                fi
+
+                # Cleanup old backups
+                cleanup_old_backups
+
+                # List recent backups
+                list_backups
+
+                log "========================================================================="
+                success "Backup and full verification completed successfully!"
                 log "========================================================================="
             else
                 error "Backup verification failed!"
