@@ -1,5 +1,5 @@
 import { getPrismaClient } from '@meta-chat/database';
-import { ChannelType, NormalizedMessage } from '@meta-chat/shared';
+import { ChannelType, NormalizedMessage, decryptSecret } from '@meta-chat/shared';
 import {
   ChannelAdapter,
   ChannelSendResult,
@@ -51,9 +51,47 @@ abstract class ChannelAdapterWrapper implements ChannelAdapter {
 
 
     // Decrypt and build secrets object from ChannelSecret relation
-    // For now, we'll handle secrets via the config field instead
-    // TODO: Implement proper secret decryption when needed
     const secretsData: Record<string, string> = {};
+
+    if (channel.secrets && channel.secrets.length > 0) {
+      // The ChannelSecret model uses a 1:1 relationship with Channel
+      const secretRecord = channel.secrets[0];
+
+      try {
+        const decryptedBuffer = await decryptSecret({
+          keyId: secretRecord.keyId,
+          ciphertext: secretRecord.ciphertext,
+          iv: secretRecord.iv,
+          authTag: secretRecord.authTag,
+        });
+
+        // Convert buffer to string
+        const decryptedValue = decryptedBuffer.toString('utf8');
+
+        // Parse as JSON if it's a JSON object containing multiple secrets
+        // Otherwise treat as a single secret value
+        try {
+          const parsedSecrets = JSON.parse(decryptedValue);
+          if (typeof parsedSecrets === 'object' && parsedSecrets !== null) {
+            Object.assign(secretsData, parsedSecrets);
+          } else {
+            // If not an object, store as a single value
+            secretsData['secret'] = decryptedValue;
+          }
+        } catch {
+          // If not valid JSON, store as a single value
+          secretsData['secret'] = decryptedValue;
+        }
+
+        // Clean up the decrypted buffer for security
+        decryptedBuffer.fill(0);
+      } catch (error) {
+        throw new Error(
+          `Failed to decrypt secret for channel ${channel.id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
     // Build channel context for the underlying adapter
     const channelContext: ChannelContext = {
       tenant: {
