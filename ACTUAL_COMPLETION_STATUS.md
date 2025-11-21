@@ -5,7 +5,7 @@
 
 ---
 
-## 📊 OVERALL COMPLETION: 80% (40 of 50 issues)
+## 📊 OVERALL COMPLETION: 88% (44 of 50 issues)
 
 ### Completion by Phase
 
@@ -13,8 +13,8 @@
 |-------|--------|-----------|------------|--------|
 | **Emergency (ISSUE-000)** | 1 | 1 | 100% | ✅ COMPLETE |
 | **Original Work (ISSUE-001 to ISSUE-040)** | 40 | 39 | 97.5% | 🟡 NEARLY COMPLETE |
-| **Codex Audit (ISSUE-041 to ISSUE-049)** | 9 | 1 | 11% | 🔴 JUST STARTED |
-| **TOTAL** | **50** | **41** | **82%** | 🟢 **MOSTLY COMPLETE** |
+| **Codex Audit (ISSUE-041 to ISSUE-049)** | 9 | 5 | 56% | 🟢 MAJORITY COMPLETE |
+| **TOTAL** | **50** | **44** | **88%** | 🟢 **NEARLY COMPLETE** |
 
 ---
 
@@ -107,7 +107,21 @@ All operational issues resolved.
   - **Remaining:** Create ConversationsPage component
   - **Effort:** 2.5 days
 
-### Codex Audit Issues (1 of 9 issues) - 11% COMPLETE
+### Codex Audit Issues (5 of 9 issues) - 56% COMPLETE
+
+- ✅ **ISSUE-043:** Stripe webhooks incomplete
+  - **Date:** Nov 21, 2025
+  - **Branch:** fix/issue-043-complete-stripe-webhooks
+  - **Commit:** 926cc2e
+  - **Evidence:** Complete billing enforcement, notifications, cancellation cleanup
+  - **Validation:** Tests created for all scenarios
+
+- ✅ **ISSUE-044:** Worker channel secrets not decrypted
+  - **Date:** Nov 21, 2025
+  - **Branch:** fix/issue-044-decrypt-channel-secrets
+  - **Commit:** 05faf85
+  - **Evidence:** Decryption implemented in channel-adapters.ts
+  - **Validation:** All channels now receive plaintext secrets
 
 - ✅ **ISSUE-045:** PM2 development secrets
   - **Date:** Nov 21, 2025
