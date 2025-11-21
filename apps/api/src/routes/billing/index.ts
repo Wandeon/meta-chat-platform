@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { StripeService } from '../../services/StripeService';
 import { PLANS, getPlan, getPaidPlans } from '../../config/plans';
+import { authenticateTenant } from '../../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -38,6 +39,7 @@ interface BillingTenantData {
  */
 router.post(
   '/create-checkout-session',
+  authenticateTenant,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { planId } = req.body;
@@ -113,6 +115,7 @@ router.post(
  */
 router.post(
   '/create-portal-session',
+  authenticateTenant,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get tenant ID from authenticated request
@@ -162,6 +165,7 @@ router.post(
  */
 router.get(
   '/subscription',
+  authenticateTenant,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get tenant ID from authenticated request
@@ -281,6 +285,7 @@ router.get('/plans', (req: Request, res: Response) => {
  */
 router.post(
   '/cancel-subscription',
+  authenticateTenant,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get tenant ID from authenticated request

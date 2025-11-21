@@ -30,6 +30,8 @@ import authRouter from './routes/auth';
 import billingRouter from "./routes/billing";
 import stripeWebhookRouter from "./routes/webhooks/stripe";
 import analyticsRouter from "./routes/analytics";
+import { securityHeaders } from './middleware/security-headers';
+import { createAuthRateLimiter } from './middleware/rate-limiter';
 
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
 import { metricsRegistry, httpRequestDuration } from './metrics';
@@ -210,8 +212,11 @@ function registerRoutes(
     res.send(await metricsRegistry.metrics());
   });
 
+  // Apply rate limiting to auth endpoints (5 requests per minute)
+  const authRateLimiter = createAuthRateLimiter();
+
   app.use('/api/security', apiKeyRouter);
-  app.use('/api/auth', authRouter);
+  app.use('/api/auth', authRateLimiter, authRouter);
   app.use('/api/tenants', tenantRouter);
   app.use('/api/channels', channelRouter);
   app.use('/api/documents', documentRouter);
@@ -413,6 +418,7 @@ export async function createApp() {
   app.set('trust proxy', 1);
 
   registerRequestContext(app);
+  app.use(securityHeaders);  // Add security headers middleware
   registerCors(app);
   registerBodyParsers(app);
   registerRateLimiting(app);
