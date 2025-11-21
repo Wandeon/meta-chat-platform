@@ -18,18 +18,50 @@ export function TenantsPage() {
 
   const createTenant = useMutation({
     mutationFn: () => api.post<CreateTenantResponse, CreateTenantRequest>('/api/tenants', form),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['tenants'] });
+      const previousTenants = queryClient.getQueryData<Tenant[]>(['tenants']);
+      const optimisticTenant: Tenant = {
+        id: 'temp-' + Date.now(),
+        name: form.name,
+        slug: form.slug,
+        active: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      queryClient.setQueryData<Tenant[]>(['tenants'], (old) =>
+        old ? [...old, optimisticTenant] : [optimisticTenant]
+      );
+      return { previousTenants };
+    },
+    onError: (err, newTenant, context) => {
+      if (context?.previousTenants) {
+        queryClient.setQueryData(['tenants'], context.previousTenants);
+      }
+    },
     onSuccess: (data) => {
       setForm({ name: '', slug: '' });
-      setNewApiKey(data.apiKey); // Show the generated API key
+      setNewApiKey(data.apiKey);
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
-
-      // Clear the API key after 30 seconds
       setTimeout(() => setNewApiKey(null), 30000);
     },
   });
 
   const deleteTenant = useMutation({
     mutationFn: (id: string) => api.delete<void>(`/api/tenants/${id}`),
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ['tenants'] });
+      const previousTenants = queryClient.getQueryData<Tenant[]>(['tenants']);
+      queryClient.setQueryData<Tenant[]>(['tenants'], (old) =>
+        old ? old.filter((t) => t.id !== deletedId) : []
+      );
+      return { previousTenants };
+    },
+    onError: (err, deletedId, context) => {
+      if (context?.previousTenants) {
+        queryClient.setQueryData(['tenants'], context.previousTenants);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
     },
@@ -38,6 +70,19 @@ export function TenantsPage() {
   const toggleTenantStatus = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.patch<Tenant>(`/api/tenants/${id}`, { active }),
+    onMutate: async ({ id, active }) => {
+      await queryClient.cancelQueries({ queryKey: ['tenants'] });
+      const previousTenants = queryClient.getQueryData<Tenant[]>(['tenants']);
+      queryClient.setQueryData<Tenant[]>(['tenants'], (old) =>
+        old ? old.map((t) => t.id === id ? { ...t, active } : t) : []
+      );
+      return { previousTenants };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousTenants) {
+        queryClient.setQueryData(['tenants'], context.previousTenants);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
     },
@@ -115,9 +160,60 @@ export function TenantsPage() {
 
       {tenantsQuery.isLoading && <p>Loading tenants...</p>}
       {tenantsQuery.error && (
-        <p style={{ color: '#dc2626' }}>
-          Error loading tenants: {tenantsQuery.error.message}
-        </p>
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '12px',
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+            Error loading tenants: {tenantsQuery.error.message}
+          </p>
+          <button
+            onClick={() => tenantsQuery.refetch()}
+            className="secondary-button"
+            style={{ fontSize: '12px', padding: '4px 8px' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {(createTenant.error || deleteTenant.error) && (
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '12px',
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+            Error: {createTenant.error?.message || deleteTenant.error?.message}
+          </p>
+          <button
+            onClick={() => {
+              createTenant.reset();
+              deleteTenant.reset();
+            }}
+            style={{
+              padding: '4px 8px',
+              fontSize: '12px',
+              background: '#fff',
+              border: '1px solid #ef4444',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
       )}
 
       {tenantsQuery.data && (
@@ -140,9 +236,16 @@ export function TenantsPage() {
               </tr>
             ) : (
               tenantsQuery.data.map((tenant) => (
-                <tr key={tenant.id}>
+                <tr key={tenant.id} style={{
+                  opacity: tenant.id.startsWith('temp-') ? 0.6 : 1,
+                }}>
                   <td>
                     <strong>{tenant.name}</strong>
+                    {tenant.id.startsWith('temp-') && (
+                      <span style={{ marginLeft: '8px', fontSize: '11px', color: '#6b7280' }}>
+                        (saving...)
+                      </span>
+                    )}
                   </td>
                   <td><code>{tenant.slug}</code></td>
                   <td>
@@ -158,6 +261,7 @@ export function TenantsPage() {
                         onChange={(e) =>
                           toggleTenantStatus.mutate({ id: tenant.id, active: e.target.checked })
                         }
+                        disabled={tenant.id.startsWith('temp-')}
                         style={{ width: '16px', height: '16px' }}
                       />
                       <span style={{
@@ -175,13 +279,14 @@ export function TenantsPage() {
                       <button
                         onClick={() => navigate(`/tenants/${tenant.id}/settings`)}
                         className="secondary-button"
+                        disabled={tenant.id.startsWith('temp-')}
                         style={{ fontSize: '13px', padding: '6px 12px' }}
                       >
                         ⚙️ Settings
                       </button>
                       <button
                         onClick={() => handleDelete(tenant.id, tenant.name)}
-                        disabled={deleteTenant.isPending}
+                        disabled={deleteTenant.isPending || tenant.id.startsWith('temp-')}
                         style={{
                           fontSize: '13px',
                           padding: '6px 12px',

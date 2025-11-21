@@ -44,6 +44,29 @@ export function ChannelsPage() {
   const createChannel = useMutation({
     mutationFn: (data: CreateChannelRequest) =>
       api.post<Channel, CreateChannelRequest>('/api/channels', data),
+    onMutate: async (newChannel) => {
+      await queryClient.cancelQueries({ queryKey: ['channels'] });
+      const previousChannels = queryClient.getQueryData<Channel[]>(['channels']);
+      const optimisticChannel: Channel = {
+        id: 'temp-' + Date.now(),
+        tenantId: (newChannel as any).tenantId || '',
+        name: newChannel.name,
+        type: newChannel.type,
+        config: newChannel.config as Record<string, unknown>,
+        active: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      queryClient.setQueryData<Channel[]>(['channels'], (old) =>
+        old ? [...old, optimisticChannel] : [optimisticChannel]
+      );
+      return { previousChannels };
+    },
+    onError: (err, newChannel, context) => {
+      if (context?.previousChannels) {
+        queryClient.setQueryData(['channels'], context.previousChannels);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels'] });
       resetForm();
@@ -53,6 +76,19 @@ export function ChannelsPage() {
   const updateChannel = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateChannelRequest }) =>
       api.patch<Channel, UpdateChannelRequest>(`/api/channels/${id}`, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['channels'] });
+      const previousChannels = queryClient.getQueryData<Channel[]>(['channels']);
+      queryClient.setQueryData<Channel[]>(['channels'], (old) =>
+        old ? old.map((c) => c.id === id ? { ...c, ...data, updatedAt: new Date().toISOString() } : c) : []
+      );
+      return { previousChannels };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousChannels) {
+        queryClient.setQueryData(['channels'], context.previousChannels);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels'] });
       resetForm();
@@ -61,6 +97,19 @@ export function ChannelsPage() {
 
   const deleteChannel = useMutation({
     mutationFn: (id: string) => api.delete<void>(`/api/channels/${id}`),
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ['channels'] });
+      const previousChannels = queryClient.getQueryData<Channel[]>(['channels']);
+      queryClient.setQueryData<Channel[]>(['channels'], (old) =>
+        old ? old.filter((c) => c.id !== deletedId) : []
+      );
+      return { previousChannels };
+    },
+    onError: (err, deletedId, context) => {
+      if (context?.previousChannels) {
+        queryClient.setQueryData(['channels'], context.previousChannels);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels'] });
     },
@@ -69,6 +118,19 @@ export function ChannelsPage() {
   const toggleChannelStatus = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
       api.patch<Channel, UpdateChannelRequest>(`/api/channels/${id}`, { active }),
+    onMutate: async ({ id, active }) => {
+      await queryClient.cancelQueries({ queryKey: ['channels'] });
+      const previousChannels = queryClient.getQueryData<Channel[]>(['channels']);
+      queryClient.setQueryData<Channel[]>(['channels'], (old) =>
+        old ? old.map((c) => c.id === id ? { ...c, active } : c) : []
+      );
+      return { previousChannels };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousChannels) {
+        queryClient.setQueryData(['channels'], context.previousChannels);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['channels'] });
     },
@@ -345,9 +407,61 @@ export function ChannelsPage() {
 
       {channelsQuery.isLoading && <p>Loading channels...</p>}
       {channelsQuery.error && (
-        <p style={{ color: '#dc2626' }}>
-          Error loading channels: {channelsQuery.error.message}
-        </p>
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '12px',
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+            Error loading channels: {channelsQuery.error.message}
+          </p>
+          <button
+            onClick={() => channelsQuery.refetch()}
+            className="secondary-button"
+            style={{ fontSize: '12px', padding: '4px 8px' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {(createChannel.error || updateChannel.error || deleteChannel.error) && (
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '12px',
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+            Error: {createChannel.error?.message || updateChannel.error?.message || deleteChannel.error?.message}
+          </p>
+          <button
+            onClick={() => {
+              createChannel.reset();
+              updateChannel.reset();
+              deleteChannel.reset();
+            }}
+            style={{
+              padding: '4px 8px',
+              fontSize: '12px',
+              background: '#fff',
+              border: '1px solid #ef4444',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
       )}
 
       {channelsQuery.data && channelsQuery.data.length > 0 && (

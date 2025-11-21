@@ -37,6 +37,33 @@ export function DocumentsPage() {
   const createDocument = useMutation({
     mutationFn: (data: CreateDocumentRequest) =>
       api.post<Document, CreateDocumentRequest>('/api/documents', data),
+    onMutate: async (newDocument) => {
+      await queryClient.cancelQueries({ queryKey: ['documents'] });
+      const previousDocuments = queryClient.getQueryData<Document[]>(['documents']);
+      const optimisticDocument: Document = {
+        id: 'temp-' + Date.now(),
+        tenantId: (newDocument as any).tenantId || '',
+        name: newDocument.name,
+        source: newDocument.source || '',
+        metadata: newDocument.metadata || {},
+        status: 'processing',
+        filename: '',
+        mimeType: '',
+        size: 0,
+        path: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      queryClient.setQueryData<Document[]>(['documents'], (old) =>
+        old ? [...old, optimisticDocument] : [optimisticDocument]
+      );
+      return { previousDocuments };
+    },
+    onError: (err, newDocument, context) => {
+      if (context?.previousDocuments) {
+        queryClient.setQueryData(['documents'], context.previousDocuments);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       resetForm();
@@ -46,6 +73,19 @@ export function DocumentsPage() {
   const updateDocument = useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateDocumentRequest }) =>
       api.patch<Document, UpdateDocumentRequest>(`/api/documents/${id}`, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['documents'] });
+      const previousDocuments = queryClient.getQueryData<Document[]>(['documents']);
+      queryClient.setQueryData<Document[]>(['documents'], (old) =>
+        old ? old.map((d) => d.id === id ? { ...d, ...data, updatedAt: new Date().toISOString() } : d) : []
+      );
+      return { previousDocuments };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousDocuments) {
+        queryClient.setQueryData(['documents'], context.previousDocuments);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       resetForm();
@@ -54,6 +94,19 @@ export function DocumentsPage() {
 
   const deleteDocument = useMutation({
     mutationFn: (id: string) => api.delete<void>(`/api/documents/${id}`),
+    onMutate: async (deletedId) => {
+      await queryClient.cancelQueries({ queryKey: ['documents'] });
+      const previousDocuments = queryClient.getQueryData<Document[]>(['documents']);
+      queryClient.setQueryData<Document[]>(['documents'], (old) =>
+        old ? old.filter((d) => d.id !== deletedId) : []
+      );
+      return { previousDocuments };
+    },
+    onError: (err, deletedId, context) => {
+      if (context?.previousDocuments) {
+        queryClient.setQueryData(['documents'], context.previousDocuments);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
     },
@@ -262,9 +315,61 @@ export function DocumentsPage() {
 
       {documentsQuery.isLoading && <p>Loading documents...</p>}
       {documentsQuery.error && (
-        <p style={{ color: '#dc2626' }}>
-          Error loading documents: {documentsQuery.error.message}
-        </p>
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '12px',
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+            Error loading documents: {documentsQuery.error.message}
+          </p>
+          <button
+            onClick={() => documentsQuery.refetch()}
+            className="secondary-button"
+            style={{ fontSize: '12px', padding: '4px 8px' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {(createDocument.error || updateDocument.error || deleteDocument.error) && (
+        <div style={{
+          background: '#fee2e2',
+          border: '1px solid #ef4444',
+          borderRadius: '8px',
+          padding: '12px',
+          marginTop: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
+            Error: {createDocument.error?.message || updateDocument.error?.message || deleteDocument.error?.message}
+          </p>
+          <button
+            onClick={() => {
+              createDocument.reset();
+              updateDocument.reset();
+              deleteDocument.reset();
+            }}
+            style={{
+              padding: '4px 8px',
+              fontSize: '12px',
+              background: '#fff',
+              border: '1px solid #ef4444',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
       )}
 
       {documentsQuery.data && documentsQuery.data.length > 0 && (
