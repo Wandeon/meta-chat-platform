@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../api/client';
+import DOMPurify from 'dompurify';
 
 interface Conversation {
   id: string;
@@ -343,6 +344,12 @@ export function ConversationsPage() {
                       : String(message.content);
                     const isHandoffMessage = message.metadata?.humanHandoffTriggered;
 
+                    // Sanitize message content to prevent XSS attacks
+                    const sanitizedMessageText = DOMPurify.sanitize(messageText, {
+                      ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li'],
+                      ALLOWED_ATTR: ['href', 'target', 'rel']
+                    });
+
                     return (
                       <div
                         key={message.id}
@@ -364,9 +371,10 @@ export function ConversationsPage() {
                           <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px', fontWeight: 600 }}>
                             {isUser ? 'User' : message.from === 'system' ? 'System' : 'AI Assistant'}
                           </div>
-                          <div style={{ fontSize: '14px', color: '#1e293b', whiteSpace: 'pre-wrap' }}>
-                            {messageText}
-                          </div>
+                          <div
+                            style={{ fontSize: '14px', color: '#1e293b', whiteSpace: 'pre-wrap' }}
+                            dangerouslySetInnerHTML={{ __html: sanitizedMessageText }}
+                          />
                           <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
                             {new Date(message.timestamp).toLocaleString()}
                           </div>
@@ -379,7 +387,7 @@ export function ConversationsPage() {
                               padding: '4px 8px',
                               borderRadius: '4px',
                             }}>
-                              ⚠️ Human handoff triggered: "{message.metadata.triggeredKeyword}"
+                              ⚠️ Human handoff triggered: "{DOMPurify.sanitize(message.metadata.triggeredKeyword)}"
                             </div>
                           )}
                         </div>
