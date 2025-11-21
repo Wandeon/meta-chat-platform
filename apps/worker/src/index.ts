@@ -3,6 +3,8 @@ import { getPrismaClient } from '@meta-chat/database';
 import { MessageOrchestrator, ChannelAdapterRegistry } from '@meta-chat/orchestrator';
 import { MessagePipelineWithEscalation } from '@meta-chat/orchestrator';
 import { createLogger, ChannelType } from '@meta-chat/shared';
+import cron from 'node-cron';
+import { aggregateAnalytics } from './jobs/aggregateAnalytics';
 import { WhatsAppAdapterWrapper, MessengerAdapterWrapper } from './channel-adapters';
 
 const logger = createLogger('Worker');
@@ -159,6 +161,21 @@ async function main() {
 
     // Start orchestrators for all tenants
     await startOrchestrators();
+
+    // Schedule analytics aggregation to run daily at midnight UTC
+    cron.schedule(
+      '0 0 * * *',
+      async () => {
+        try {
+          logger.info('Running scheduled analytics aggregation');
+          await aggregateAnalytics(prisma);
+          logger.info('Scheduled analytics aggregation completed');
+        } catch (error) {
+          logger.error('Scheduled analytics aggregation failed', error as Error);
+        }
+      },
+      { timezone: 'UTC' }
+    );
 
     logger.info('Worker is running and processing messages');
   } catch (error) {
