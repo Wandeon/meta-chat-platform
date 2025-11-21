@@ -29,6 +29,7 @@ import widgetConfigRouter from './routes/public/widget-config';
 import authRouter from './routes/auth';
 import billingRouter from "./routes/billing";
 import stripeWebhookRouter from "./routes/webhooks/stripe";
+import whatsappWebhookRouter from "./routes/webhooks/whatsapp";
 import analyticsRouter from "./routes/analytics";
 import { securityHeaders } from './middleware/security-headers';
 import { createAuthRateLimiter } from './middleware/rate-limiter';
@@ -230,6 +231,7 @@ function registerRoutes(
   app.use("/api/billing", billingRouter);
   app.use("/api/analytics", analyticsRouter);
   app.use("/api/webhooks", stripeWebhookRouter);
+  app.use("/api/webhooks/whatsapp", whatsappWebhookRouter);
 
   app.use((req, _res, next) => {
     next(createHttpError(404, `Route not found: ${req.method} ${req.originalUrl}`));
