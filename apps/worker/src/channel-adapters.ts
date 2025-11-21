@@ -59,8 +59,8 @@ abstract class ChannelAdapterWrapper implements ChannelAdapter {
         id: channel.id,
         type: channel.type as ChannelType,
         config: (channel.config as Record<string, any>) || {},
-        secrets: (channel.secrets as Record<string, string>) || undefined,
-        metadata: (channel.metadata as Record<string, any>) || undefined,
+        secrets: undefined,
+        metadata: undefined,
       },
     };
 
