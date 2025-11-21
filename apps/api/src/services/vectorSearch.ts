@@ -1,6 +1,6 @@
-import { getPrismaClient } from '@meta-chat/database';
-import { vectorSearch as dbVectorSearch, keywordSearch as dbKeywordSearch } from "@meta-chat/database/dist/client";
+import { getPrismaClient, vectorSearch as dbVectorSearch, keywordSearch as dbKeywordSearch } from '@meta-chat/database';
 import { createLogger } from '@meta-chat/shared';
+
 
 const logger = createLogger('VectorSearch');
 

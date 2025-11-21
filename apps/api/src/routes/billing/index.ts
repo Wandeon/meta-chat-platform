@@ -1,10 +1,22 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import rateLimit from 'express-rate-limit';
+import { getPrismaClient } from '@meta-chat/database';
 import { StripeService } from '../../services/StripeService';
 import { PLANS, getPlan, getPaidPlans } from '../../config/plans';
+import { authenticateTenant } from '../../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
+
+const billingLimiter = rateLimit({
+  windowMs: parseInt(process.env.BILLING_RATE_LIMIT_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.BILLING_RATE_LIMIT_MAX_REQUESTS || '5', 10),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.use(authenticateTenant);
+router.use(billingLimiter);
 
 /**
  * Get or create StripeService instance
@@ -16,20 +28,6 @@ function getStripeService(): StripeService {
     throw new Error('Stripe API key not configured. Please set STRIPE_SECRET_KEY environment variable.');
   }
   return new StripeService(apiKey, prisma);
-}
-
-/**
- * Middleware to extract tenant from request
- * Assumes tenant is attached to req by upstream auth middleware
- * Extended interface for billing-specific tenant data
- */
-interface BillingTenantData {
-  id: string;
-  name: string;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  subscriptionStatus?: string;
-  currentPlanId?: string;
 }
 
 /**
@@ -270,7 +268,7 @@ router.get(
  * GET /api/billing/plans
  * Get all available subscription plans
  */
-router.get('/plans', (req: Request, res: Response) => {
+router.get('/plans', (_req: Request, res: Response) => {
   const plans = getPaidPlans();
   res.json({ plans: Object.values(PLANS) });
 });
