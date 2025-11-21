@@ -49,6 +49,7 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
   const [state, dispatch] = useReducer(widgetReducer, initialState);
   const wsRef = useRef<WebSocket | null>(null);
   const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCount = useRef(0);
   const pendingMessageIds = useRef<Set<string>>(new Set());
   const initialMessageInserted = useRef(false);
@@ -71,6 +72,11 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
 
     ws.onopen = () => {
       retryCount.current = 0;
+      // Clear countdown interval on successful connection
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+        countdownInterval.current = null;
+      }
       dispatch({ type: 'connection', connection: { status: 'open', retryCount: 0 } });
       onEvent?.({ type: 'connection-state', state: { status: 'open', retryCount: 0 } });
       if (config.initialMessage && !initialMessageInserted.current) {
@@ -132,6 +138,11 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
       // Only clear after max retries exhausted
       if (retryCount.current >= MAX_RETRIES) {
         pendingMessageIds.current.clear();
+        // Clear countdown interval
+        if (countdownInterval.current) {
+          clearInterval(countdownInterval.current);
+          countdownInterval.current = null;
+        }
         dispatch({
           type: 'connection',
           connection: {
@@ -142,14 +153,40 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
         });
         return;
       }
+
+      // Calculate retry delay in seconds
+      const retryDelayMs = Math.min(1000 * 2 ** retryCount.current, 30_000);
+      const retryDelaySec = Math.ceil(retryDelayMs / 1000);
+      let remainingTime = retryDelaySec;
+
       dispatch({
         type: 'connection',
-        connection: { status: 'closed', retryCount: retryCount.current },
+        connection: { status: 'closed', retryCount: retryCount.current, nextRetryTime: remainingTime },
       });
+
+      // Start countdown interval
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+      }
+      countdownInterval.current = setInterval(() => {
+        remainingTime -= 1;
+        if (remainingTime > 0) {
+          dispatch({
+            type: 'connection',
+            connection: { status: 'closed', retryCount: retryCount.current, nextRetryTime: remainingTime },
+          });
+        } else {
+          if (countdownInterval.current) {
+            clearInterval(countdownInterval.current);
+            countdownInterval.current = null;
+          }
+        }
+      }, 1000);
+
       retryTimeout.current = setTimeout(() => {
         retryCount.current += 1;
         connect();
-      }, Math.min(1000 * 2 ** retryCount.current, 30_000));
+      }, retryDelayMs);
     };
 
     ws.onerror = () => {
@@ -168,6 +205,9 @@ export function useWidgetState({ config, token, onEvent }: UseWidgetStateOptions
     return () => {
       if (retryTimeout.current) {
         clearTimeout(retryTimeout.current);
+      }
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
       }
       wsRef.current?.close();
       // Don't clear pending IDs here - they're cleared after max retries in onclose

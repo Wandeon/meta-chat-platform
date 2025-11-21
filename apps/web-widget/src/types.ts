@@ -37,6 +37,7 @@ export interface ConnectionState {
   status: 'idle' | 'connecting' | 'open' | 'closed' | 'error';
   error?: string;
   retryCount: number;
+  nextRetryTime?: number;
 }
 
 export interface WidgetState {

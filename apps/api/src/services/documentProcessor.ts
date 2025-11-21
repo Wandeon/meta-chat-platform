@@ -31,14 +31,26 @@ export async function processDocument(
     });
 
     if (!document) {
-      throw new Error(`Document ${documentId} not found`);
+      const errorMsg = `Document ${documentId} not found`;
+      console.error(`[DocumentProcessor] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
+    console.log(`[DocumentProcessor] Document ${documentId} current status: ${document.status}`);
+
     // Update status to processing
+    console.log(`[DocumentProcessor] Updating document ${documentId} status: pending -> processing`);
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: 'processing' },
+      data: { 
+        status: 'processing',
+        metadata: {
+          ...(document.metadata as any),
+          processingStartedAt: new Date().toISOString(),
+        }
+      },
     });
+    console.log(`[DocumentProcessor] Document ${documentId} status updated to: processing`);
 
     // Extract content from metadata
     const content = (document.metadata as any)?.content;
@@ -109,6 +121,8 @@ export async function processDocument(
       `;
     }
 
+    console.log(`[DocumentProcessor] All chunks saved. Updating document ${documentId} status: processing -> indexed`);
+
     // Update document status to indexed
     await prisma.document.update({
       where: { id: documentId },
@@ -126,21 +140,30 @@ export async function processDocument(
       },
     });
 
+    console.log(`[DocumentProcessor] Document ${documentId} status updated to: indexed (${chunks.length} chunks)`);
     console.log(`[DocumentProcessor] Successfully processed document ${documentId}`);
   } catch (error) {
     console.error(`[DocumentProcessor] Error processing document ${documentId}:`, error);
+    console.error(`[DocumentProcessor] Error stack:`, error instanceof Error ? error.stack : 'N/A');
 
-    // Update status to failed
-    await prisma.document.update({
-      where: { id: documentId },
-      data: {
-        status: 'failed',
-        metadata: {
-          error: error instanceof Error ? error.message : String(error),
-          failedAt: new Date().toISOString(),
+    try {
+      // Update status to failed
+      console.log(`[DocumentProcessor] Updating document ${documentId} status to: failed`);
+      await prisma.document.update({
+        where: { id: documentId },
+        data: {
+          status: 'failed',
+          metadata: {
+            error: error instanceof Error ? error.message : String(error),
+            errorStack: error instanceof Error ? error.stack : undefined,
+            failedAt: new Date().toISOString(),
+          },
         },
-      },
-    });
+      });
+      console.log(`[DocumentProcessor] Document ${documentId} status updated to: failed`);
+    } catch (updateError) {
+      console.error(`[DocumentProcessor] Failed to update document status to failed:`, updateError);
+    }
 
     throw error;
   }

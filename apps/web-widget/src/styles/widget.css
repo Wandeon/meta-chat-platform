@@ -211,3 +211,44 @@
   gap: 6px;
   box-shadow: 0 10px 20px -12px rgba(15, 23, 42, 0.8);
 }
+
+/* Enhanced Connection Banner Status Styles for ISSUE-011 */
+.meta-chat-connection-connecting {
+  background: rgba(59, 130, 246, 0.95);
+  color: #fff;
+}
+
+.meta-chat-connection-closed {
+  background: rgba(245, 158, 11, 0.95);
+  color: #fff;
+}
+
+.meta-chat-connection-error {
+  background: rgba(239, 68, 68, 0.95);
+  color: #fff;
+}
+
+.meta-chat-connection-icon {
+  display: inline-flex;
+  animation: meta-chat-spin 2s linear infinite;
+}
+
+.meta-chat-connection-error .meta-chat-connection-icon {
+  animation: none;
+}
+
+@keyframes meta-chat-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.meta-chat-connection-message {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
