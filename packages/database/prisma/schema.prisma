@@ -124,7 +124,7 @@ model Document {
   checksum  String // SHA-256 checksum of the stored file
   storageProvider String @default("local") // Storage backend identifier
   version   Int      @default(1) // Incremented on every re-upload
-  status    String   @default("pending") // pending, processing, ready, failed, stale
+  status    String   @default("pending") // pending, processing, ready, indexed, failed, stale
   metadata  Json     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

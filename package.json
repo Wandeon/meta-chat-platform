@@ -18,6 +18,7 @@
     "db:push": "cd packages/database && npm run push",
     "db:migrate": "cd packages/database && npm run migrate",
     "db:studio": "cd packages/database && npm run studio",
+    "fix:document-status": "tsx packages/database/scripts/fix-document-status.ts",
     "clean": "turbo run clean && rm -rf node_modules",
     "test:unit": "VITEST_MODE=unit vitest --config vitest.unit.config.ts --run",
     "test:integration": "VITEST_MODE=integration vitest --config tests/integration/vitest.config.ts --run",
