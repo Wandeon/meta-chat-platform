@@ -358,9 +358,24 @@ async function createSocketServer(httpServer: HttpServer): Promise<SocketServer>
         const payload = jwt.verify(token, secret) as jwt.JwtPayload;
         const resolvedTenant = (payload as any).tenantId ?? payload.tid;
         const resolvedUser = (payload as any).userId ?? payload.sub;
+        const tokenType = (payload as any).type;
 
-        if (!resolvedTenant || !resolvedUser) {
-          throw new Error('Invalid JWT payload');
+        // Widget tokens only require tenantId, user tokens require both
+        if (!resolvedTenant) {
+          throw new Error('Invalid JWT payload: missing tenantId');
+        }
+
+        // If this is a widget token, generate a temporary userId
+        if (tokenType === 'widget' && !resolvedUser) {
+          socket.data.tenantId = resolvedTenant;
+          socket.data.userId = `widget-${socket.id}`;
+          socket.data.isWidget = true;
+          return next();
+        }
+
+        // Regular user tokens require userId
+        if (!resolvedUser) {
+          throw new Error('Invalid JWT payload: missing userId');
         }
 
         socket.data.tenantId = resolvedTenant;
