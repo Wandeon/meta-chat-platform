@@ -13,6 +13,7 @@ export type {
 export * from './admin';
 export * from './client';
 export * from './maintenance';
+export * from './search-validation';
 
 // Export enums
 export { 
