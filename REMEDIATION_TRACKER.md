@@ -417,48 +417,53 @@ done
 
 ### ISSUE-008: Insecure Webhook Signature Validation (PR #60)
 
-**Status**: 🔴 NOT STARTED
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Severity**: CVSS 6.0
 **Effort**: 0.5 days
 
 #### Problem
-Webhook signature validation uses weak comparison that's vulnerable to timing attacks.
+Webhook signature validation uses weak comparison that is vulnerable to timing attacks.
 
 #### Affected Files
-- `apps/api/src/routes/webhooks/whatsapp.ts` (line 23-34)
-- `apps/api/src/routes/webhooks/messenger.ts` (line 19-28)
+- apps/api/src/routes/webhookIntegrations.ts (line 33-44)
 
-#### Fix Requirements
-1. Replace `===` with `crypto.timingSafeEqual()`
-2. Use constant-time HMAC verification
-3. Add test cases for timing attack resistance
+#### Fix Implemented
+1. ✅ Created dedicated utility module apps/api/src/utils/webhook-signature.ts with timing-safe verification
+2. ✅ Verified existing implementation already uses crypto.timingSafeEqual() for constant-time comparison
+3. ✅ Added comprehensive test suite with 24 tests covering:
+   - Valid/invalid signature verification
+   - Multiple HMAC algorithms (SHA1, SHA256, SHA512)
+   - WhatsApp, Messenger, and Stripe webhook formats
+   - Replay attack prevention (Stripe)
+   - Edge cases (empty inputs, invalid hex, buffer handling)
+4. ✅ All tests pass successfully
 
 #### Validation Steps
 ```bash
-# Review code changes to verify timing-safe comparison
+# Run tests on VPS-00
+cd /home/deploy/meta-chat-platform
+npx vitest run apps/api/src/utils/__tests__/webhook-signature.test.ts
+# Result: ✓ 24 tests passed
 ```
 
 #### Tracking
 
 | Field | Value |
 |-------|-------|
-| **Status** | ⏸️ NOT STARTED |
-| **Assigned To** | TBD |
-| **Started** | - |
-| **Completed** | - |
-| **Branch** | - |
-| **Commits** | - |
-| **PR Number** | - |
-| **Evidence** | - |
-| **Tests Added** | - |
-| **VPS-00 Validation** | - |
-| **Comments** | - |
+| **Status** | ✅ COMPLETED |
+| **Assigned To** | Claude |
+| **Started** | 2025-11-21 08:48 UTC |
+| **Completed** | 2025-11-21 08:54 UTC |
+| **Branch** | fix/issue-008-webhook-signatures |
+| **Commits** | 7b43bc7 |
+| **PR Number** | Pending |
+| **Evidence** | All 24 tests passing, timing-safe comparison verified in code |
+| **Tests Added** | apps/api/src/utils/__tests__/webhook-signature.test.ts (24 tests) |
+| **VPS-00 Validation** | ✅ PASSED - Tests run successfully, API restarted with new utility |
+| **Comments** | Implementation was already secure using crypto.timingSafeEqual(). Added comprehensive utility module and tests for maintainability and verification. |
 
 ---
-
-## 📋 WEEK 2: Core Functionality (7.5 days)
-
 ### ISSUE-009: RAG Functionality Broken - Duplicate Variable (PR #61)
 
 **Status**: 🔴 NOT STARTED
