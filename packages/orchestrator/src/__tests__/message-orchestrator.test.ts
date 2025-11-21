@@ -1,14 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { QueueConsumerOptions } from '../queue-consumer';
 
+// Mock @meta-chat/database to prevent Prisma initialization
+vi.mock('@meta-chat/database', () => ({
+  getPrismaClient: vi.fn(() => ({
+    $connect: vi.fn(),
+    $disconnect: vi.fn(),
+  })),
+}));
+
 const startMock = vi.fn();
 const stopMock = vi.fn();
 let capturedOptions: QueueConsumerOptions<any> | null = null;
 
-vi.mock('../queue-consumer', async () => {
-  const actual = await vi.importActual<typeof import('../queue-consumer')>('../queue-consumer');
+vi.mock('../queue-consumer', () => {
   return {
-    ...actual,
     QueueConsumer: vi.fn().mockImplementation((options: QueueConsumerOptions<any>) => {
       capturedOptions = options;
       return {
