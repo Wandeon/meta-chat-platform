@@ -14,6 +14,7 @@ export * from './admin';
 export * from './client';
 export * from './maintenance';
 export * from './search-validation';
+export * from './partitioning';
 
 // Export enums
 export { 

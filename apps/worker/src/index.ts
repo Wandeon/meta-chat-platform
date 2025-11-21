@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { getPrismaClient } from '@meta-chat/database';
+import { getPrismaClient, startPartitionScheduler } from '@meta-chat/database';
 import { MessageOrchestrator, ChannelAdapterRegistry } from '@meta-chat/orchestrator';
 import { MessagePipelineWithEscalation } from '@meta-chat/orchestrator';
 import { createLogger, ChannelType } from '@meta-chat/shared';
@@ -23,6 +23,7 @@ const config: WorkerConfig = {
 };
 
 const orchestrators: MessageOrchestrator[] = [];
+let partitionSchedulerHandle: ReturnType<typeof startPartitionScheduler> | null = null;
 
 // Create and configure channel adapter registry
 const channelAdapterRegistry = new ChannelAdapterRegistry();
@@ -115,6 +116,16 @@ async function startOrchestrators() {
 async function shutdown() {
   logger.info('Shutting down worker...');
 
+  // Stop partition scheduler
+  if (partitionSchedulerHandle) {
+    try {
+      partitionSchedulerHandle.stop();
+      logger.info('Stopped partition scheduler');
+    } catch (error) {
+      logger.error('Error stopping partition scheduler', error as Error);
+    }
+  }
+
   // Stop all orchestrators
   for (const orchestrator of orchestrators) {
     try {
@@ -156,6 +167,16 @@ async function main() {
     // Connect to database
     await prisma.$connect();
     logger.info('Connected to database');
+
+    // Start partition scheduler
+    logger.info('Starting partition scheduler...');
+    partitionSchedulerHandle = startPartitionScheduler({
+      cronExpression: '0 2 1,15 * *', // 1st and 15th of each month at 2 AM
+      timezone: 'UTC',
+      monthsForward: 12, // Create partitions 12 months ahead
+      monthsBack: 6,     // Maintain 6 months of historical partitions
+    });
+    logger.info('Partition scheduler started');
 
     // Start orchestrators for all tenants
     await startOrchestrators();
