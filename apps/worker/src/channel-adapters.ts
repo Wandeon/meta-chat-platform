@@ -6,12 +6,12 @@ import {
   OutboundMessage,
   ChannelAdapterContext,
 } from '@meta-chat/orchestrator';
-import { WhatsAppAdapter } from '@meta-chat/channels/dist/whatsapp/whatsapp-adapter';
-import { MessengerAdapter } from '@meta-chat/channels/dist/messenger/messenger-adapter';
+import { WhatsAppAdapter } from '@meta-chat/channels';
+import { MessengerAdapter } from '@meta-chat/channels';
 import type {
   ChannelContext,
   ChannelSendPayload,
-} from '@meta-chat/channels/dist/types';
+} from '@meta-chat/channels';
 
 const prisma = getPrismaClient();
 

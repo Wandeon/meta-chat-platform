@@ -18,6 +18,3 @@ export * from './maintenance';
 export {
   AdminRole, AdminKeyStatus
 } from '@prisma/client';
-
-// Export vector search functions
-export { getPrismaClient, vectorSearch, keywordSearch } from './client';

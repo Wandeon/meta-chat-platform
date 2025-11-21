@@ -1,4 +1,5 @@
-import { getPrismaClient, vectorSearch, keywordSearch } from '@meta-chat/database';
+import { getPrismaClient } from '@meta-chat/database';
+import { vectorSearch as dbVectorSearch, keywordSearch as dbKeywordSearch } from "@meta-chat/database/dist/client";
 import { createLogger } from '@meta-chat/shared';
 
 const logger = createLogger('VectorSearch');
@@ -24,7 +25,7 @@ export async function searchSimilarChunks(
     const prisma = getPrismaClient();
 
     // Perform vector search using the pgvector implementation
-    const vectorResults = await vectorSearch(
+    const vectorResults = await dbVectorSearch(
       tenantId,
       embedding,
       limit,
@@ -34,7 +35,7 @@ export async function searchSimilarChunks(
     // If hybrid search is enabled and keyword query is provided, combine results
     let results = vectorResults;
     if (useHybridSearch && options.keywordQuery) {
-      const keywordResults = await keywordSearch(
+      const keywordResults = await dbKeywordSearch(
         tenantId,
         options.keywordQuery,
         Math.ceil(limit / 2) // Get half the results from keyword search
