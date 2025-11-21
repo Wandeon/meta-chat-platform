@@ -829,7 +829,7 @@ This issue can be marked as COMPLETED. The core requirement (connecting webhook 
 
 ### ISSUE-016: Document Status Not Updated (PR #68)
 
-**Status**: 🔴 NOT STARTED
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: 0.5 days
 
@@ -878,42 +878,51 @@ curl https://chat.genai.hr/api/documents/$DOC_ID \
 
 ---
 
-### ISSUE-017: Embedding Error Not Handled
+### ISSUE-017: Embedding Error Not Handled (PR #69)
 
-**Status**: ✅ COMPLETED  
-**Priority**: MEDIUM  
-**Effort**: 0.5 days  
-**Completed**: 2025-11-21
+**Status**: 🔴 NOT STARTED
+**Priority**: MEDIUM
+**Effort**: 0.5 days
 
 #### Problem
-Ollama embedding failures cause document processor to crash instead of marking document as failed.
+OpenAI embedding failures cause worker to crash instead of marking document as failed.
 
-#### Solution Implemented
-1. **Added retry logic with exponential backoff** in `apps/api/src/services/embedding.ts`:
-   - Maximum 3 retry attempts
-   - Exponential backoff: 2^attempt * 1000ms (2s, 4s, 8s)
-   - Detailed logging for each attempt
-   - Clear error messages after all retries exhausted
+#### Affected Files
+- `packages/rag/src/embeddings.ts` (missing try/catch)
+- `packages/orchestrator/src/workers/embedding-worker.ts`
 
-2. **Enhanced error handling** in `apps/api/src/services/documentProcessor.ts`:
-   - Documents marked as "failed" with error details in metadata
-   - Process continues running (no crashes)
-   - Error tracking and statistics
-   - Graceful degradation
+#### Fix Requirements
+1. Wrap embedding calls in try/catch
+2. Mark document as "failed" on error
+3. Store error message in document metadata
+4. Retry with exponential backoff (max 3 attempts)
+5. Emit failure event for monitoring
 
-#### Files Changed
-- `apps/api/src/services/embedding.ts` - Added retry logic and exponential backoff
-- `apps/api/src/services/documentProcessor.ts` - Enhanced error handling (source ready, needs build)
+#### Validation Steps
+```bash
+# Test on VPS-00
+# 1. Temporarily set invalid OpenAI API key
+# 2. Upload document
+# 3. Verify worker doesn't crash
+# 4. Verify document status shows "failed" with error
+# 5. Restore valid API key
+```
 
-#### Testing
-- API service restarted successfully
-- Error handling verified in source code
-- System remains stable with improved resilience
+#### Tracking
 
-#### Notes
-- System uses Ollama embeddings (not OpenAI as originally documented)
-- Build system has TypeScript compilation issues (separate infrastructure issue)
-- Source code changes are complete and will be active after next successful build
+| Field | Value |
+|-------|-------|
+| **Status** | ⏸️ NOT STARTED |
+| **Assigned To** | TBD |
+| **Started** | - |
+| **Completed** | - |
+| **Branch** | - |
+| **Commits** | - |
+| **PR Number** | - |
+| **Evidence** | - |
+| **Tests Added** | - |
+| **VPS-00 Validation** | - |
+| **Comments** | - |
 
 ---
 
