@@ -1,5 +1,4 @@
-import { test, beforeEach } from 'node:test';
-import assert from 'node:assert/strict';
+import { describe, it, beforeEach, expect } from 'vitest';
 import { createHash, randomUUID } from 'crypto';
 import { DocumentUploadPipeline } from '../upload-pipeline';
 import { StorageProvider, SaveOptions, SaveResult } from '../storage/storage-provider';
@@ -310,101 +309,103 @@ beforeEach(() => {
   pipeline = new DocumentUploadPipeline(prisma as any, storageRegistry, loaderRegistry, embeddingsService);
 });
 
-void test('document upload pipeline indexes and chunks text documents', async () => {
-  const buffer = Buffer.from(
-    'Paragraph one introduces the topic.\n\nParagraph two expands the idea with additional detail.\n\nParagraph three concludes.'
-  );
+describe('RAG Integration Tests', () => {
+  it('document upload pipeline indexes and chunks text documents', async () => {
+    const buffer = Buffer.from(
+      'Paragraph one introduces the topic.\n\nParagraph two expands the idea with additional detail.\n\nParagraph three concludes.'
+    );
 
-  const document = await pipeline.upload({
-    tenantId: TENANT_ID,
-    filename: 'sample.txt',
-    mimeType: 'text/plain',
-    buffer,
-    metadata: { source: 'integration-test' },
-    chunker: { strategy: 'semantic', maxTokens: 40 },
+    const document = await pipeline.upload({
+      tenantId: TENANT_ID,
+      filename: 'sample.txt',
+      mimeType: 'text/plain',
+      buffer,
+      metadata: { source: 'integration-test' },
+      chunker: { strategy: 'semantic', maxTokens: 40 },
+    });
+
+    expect(document.status).toBe('ready');
+    const stored = prisma.documents.get(document.id);
+    expect(stored).toBeDefined();
+    expect(stored?.metadata.indexing).toBeDefined();
+    expect(stored?.metadata.indexing.chunkCount).toBe(prisma.chunks.size);
+
+    const positions = Array.from(prisma.chunks.values()).map((chunk) => chunk.position);
+    const sortedPositions = [...positions].sort((a, b) => a - b);
+    expect(positions).toEqual(sortedPositions);
+
+    const firstChunk = Array.from(prisma.chunks.values())[0];
+    expect(firstChunk.metadata.loader).toBeDefined();
+    expect(firstChunk.metadata.tokens).toBeGreaterThan(0);
   });
 
-  assert.equal(document.status, 'ready');
-  const stored = prisma.documents.get(document.id);
-  assert.ok(stored);
-  assert.ok(stored?.metadata.indexing);
-  assert.equal(stored?.metadata.indexing.chunkCount, prisma.chunks.size);
+  it('retrieveKnowledgeBase performs hybrid retrieval', async () => {
+    const buffer = Buffer.from(
+      'Alpha section covers introductions.\n\nBeta section dives deep into hybrid retrieval strategies.\n\nGamma section mentions Alpha again for reinforcement.'
+    );
+    const doc = await pipeline.upload({
+      tenantId: TENANT_ID,
+      filename: 'hybrid.txt',
+      mimeType: 'text/plain',
+      buffer,
+      chunker: { strategy: 'recursive', maxTokens: 50 },
+    });
 
-  const positions = Array.from(prisma.chunks.values()).map((chunk) => chunk.position);
-  const sortedPositions = [...positions].sort((a, b) => a - b);
-  assert.deepEqual(positions, sortedPositions, 'chunks should be stored sequentially');
+    const retrievalEmbeddings = new EmbeddingsService({
+      provider: new DeterministicEmbeddingsProvider(),
+      batchSize: 4,
+      pricePerThousandTokens: 0,
+      model: 'deterministic-test',
+    });
 
-  const firstChunk = Array.from(prisma.chunks.values())[0];
-  assert.ok(firstChunk.metadata.loader);
-  assert.ok(firstChunk.metadata.tokens > 0);
-});
+    const results = await retrieveKnowledgeBase(
+      { tenantId: TENANT_ID, query: 'hybrid retrieval strategies', topK: 3 },
+      {
+        embeddings: retrievalEmbeddings,
+        keywordSearch: makeKeywordSearch(prisma),
+        vectorSearch: makeVectorSearch(prisma),
+      }
+    );
 
-void test('retrieveKnowledgeBase performs hybrid retrieval', async () => {
-  const buffer = Buffer.from(
-    'Alpha section covers introductions.\n\nBeta section dives deep into hybrid retrieval strategies.\n\nGamma section mentions Alpha again for reinforcement.'
-  );
-  const doc = await pipeline.upload({
-    tenantId: TENANT_ID,
-    filename: 'hybrid.txt',
-    mimeType: 'text/plain',
-    buffer,
-    chunker: { strategy: 'recursive', maxTokens: 50 },
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].chunk.documentId).toBe(doc.id);
+    expect(results[0].chunk.metadata.position).toBeGreaterThanOrEqual(0);
+    expect(results.some((result) => result.type === 'hybrid' || result.type === 'vector')).toBe(true);
   });
 
-  const retrievalEmbeddings = new EmbeddingsService({
-    provider: new DeterministicEmbeddingsProvider(),
-    batchSize: 4,
-    pricePerThousandTokens: 0,
-    model: 'deterministic-test',
-  });
+  it('search_knowledge_base function serializes retrieval results', async () => {
+    const buffer = Buffer.from('Delta section explains serialization.\n\nEpsilon section references Delta for completeness.');
+    await pipeline.upload({
+      tenantId: TENANT_ID,
+      filename: 'function.txt',
+      mimeType: 'text/plain',
+      buffer,
+      chunker: { strategy: 'fixed', maxTokens: 30 },
+    });
 
-  const results = await retrieveKnowledgeBase(
-    { tenantId: TENANT_ID, query: 'hybrid retrieval strategies', topK: 3 },
-    {
-      embeddings: retrievalEmbeddings,
+    const functionEmbeddings = new EmbeddingsService({
+      provider: new DeterministicEmbeddingsProvider(),
+      batchSize: 4,
+      pricePerThousandTokens: 0,
+      model: 'deterministic-test',
+    });
+
+    const fn = createSearchKnowledgeBaseFunction({
+      embeddings: functionEmbeddings,
       keywordSearch: makeKeywordSearch(prisma),
       vectorSearch: makeVectorSearch(prisma),
-    }
-  );
+    });
 
-  assert.ok(results.length > 0);
-  assert.equal(results[0].chunk.documentId, doc.id);
-  assert.ok(results[0].chunk.metadata.position >= 0);
-  assert.ok(results.some((result) => result.type === 'hybrid' || result.type === 'vector'));
-});
+    const context = {
+      tenantId: TENANT_ID,
+      conversationId: 'conversation-1',
+      message: {} as any,
+    } satisfies FunctionContext;
 
-void test('search_knowledge_base function serializes retrieval results', async () => {
-  const buffer = Buffer.from('Delta section explains serialization.\n\nEpsilon section references Delta for completeness.');
-  await pipeline.upload({
-    tenantId: TENANT_ID,
-    filename: 'function.txt',
-    mimeType: 'text/plain',
-    buffer,
-    chunker: { strategy: 'fixed', maxTokens: 30 },
+    const payload = await fn.handler({ query: 'Delta section', topK: 1 }, context);
+    const parsed = JSON.parse(payload);
+    expect(parsed.length).toBe(1);
+    expect(parsed[0].documentId).toBeDefined();
+    expect(['keyword', 'hybrid', 'vector'].includes(parsed[0].source)).toBe(true);
   });
-
-  const functionEmbeddings = new EmbeddingsService({
-    provider: new DeterministicEmbeddingsProvider(),
-    batchSize: 4,
-    pricePerThousandTokens: 0,
-    model: 'deterministic-test',
-  });
-
-  const fn = createSearchKnowledgeBaseFunction({
-    embeddings: functionEmbeddings,
-    keywordSearch: makeKeywordSearch(prisma),
-    vectorSearch: makeVectorSearch(prisma),
-  });
-
-  const context = {
-    tenantId: TENANT_ID,
-    conversationId: 'conversation-1',
-    message: {} as any,
-  } satisfies FunctionContext;
-
-  const payload = await fn.handler({ query: 'Delta section', topK: 1 }, context);
-  const parsed = JSON.parse(payload);
-  assert.equal(parsed.length, 1);
-  assert.equal(parsed[0].documentId !== undefined, true);
-  assert.ok(['keyword', 'hybrid', 'vector'].includes(parsed[0].source));
 });
