@@ -11,4 +11,3 @@ router.use('/', verifyEmailRouter);
 router.use('/', loginRouter);
 
 export default router;
-EOF'
