@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { getPrismaClient } from '@meta-chat/database';
 import { emailService } from './EmailService';
 
-const prisma = new PrismaClient();
+const prisma = getPrismaClient();
 
 export interface SignupData {
   email: string;

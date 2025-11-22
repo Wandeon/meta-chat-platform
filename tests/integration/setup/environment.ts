@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import { exec as execCallback } from 'child_process';
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
-import { RabbitMqContainer, StartedRabbitMqContainer } from '@testcontainers/rabbitmq';
+import { RabbitMQContainer, StartedRabbitMQContainer } from '@testcontainers/rabbitmq';
 import { PrismaClient } from '@prisma/client';
 
 const execAsync = promisify(execCallback);
@@ -11,13 +11,13 @@ const execAsync = promisify(execCallback);
 export interface IntegrationTestContext {
   prisma: PrismaClient;
   postgres: StartedPostgreSqlContainer;
-  rabbit: StartedRabbitMqContainer;
+  rabbit: StartedRabbitMQContainer;
 }
 
 const context: IntegrationTestContext = {
   prisma: undefined as unknown as PrismaClient,
   postgres: undefined as unknown as StartedPostgreSqlContainer,
-  rabbit: undefined as unknown as StartedRabbitMqContainer,
+  rabbit: undefined as unknown as StartedRabbitMQContainer,
 };
 
 export function getIntegrationTestContext(): IntegrationTestContext {
@@ -29,7 +29,7 @@ export function getIntegrationTestContext(): IntegrationTestContext {
 
 async function runMigrations(databaseUrl: string): Promise<void> {
   const cwd = path.resolve(__dirname, '../../../packages/database');
-  await execAsync('npx prisma migrate deploy', {
+  await execAsync('npx prisma db push --force-reset --skip-generate', {
     cwd,
     env: {
       ...process.env,
@@ -63,15 +63,13 @@ async function truncateDatabase(prisma: PrismaClient): Promise<void> {
 
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
-  const postgres = await new PostgreSqlContainer('postgres:15-alpine')
+  const postgres = await new PostgreSqlContainer('pgvector/pgvector:pg16')
     .withDatabase('metachat')
     .withUsername('test')
     .withPassword('test')
     .start();
 
-  const rabbit = await new RabbitMqContainer('rabbitmq:3.12-management')
-    .withUser('test', 'test')
-    .start();
+  const rabbit = await new RabbitMQContainer('rabbitmq:3.12-management').start();
 
   const databaseUrl = postgres.getConnectionUri();
   process.env.DATABASE_URL = databaseUrl;

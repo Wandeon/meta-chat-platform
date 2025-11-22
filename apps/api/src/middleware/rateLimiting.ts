@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 /**
@@ -43,8 +43,8 @@ export const chatLimiter = rateLimit({
       return `tenant:${body.tenantId}`;
     }
     
-    // Fall back to IP address
-    return `ip:${req.ip}`;
+    // Fall back to IP address using helper to handle IPv6
+    return ipKeyGenerator(req as any);
   },
   
   message: {
