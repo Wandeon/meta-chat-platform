@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenant } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
+import { requireTenant, withTenantScope } from '../utils/tenantScope';
 
 const prisma = getPrismaClient();
 const router = Router();
@@ -26,22 +27,23 @@ const updateConversationSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-router.use(authenticateAdmin);
+router.use(authenticateTenant);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
+    const tenantId = requireTenant(req);
     const query = parseWithSchema(listQuerySchema, req.query);
-    const { tenantId } = req.query;
-    const conversations = await prisma.conversation.findMany({
-      where: {
-        ...(tenantId ? { tenantId: String(tenantId) } : {}),
-        ...(query.status ? { status: query.status } : {}),
-        ...(query.channelType ? { channelType: query.channelType } : {}),
-        ...(query.userId ? { userId: query.userId } : {}),
-      },
-      orderBy: { lastMessageAt: 'desc' },
-    });
+    const conversations = await prisma.conversation.findMany(
+      withTenantScope(tenantId, {
+        where: {
+          ...(query.status ? { status: query.status } : {}),
+          ...(query.channelType ? { channelType: query.channelType } : {}),
+          ...(query.userId ? { userId: query.userId } : {}),
+        },
+        orderBy: { lastMessageAt: 'desc' },
+      }),
+    );
 
     respondSuccess(res, conversations);
   }),
@@ -50,11 +52,12 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createConversationSchema.extend({ tenantId: z.string() }), req.body);
+    const tenantId = requireTenant(req);
+    const payload = parseWithSchema(createConversationSchema, req.body);
 
     const conversation = await prisma.conversation.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId,
         channelType: payload.channelType,
         externalId: payload.externalId,
         userId: payload.userId,
@@ -70,25 +73,22 @@ router.get(
   '/:conversationId',
   asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    const tenantId = requireTenant(req);
 
     // Use findFirst with tenantId to enforce tenant isolation
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        tenantId: String(tenantId),
-      },
-      include: {
-        messages: {
-          orderBy: { timestamp: 'asc' },
-          take: 50,
+    const conversation = await prisma.conversation.findFirst(
+      withTenantScope(tenantId, {
+        where: {
+          id: conversationId,
         },
-      },
-    });
+        include: {
+          messages: {
+            orderBy: { timestamp: 'asc' },
+            take: 50,
+          },
+        },
+      }),
+    );
 
     if (!conversation) {
       throw createHttpError(404, 'Conversation not found');
@@ -102,20 +102,17 @@ router.put(
   '/:conversationId',
   asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const { tenantId } = req.query;
+    const tenantId = requireTenant(req);
     const payload = parseWithSchema(updateConversationSchema, req.body);
 
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
-
     // Use findFirst with tenantId to enforce tenant isolation
-    const existing = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        tenantId: String(tenantId),
-      },
-    });
+    const existing = await prisma.conversation.findFirst(
+      withTenantScope(tenantId, {
+        where: {
+          id: conversationId,
+        },
+      }),
+    );
 
     if (!existing) {
       throw createHttpError(404, 'Conversation not found');

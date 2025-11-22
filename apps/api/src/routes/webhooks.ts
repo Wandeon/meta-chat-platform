@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenant } from '../middleware/auth';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
+import { requireTenant, withTenantScope } from '../utils/tenantScope';
 
 const prisma = getPrismaClient();
 const router = Router();
@@ -19,16 +20,17 @@ const createWebhookSchema = z.object({
 
 const updateWebhookSchema = createWebhookSchema.partial();
 
-router.use(authenticateAdmin);
+router.use(authenticateTenant);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.query;
-    const webhooks = await prisma.webhook.findMany({
-      where: tenantId ? { tenantId: String(tenantId) } : undefined,
-      orderBy: { createdAt: 'desc' },
-    });
+    const tenantId = requireTenant(req);
+    const webhooks = await prisma.webhook.findMany(
+      withTenantScope(tenantId, {
+        orderBy: { createdAt: 'desc' },
+      }),
+    );
 
     respondSuccess(res, webhooks);
   }),
@@ -37,11 +39,12 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createWebhookSchema.extend({ tenantId: z.string() }), req.body);
+    const tenantId = requireTenant(req);
+    const payload = parseWithSchema(createWebhookSchema, req.body);
 
     const webhook = await prisma.webhook.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId,
         url: payload.url,
         events: payload.events,
         headers: payload.headers ?? {},
@@ -57,9 +60,12 @@ router.get(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
-    const webhook = await prisma.webhook.findUnique({
-      where: { id: webhookId },
-    });
+    const tenantId = requireTenant(req);
+    const webhook = await prisma.webhook.findFirst(
+      withTenantScope(tenantId, {
+        where: { id: webhookId },
+      }),
+    );
 
     if (!webhook) {
       throw createHttpError(404, 'Webhook not found');
@@ -73,11 +79,14 @@ router.put(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
+    const tenantId = requireTenant(req);
     const payload = parseWithSchema(updateWebhookSchema, req.body);
 
-    const existing = await prisma.webhook.findUnique({
-      where: { id: webhookId },
-    });
+    const existing = await prisma.webhook.findFirst(
+      withTenantScope(tenantId, {
+        where: { id: webhookId },
+      }),
+    );
 
     if (!existing) {
       throw createHttpError(404, 'Webhook not found');
@@ -101,10 +110,13 @@ router.delete(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
+    const tenantId = requireTenant(req);
 
-    const existing = await prisma.webhook.findUnique({
-      where: { id: webhookId },
-    });
+    const existing = await prisma.webhook.findFirst(
+      withTenantScope(tenantId, {
+        where: { id: webhookId },
+      }),
+    );
 
     if (!existing) {
       throw createHttpError(404, 'Webhook not found');

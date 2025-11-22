@@ -4,6 +4,15 @@ import createHttpError from 'http-errors';
 
 export type TenantRequest = Request;
 
+// Extract the tenant ID from the authenticated request
+export function requireTenant(req: TenantRequest): string {
+  if (!req.tenant?.id) {
+    throw createHttpError(401, 'Tenant context required');
+  }
+
+  return req.tenant.id;
+}
+
 // Ensure a query includes tenant filtering
 export function withTenantScope<T extends { where?: any }>(
   tenantId: string,
@@ -41,7 +50,7 @@ export async function validateTenantOwnership(
   });
 
   if (!resource) {
-    throw createHttpError(404, );
+    throw createHttpError(404, `${resourceType} not found`);
   }
 }
 
