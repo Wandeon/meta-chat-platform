@@ -92,3 +92,4 @@ test-results/
 # Environment files (keep production env private)
 apps/api/.env.production
 apps/api/.env.production.backup
+.worktrees/
