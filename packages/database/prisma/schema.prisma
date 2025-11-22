@@ -14,13 +14,13 @@ datasource db {
 // ============= Tenant & Configuration =============
 
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  settings     Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   enabled      Boolean  @default(true)
-  widgetConfig Json     @default("{}")  @map("widget_config")
+  widgetConfig Json     @default("{}") @map("widget_config")
 
   // Stripe Billing Fields
   stripeCustomerId     String?   @map("stripe_customer_id")
@@ -30,6 +30,7 @@ model Tenant {
   subscriptionEndDate  DateTime? @map("subscription_end_date")
 
   channels        Channel[]
+  users           TenantUser[]
   conversations   Conversation[]
   documents       Document[]
   webhooks        Webhook[]
@@ -56,11 +57,11 @@ model Channel {
   type      String // whatsapp, messenger, webchat
   config    Json // Channel-specific credentials
   enabled   Boolean  @default(true)
-  metadata  Json?    // Optional channel metadata
+  metadata  Json? // Optional channel metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   secrets ChannelSecret[]
 
   @@unique([tenantId, type])
@@ -71,16 +72,16 @@ model Channel {
 // ============= Conversations & Messages =============
 
 model Conversation {
-  id            String           @id @default(cuid())
+  id            String   @id @default(cuid())
   tenantId      String
   channelType   String // whatsapp, messenger, webchat
   externalId    String // Platform-specific conversation ID
   userId        String // Phone number, PSID, or user ID
-  status        String           @default("active") // active, assigned_human, closed
-  metadata      Json             @default("{}")
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  lastMessageAt DateTime         @default(now())
+  status        String   @default("active") // active, assigned_human, closed
+  metadata      Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastMessageAt DateTime @default(now())
 
   tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   messages       Message[]
@@ -120,19 +121,19 @@ model Message {
 // ============= RAG / Knowledge Base =============
 
 model Document {
-  id        String   @id @default(cuid())
-  tenantId  String
-  filename  String
-  mimeType  String
-  size      Int
-  path      String // Storage path
-  checksum  String // SHA-256 checksum of the stored file
-  storageProvider String @default("local") // Storage backend identifier
-  version   Int      @default(1) // Incremented on every re-upload
-  status    String   @default("pending") // pending, processing, ready, failed, stale
-  metadata  Json     @default("{}")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  tenantId        String
+  filename        String
+  mimeType        String
+  size            Int
+  path            String // Storage path
+  checksum        String // SHA-256 checksum of the stored file
+  storageProvider String   @default("local") // Storage backend identifier
+  version         Int      @default(1) // Incremented on every re-upload
+  status          String   @default("pending") // pending, processing, ready, failed, stale
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   chunks Chunk[]
@@ -143,14 +144,14 @@ model Document {
 }
 
 model Chunk {
-  id         String                        @id @default(cuid())
+  id         String                       @id @default(cuid())
   tenantId   String
   documentId String
-  content    String                        @db.Text
-  embedding  Unsupported("vector(1024)")?  // mxbai-embed-large produces 1024-dim vectors
-  metadata   Json                          @default("{}")
+  content    String                       @db.Text
+  embedding  Unsupported("vector(1024)")? // mxbai-embed-large produces 1024-dim vectors
+  metadata   Json                         @default("{}")
   position   Int // Order within document
-  createdAt  DateTime                      @default(now())
+  createdAt  DateTime                     @default(now())
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -171,7 +172,7 @@ model Webhook {
   events    String[] // Array of event types to subscribe to
   headers   Json     @default("{}") // Custom headers
   enabled   Boolean  @default(true)
-  metadata  Json?    // Optional channel metadata
+  metadata  Json? // Optional channel metadata
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -233,18 +234,18 @@ model ChannelSecret {
 // ============= Billing & Subscriptions =============
 
 model Invoice {
-  id                 Int      @id @default(autoincrement())
-  tenantId           String   @map("tenant_id")
-  stripeInvoiceId    String   @unique @map("stripe_invoice_id")
-  amountPaid         Int      @map("amount_paid")
-  currency           String   @default("eur")
-  status             String
-  invoicePdf         String?  @map("invoice_pdf")
-  hostedInvoiceUrl   String?  @map("hosted_invoice_url")
-  periodStart        DateTime? @map("period_start")
-  periodEnd          DateTime? @map("period_end")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+  id               Int       @id @default(autoincrement())
+  tenantId         String    @map("tenant_id")
+  stripeInvoiceId  String    @unique @map("stripe_invoice_id")
+  amountPaid       Int       @map("amount_paid")
+  currency         String    @default("eur")
+  status           String
+  invoicePdf       String?   @map("invoice_pdf")
+  hostedInvoiceUrl String?   @map("hosted_invoice_url")
+  periodStart      DateTime? @map("period_start")
+  periodEnd        DateTime? @map("period_end")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -255,17 +256,17 @@ model Invoice {
 }
 
 model UsageTracking {
-  id                  Int      @id @default(autoincrement())
-  tenantId            String   @map("tenant_id")
-  periodStart         DateTime @map("period_start")
-  periodEnd           DateTime @map("period_end")
-  conversationsCount  Int      @default(0) @map("conversations_count")
-  documentsCount      Int      @default(0) @map("documents_count")
-  teamMembersCount    Int      @default(0) @map("team_members_count")
-  messagesCount       Int      @default(0) @map("messages_count")
-  apiCallsCount       Int      @default(0) @map("api_calls_count")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+  id                 Int      @id @default(autoincrement())
+  tenantId           String   @map("tenant_id")
+  periodStart        DateTime @map("period_start")
+  periodEnd          DateTime @map("period_end")
+  conversationsCount Int      @default(0) @map("conversations_count")
+  documentsCount     Int      @default(0) @map("documents_count")
+  teamMembersCount   Int      @default(0) @map("team_members_count")
+  messagesCount      Int      @default(0) @map("messages_count")
+  apiCallsCount      Int      @default(0) @map("api_calls_count")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -284,20 +285,20 @@ enum AdminKeyStatus {
 }
 
 model AdminKey {
-  id             String          @id @default(cuid())
-  name           String
-  hashedSecret   String
-  status         AdminKeyStatus  @default(active)
-  metadata       Json?
-  expiresAt      DateTime?
-  lastUsedAt     DateTime?
-  rotatedAt      DateTime?
-  rotatedBy      String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  createdBy      String?
-  revokedAt      DateTime?
-  revokedBy      String?
+  id           String         @id @default(cuid())
+  name         String
+  hashedSecret String
+  status       AdminKeyStatus @default(active)
+  metadata     Json?
+  expiresAt    DateTime?
+  lastUsedAt   DateTime?
+  rotatedAt    DateTime?
+  rotatedBy    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  createdBy    String?
+  revokedAt    DateTime?
+  revokedBy    String?
 
   auditLogs AdminAuditLog[]
 
@@ -349,72 +350,113 @@ model ApiLog {
 // ============= Authentication & Access Control =============
 
 model TenantApiKey {
-  id                 String   @id @default(cuid())
-  tenantId           String
-  label              String?
-  prefix             String
-  hash               String
-  salt               String
-  lastFour           String
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  lastUsedAt         DateTime?
-  expiresAt          DateTime?
-  rotatedAt          DateTime?
-  rotationTokenHash  String?
-  rotationTokenSalt  String?
-  rotationIssuedAt   DateTime?
-  rotationExpiresAt  DateTime?
+  id                String    @id @default(cuid())
+  tenantId          String
+  label             String?
+  prefix            String
+  hash              String
+  salt              String
+  lastFour          String
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastUsedAt        DateTime?
+  expiresAt         DateTime?
+  rotatedAt         DateTime?
+  rotationTokenHash String?
+  rotationTokenSalt String?
+  rotationIssuedAt  DateTime?
+  rotationExpiresAt DateTime?
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
+  @@unique([tenantId, label])
   @@index([tenantId, active])
   @@index([prefix])
-  @@unique([tenantId, label])
   @@map("tenant_api_keys")
 }
 
 model AdminUser {
-  id                 String              @id @default(cuid())
-  email              String              @unique
-  name               String?
-  password           String?
-  emailVerified      Boolean             @default(false) @map("email_verified")
-  role               AdminRole           @default(STANDARD)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  apiKeys            AdminApiKey[]
-  verificationTokens VerificationToken[]
+  id                String              @id @default(cuid())
+  email             String              @unique
+  name              String?
+  password          String?
+  emailVerified     Boolean             @default(false) @map("email_verified")
+  role              AdminRole           @default(STANDARD)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  apiKeys           AdminApiKey[]
+  VerificationToken VerificationToken[]
 
   @@map("admin_users")
 }
 
 model AdminApiKey {
-  id                 String   @id @default(cuid())
-  adminId            String
-  label              String?
-  prefix             String
-  hash               String
-  salt               String
-  lastFour           String
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  lastUsedAt         DateTime?
-  expiresAt          DateTime?
-  rotatedAt          DateTime?
-  rotationTokenHash  String?
-  rotationTokenSalt  String?
-  rotationIssuedAt   DateTime?
-  rotationExpiresAt  DateTime?
+  id                String    @id @default(cuid())
+  adminId           String
+  label             String?
+  prefix            String
+  hash              String
+  salt              String
+  lastFour          String
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastUsedAt        DateTime?
+  expiresAt         DateTime?
+  rotatedAt         DateTime?
+  rotationTokenHash String?
+  rotationTokenSalt String?
+  rotationIssuedAt  DateTime?
+  rotationExpiresAt DateTime?
 
   admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
+  @@unique([adminId, label])
   @@index([adminId, active])
   @@index([prefix])
-  @@unique([adminId, label])
   @@map("admin_api_keys")
+}
+
+model TenantUser {
+  id            String         @id @default(cuid())
+  tenantId      String
+  email         String         @unique
+  password      String
+  name          String?
+  emailVerified Boolean        @default(false) @map("email_verified")
+  role          TenantUserRole @default(OWNER)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  tenant              Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  verificationTokens  VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("tenant_users")
+}
+
+model PasswordResetToken {
+  id           String     @id @default(cuid())
+  tenantUserId String     @map("tenant_user_id")
+  token        String     @unique
+  expiresAt    DateTime   @map("expires_at")
+  used         Boolean    @default(false)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([tenantUserId])
+  @@map("password_reset_tokens")
+}
+
+enum TenantUserRole {
+  OWNER
+  ADMIN
+  MEMBER
 }
 
 enum AdminRole {
@@ -422,17 +464,16 @@ enum AdminRole {
   STANDARD
 }
 
-
 model McpServer {
-  id           String   @id @default(cuid())
-  name         String   @unique
-  description  String?
-  command      String   // e.g., "npx", "node", "python"
-  args         Json     @default("[]") // Command arguments as array
-  requiredEnv  Json     @default("[]") // Required env var names (array of strings)
-  enabled      Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  command     String // e.g., "npx", "node", "python"
+  args        Json     @default("[]") // Command arguments as array
+  requiredEnv Json     @default("[]") // Required env var names (array of strings)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("mcp_servers")
 }
@@ -440,17 +481,20 @@ model McpServer {
 // ============= Email Verification =============
 
 model VerificationToken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique
-  adminId   String   @map("admin_id")
-  expiresAt DateTime @map("expires_at")
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now()) @map("created_at")
+  id           Int         @id @default(autoincrement())
+  token        String      @unique
+  adminId      String?     @map("admin_id")
+  tenantUserId String?     @map("tenant_user_id")
+  expiresAt    DateTime    @map("expires_at")
+  used         Boolean     @default(false)
+  createdAt    DateTime    @default(now()) @map("created_at")
 
-  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  admin      AdminUser?  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tenantUser TenantUser? @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
 
   @@index([token], map: "idx_verification_tokens_token")
   @@index([adminId], map: "idx_verification_tokens_admin_id")
+  @@index([tenantUserId], map: "idx_verification_tokens_tenant_user_id")
   @@index([expiresAt], map: "idx_verification_tokens_expires_at")
   @@map("verification_tokens")
 }
@@ -458,24 +502,24 @@ model VerificationToken {
 // ============= Analytics & Metrics =============
 
 model AnalyticsDaily {
-  id                    Int      @id @default(autoincrement())
-  tenantId              String   @map("tenant_id")
-  date                  DateTime @db.Date
-  totalConversations    Int      @default(0) @map("total_conversations")
-  totalMessages         Int      @default(0) @map("total_messages")
-  activeUsers           Int      @default(0) @map("active_users")
-  documentsQueried      Int      @default(0) @map("documents_queried")
-  apiCalls              Int      @default(0) @map("api_calls")
-  avgResponseTimeMs     Int?     @map("avg_response_time_ms")
-  ragQueries            Int      @default(0) @map("rag_queries")
-  ragAvgSimilarity      Decimal? @db.Decimal(5, 4) @map("rag_avg_similarity")
-  conversationsResolved Int      @default(0) @map("conversations_resolved")
-  conversationsEscalated Int     @default(0) @map("conversations_escalated")
-  errorCount            Int      @default(0) @map("error_count")
-  widgetImpressions     Int      @default(0) @map("widget_impressions")
-  widgetConversations   Int      @default(0) @map("widget_conversations")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @default(now()) @updatedAt @map("updated_at")
+  id                     Int      @id @default(autoincrement())
+  tenantId               String   @map("tenant_id")
+  date                   DateTime @db.Date
+  totalConversations     Int      @default(0) @map("total_conversations")
+  totalMessages          Int      @default(0) @map("total_messages")
+  activeUsers            Int      @default(0) @map("active_users")
+  documentsQueried       Int      @default(0) @map("documents_queried")
+  apiCalls               Int      @default(0) @map("api_calls")
+  avgResponseTimeMs      Int?     @map("avg_response_time_ms")
+  ragQueries             Int      @default(0) @map("rag_queries")
+  ragAvgSimilarity       Decimal? @map("rag_avg_similarity") @db.Decimal(5, 4)
+  conversationsResolved  Int      @default(0) @map("conversations_resolved")
+  conversationsEscalated Int      @default(0) @map("conversations_escalated")
+  errorCount             Int      @default(0) @map("error_count")
+  widgetImpressions      Int      @default(0) @map("widget_impressions")
+  widgetConversations    Int      @default(0) @map("widget_conversations")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @default(now()) @updatedAt @map("updated_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -486,22 +530,22 @@ model AnalyticsDaily {
 }
 
 model MessageMetrics {
-  id                  Int           @id @default(autoincrement())
-  conversationId      String?       @map("conversation_id")
-  messageId           String?       @map("message_id")
-  tenantId            String        @map("tenant_id")
-  sentAt              DateTime?     @map("sent_at")
-  responseAt          DateTime?     @map("response_at")
-  responseTimeMs      Int?          @map("response_time_ms")
-  ragUsed             Boolean       @default(false) @map("rag_used")
-  ragSimilarity       Decimal?      @db.Decimal(5, 4) @map("rag_similarity")
-  ragChunksRetrieved  Int?          @map("rag_chunks_retrieved")
-  ragTopDocumentId    String?       @map("rag_top_document_id")
-  confidenceScore     Decimal?      @db.Decimal(5, 4) @map("confidence_score")
-  escalated           Boolean       @default(false)
-  errorOccurred       Boolean       @default(false) @map("error_occurred")
-  userMessage         String?       @db.Text @map("user_message")
-  createdAt           DateTime      @default(now()) @map("created_at")
+  id                 Int       @id @default(autoincrement())
+  conversationId     String?   @map("conversation_id")
+  messageId          String?   @map("message_id")
+  tenantId           String    @map("tenant_id")
+  sentAt             DateTime? @map("sent_at")
+  responseAt         DateTime? @map("response_at")
+  responseTimeMs     Int?      @map("response_time_ms")
+  ragUsed            Boolean   @default(false) @map("rag_used")
+  ragSimilarity      Decimal?  @map("rag_similarity") @db.Decimal(5, 4)
+  ragChunksRetrieved Int?      @map("rag_chunks_retrieved")
+  ragTopDocumentId   String?   @map("rag_top_document_id")
+  confidenceScore    Decimal?  @map("confidence_score") @db.Decimal(5, 4)
+  escalated          Boolean   @default(false)
+  errorOccurred      Boolean   @default(false) @map("error_occurred")
+  userMessage        String?   @map("user_message") @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -514,16 +558,16 @@ model MessageMetrics {
 }
 
 model WidgetAnalytics {
-  id         Int      @id @default(autoincrement())
-  tenantId   String   @map("tenant_id")
-  eventType  String   @map("event_type")
-  sessionId  String?  @map("session_id")
-  userId     String?  @map("user_id")
-  pageUrl    String?  @db.Text @map("page_url")
-  referrer   String?  @db.Text
-  userAgent  String?  @db.Text @map("user_agent")
-  metadata   Json     @default("{}")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        Int      @id @default(autoincrement())
+  tenantId  String   @map("tenant_id")
+  eventType String   @map("event_type")
+  sessionId String?  @map("session_id")
+  userId    String?  @map("user_id")
+  pageUrl   String?  @map("page_url") @db.Text
+  referrer  String?  @db.Text
+  userAgent String?  @map("user_agent") @db.Text
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
