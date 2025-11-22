@@ -16,3 +16,4 @@
 ## Follow-up fixes (auth)
 - Added /api/auth/login endpoint issuing admin API keys after password validation.
 - Reused shared Prisma client in auth service and signup route to reduce connection churn.
+- Added tenant isolation unit coverage to guard conversations/documents routes with mocked auth + Prisma.
