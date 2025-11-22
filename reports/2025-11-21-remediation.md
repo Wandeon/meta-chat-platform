@@ -12,3 +12,7 @@
 
 ## Notes
 - Cross-tenant integration tests remain skipped (require live DB); helper and route guards now block mismatched tenant IDs from request vs credentials.
+
+## Follow-up fixes (auth)
+- Added /api/auth/login endpoint issuing admin API keys after password validation.
+- Reused shared Prisma client in auth service and signup route to reduce connection churn.
