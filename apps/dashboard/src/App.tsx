@@ -15,6 +15,7 @@ import { HealthPage } from './pages/HealthPage';
 import { TestingPage } from './pages/TestingPage';
 import { McpServersPage } from './pages/McpServersPage';
 import { WidgetPage } from './pages/WidgetPage';
+import { WidgetsIndexPage } from './pages/WidgetsIndexPage';
 import { BillingPage } from './pages/BillingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 
@@ -37,9 +38,11 @@ export function App() {
     <Routes>
       <Route element={<DashboardLayout />}>
         <Route index element={<Navigate to="/tenants" replace />} />
+        <Route path="/dashboard" element={<AnalyticsPage />} />
         <Route path="/tenants" element={<TenantsPage />} />
         <Route path="/tenants/:tenantId/settings" element={<TenantSettingsPage />} />
         <Route path="/tenants/:tenantId/widget" element={<WidgetPage />} />
+        <Route path="/widgets" element={<WidgetsIndexPage />} />
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/mcp-servers" element={<McpServersPage />} />

@@ -4,12 +4,15 @@ import { clsx } from 'clsx';
 import '../styles/dashboard.css';
 
 const NAV_LINKS = [
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/tenants', label: 'Tenants' },
   { to: '/analytics', label: 'Analytics' },
-  { to: '/mcp-servers', label: 'MCP Servers' },
   { to: '/channels', label: 'Channels' },
   { to: '/documents', label: 'Documents' },
   { to: '/conversations', label: 'Conversations' },
+  { to: '/widgets', label: 'Widgets' },
+  { to: '/billing', label: 'Billing' },
+  { to: '/mcp-servers', label: 'MCP Servers' },
   { to: '/webhooks', label: 'Webhooks' },
   { to: '/testing', label: 'Testing' },
   { to: '/health', label: 'System Health' },
