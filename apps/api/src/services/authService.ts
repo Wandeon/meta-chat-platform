@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { hashPassword } from '../utils/password';
+import { hashPassword, verifyPassword } from '../utils/password';
+import { generateToken } from '../utils/jwt';
 import crypto from 'crypto';
 import { emailService } from './EmailService';
 
@@ -19,6 +20,16 @@ export interface SignupResult {
 
 export interface VerifyEmailResult {
   user: { id: string; email: string; name: string; tenantId: string };
+}
+
+interface LoginResult {
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    tenantId: string;
+  };
+  token: string;
 }
 
 /**
@@ -161,6 +172,52 @@ export async function verifyEmailTransaction(token: string): Promise<VerifyEmail
       },
     };
   });
+}
+
+
+/**
+ * Authenticate tenant user with email and password
+ */
+export async function loginTenantUser(
+  email: string,
+  password: string
+): Promise<LoginResult | null> {
+  // Find user by email
+  const user = await prisma.tenantUser.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    return null; // Don't reveal whether email exists
+  }
+
+  // Verify password
+  const isValidPassword = await verifyPassword(password, user.password);
+  if (!isValidPassword) {
+    return null;
+  }
+
+  // Check if email is verified
+  if (!user.emailVerified) {
+    throw new Error('EMAIL_NOT_VERIFIED');
+  }
+
+  // Generate JWT token
+  const token = generateToken({
+    userId: user.id,
+    tenantId: user.tenantId,
+    email: user.email,
+  });
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      tenantId: user.tenantId,
+    },
+    token,
+  };
 }
 
 /**
