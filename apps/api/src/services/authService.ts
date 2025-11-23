@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { hashPassword } from '../utils/password';
 import crypto from 'crypto';
 import { emailService } from './EmailService';
 
@@ -25,25 +25,38 @@ export interface VerifyEmailResult {
 
 /**
  * Transactional signup with automatic rollback on failure
- * Creates admin user and verification token in a single transaction
+ * Creates TenantUser and verification token in a single transaction
  * Email sending happens outside the transaction to avoid blocking
  */
 export async function signupTransaction(data: SignupData): Promise<SignupResult> {
   const { email, password, companyName, name } = data;
 
-  // Step 1: Create admin, verification token, and store pending tenant setup in a single transaction
+  // Step 1: Create TenantUser, Tenant, and verification token in a single transaction
   const result = await prisma.$transaction(async (tx) => {
-    // Hash password with bcrypt (12 rounds)
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Hash password using the hashPassword utility
+    const hashedPassword = await hashPassword(password);
 
-    // Create admin user with email_verified=false
-    const admin = await tx.adminUser.create({
+    // Create TenantUser with Tenant in a single operation
+    const tenantUser = await tx.tenantUser.create({
       data: {
         email,
         password: hashedPassword,
         name,
         emailVerified: false,
-        role: 'STANDARD',
+        role: 'OWNER',
+        tenant: {
+          create: {
+            name: companyName,
+            enabled: true,
+            subscriptionStatus: 'free',
+            currentPlanId: 'free',
+            settings: {},
+            widgetConfig: {},
+          },
+        },
+      },
+      include: {
+        tenant: true,
       },
     });
 
@@ -54,34 +67,18 @@ export async function signupTransaction(data: SignupData): Promise<SignupResult>
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // Create verification token
+    // Create verification token linked to TenantUser
     await tx.verificationToken.create({
       data: {
         token,
-        adminId: admin.id,
+        tenantUserId: tenantUser.id,
         expiresAt,
         used: false,
       },
     });
 
-    // Store company name for later tenant creation (using raw SQL for now)
-    // This will be used during email verification to create the tenant
-    await tx.$executeRaw`
-      CREATE TABLE IF NOT EXISTS pending_tenant_setups (
-        admin_id VARCHAR(30) PRIMARY KEY REFERENCES admin_users(id) ON DELETE CASCADE,
-        company_name VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `;
-
-    await tx.$executeRaw`
-      INSERT INTO pending_tenant_setups (admin_id, company_name)
-      VALUES (${admin.id}, ${companyName})
-      ON CONFLICT (admin_id) DO UPDATE SET company_name = ${companyName}
-    `;
-
     return {
-      admin: { id: admin.id, email: admin.email, name: admin.name || '' },
+      admin: { id: tenantUser.id, email: tenantUser.email, name: tenantUser.name || '' },
       verificationToken: token,
     };
   });
@@ -94,12 +91,13 @@ export async function signupTransaction(data: SignupData): Promise<SignupResult>
   } catch (emailError) {
     console.error('Failed to send verification email:', emailError);
     // Don't throw - user account created successfully
-    // Admin can request a new verification email later
+    // User can request a new verification email later
     // The account exists but is not verified yet
   }
 
   return result;
 }
+
 
 /**
  * Verify email and activate account in a transaction
