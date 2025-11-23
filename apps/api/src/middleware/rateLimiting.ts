@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 /**
@@ -44,7 +44,7 @@ export const chatLimiter = rateLimit({
     }
     
     // Fall back to IP address
-    return `ip:${req.ip}`;
+    return `ip:${ipKeyGenerator(req.ip || "unknown")}`;
   },
   
   message: {
