@@ -61,11 +61,17 @@ router.get(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
+    const tenantId = req.tenantUser!.tenantId;
     const webhook = await prisma.webhook.findUnique({
       where: { id: webhookId },
     });
 
     if (!webhook) {
+      throw createHttpError(404, 'Webhook not found');
+    }
+
+    // Verify tenant ownership
+    if (webhook.tenantId !== tenantId) {
       throw createHttpError(404, 'Webhook not found');
     }
 
@@ -77,6 +83,7 @@ router.put(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
+    const tenantId = req.tenantUser!.tenantId;
     const payload = parseWithSchema(updateWebhookSchema, req.body);
 
     const existing = await prisma.webhook.findUnique({
@@ -84,6 +91,11 @@ router.put(
     });
 
     if (!existing) {
+      throw createHttpError(404, 'Webhook not found');
+    }
+
+    // Verify tenant ownership
+    if (existing.tenantId !== tenantId) {
       throw createHttpError(404, 'Webhook not found');
     }
 
@@ -105,12 +117,18 @@ router.delete(
   '/:webhookId',
   asyncHandler(async (req, res) => {
     const { webhookId } = req.params;
+    const tenantId = req.tenantUser!.tenantId;
 
     const existing = await prisma.webhook.findUnique({
       where: { id: webhookId },
     });
 
     if (!existing) {
+      throw createHttpError(404, 'Webhook not found');
+    }
+
+    // Verify tenant ownership
+    if (existing.tenantId !== tenantId) {
       throw createHttpError(404, 'Webhook not found');
     }
 

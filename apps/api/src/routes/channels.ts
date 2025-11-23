@@ -60,6 +60,7 @@ router.patch(
   '/:channelId',
   asyncHandler(async (req, res) => {
     const { channelId } = req.params;
+    const tenantId = req.tenantUser!.tenantId;
     const payload = parseWithSchema(updateChannelSchema, req.body);
 
     const existing = await prisma.channel.findUnique({
@@ -67,6 +68,11 @@ router.patch(
     });
 
     if (!existing) {
+      throw createHttpError(404, 'Channel not found');
+    }
+
+    // Verify tenant ownership
+    if (existing.tenantId !== tenantId) {
       throw createHttpError(404, 'Channel not found');
     }
 
@@ -87,12 +93,18 @@ router.delete(
   '/:channelId',
   asyncHandler(async (req, res) => {
     const { channelId } = req.params;
+    const tenantId = req.tenantUser!.tenantId;
 
     const existing = await prisma.channel.findUnique({
       where: { id: channelId },
     });
 
     if (!existing) {
+      throw createHttpError(404, 'Channel not found');
+    }
+
+    // Verify tenant ownership
+    if (existing.tenantId !== tenantId) {
       throw createHttpError(404, 'Channel not found');
     }
 
