@@ -36,6 +36,24 @@ describe('JWT Utils', () => {
     expect(decoded?.type).toBe('tenant_user');
   });
 
+  it('should set a 7-day expiration for tenant user tokens', () => {
+    const payload = {
+      userId: 'user123',
+      tenantId: 'tenant456',
+      email: 'test@example.com',
+    };
+
+    const token = generateToken(payload);
+    const decoded = verifyToken(token);
+
+    expect(decoded?.type).toBe('tenant_user');
+    expect(decoded?.iat).toBeDefined();
+    expect(decoded?.exp).toBeDefined();
+
+    const tokenLifetime = (decoded!.exp as number) - (decoded!.iat as number);
+    expect(tokenLifetime).toBe(60 * 60 * 24 * 7); // exactly 7 days in seconds
+  });
+
   it('should return null for invalid token', () => {
     const decoded = verifyToken('invalid.token.here');
     expect(decoded).toBeNull();
