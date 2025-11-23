@@ -20,13 +20,14 @@ describe("Auth API Integration Tests", () => {
           email: testEmail,
           password: testPassword,
           name: "Test User",
+          companyName: "Test Company",
         })
-        .expect(201);
+        .expect(200);
 
-      expect(response.body).toHaveProperty("user");
-      expect(response.body).toHaveProperty("token");
-      expect(response.body.user.email).toBe(testEmail);
-      authToken = response.body.token;
+      expect(response.body.success).toBe(true);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body.data.email).toBe(testEmail);
+      authToken = response.body.data.email;
     });
 
     it("should reject duplicate email", async () => {
@@ -36,6 +37,7 @@ describe("Auth API Integration Tests", () => {
           email: testEmail,
           password: testPassword,
           name: "Duplicate User",
+          companyName: "Test Company",
         })
         .expect(409);
 
@@ -49,6 +51,7 @@ describe("Auth API Integration Tests", () => {
           email: "invalid-email",
           password: testPassword,
           name: "Test User",
+          companyName: "Test Company",
         })
         .expect(400);
 
@@ -62,6 +65,7 @@ describe("Auth API Integration Tests", () => {
           email: `weak-${Math.random().toString(36).substring(7)}@example.com`,
           password: "weak",
           name: "Test User",
+          companyName: "Test Company",
         })
         .expect(400);
 

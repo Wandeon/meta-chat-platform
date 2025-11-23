@@ -43,7 +43,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     const { email, password, name, companyName } = validationResult.data;
 
     // Check if user already exists
-    const existingUser = await prisma.adminUser.findUnique({
+    const existingUser = await prisma.tenantUser.findUnique({
       where: { email },
     });
 
@@ -65,7 +65,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       companyName,
     });
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: 'Account created successfully. Please check your email to verify your address.',
       data: {
