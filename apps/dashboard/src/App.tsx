@@ -26,13 +26,13 @@ export function App() {
   if (!apiKey) {
     return (
       <Routes>
-        <Route path=/ element={<LandingPage />} />
-        <Route path=/login element={<LoginPage />} />
-        <Route path=/signup element={<SignupPage />} />
-        <Route path=/verify-email element={<VerifyEmailPage />} />
-        <Route path=/forgot-password element={<ForgotPasswordPage />} />
-        <Route path=/reset-password element={<ResetPasswordPage />} />
-        <Route path=* element={<Navigate to=/ replace />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
@@ -40,21 +40,21 @@ export function App() {
   return (
     <Routes>
       <Route element={<DashboardLayout />}>
-        <Route index element={<Navigate to=/tenants replace />} />
-        <Route path=/tenants element={<TenantsPage />} />
-        <Route path=/tenants/:tenantId/settings element={<TenantSettingsPage />} />
-        <Route path=/tenants/:tenantId/widget element={<WidgetPage />} />
-        <Route path=/billing element={<BillingPage />} />
-        <Route path=/analytics element={<AnalyticsPage />} />
-        <Route path=/mcp-servers element={<McpServersPage />} />
-        <Route path=/channels element={<ChannelsPage />} />
-        <Route path=/documents element={<DocumentsPage />} />
-        <Route path=/conversations element={<ConversationsPage />} />
-        <Route path=/webhooks element={<WebhooksPage />} />
-        <Route path=/testing element={<TestingPage />} />
-        <Route path=/health element={<HealthPage />} />
+        <Route index element={<Navigate to="/tenants" replace />} />
+        <Route path="/tenants" element={<TenantsPage />} />
+        <Route path="/tenants/:tenantId/settings" element={<TenantSettingsPage />} />
+        <Route path="/tenants/:tenantId/widget" element={<WidgetPage />} />
+        <Route path="/billing" element={<BillingPage />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/mcp-servers" element={<McpServersPage />} />
+        <Route path="/channels" element={<ChannelsPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/conversations" element={<ConversationsPage />} />
+        <Route path="/webhooks" element={<WebhooksPage />} />
+        <Route path="/testing" element={<TestingPage />} />
+        <Route path="/health" element={<HealthPage />} />
       </Route>
-      <Route path=* element={<Navigate to=/tenants replace />} />
+      <Route path="*" element={<Navigate to="/tenants" replace />} />
     </Routes>
   );
 }

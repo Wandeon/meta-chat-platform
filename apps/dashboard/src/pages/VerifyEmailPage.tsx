@@ -134,8 +134,8 @@ export function VerifyEmailPage() {
               justifyContent: 'center',
             }}
           >
-            <svg width=32 height=32 viewBox=0 0 24 24 fill=none xmlns=http://www.w3.org/2000/svg>
-              <path d=M20 6L9 17L4 12 stroke=#16a34a strokeWidth=2 strokeLinecap=round strokeLinejoin=round/>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 6L9 17L4 12" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Email Verified!</h1>
@@ -144,7 +144,7 @@ export function VerifyEmailPage() {
           </p>
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
             <Link
-              to=/login
+              to="/login"
               style={{
                 color: '#3b82f6',
                 textDecoration: 'none',
@@ -185,8 +185,8 @@ export function VerifyEmailPage() {
             justifyContent: 'center',
           }}
         >
-          <svg width=32 height=32 viewBox=0 0 24 24 fill=none xmlns=http://www.w3.org/2000/svg>
-            <path d=M18 6L6 18M6 6l12 12 stroke=#dc2626 strokeWidth=2 strokeLinecap=round strokeLinejoin=round/>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
         <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Verification Failed</h1>
@@ -204,7 +204,7 @@ export function VerifyEmailPage() {
           }}
         >
           <Link
-            to=/signup
+            to="/signup"
             style={{
               color: '#3b82f6',
               textDecoration: 'none',
@@ -215,7 +215,7 @@ export function VerifyEmailPage() {
             Sign up again
           </Link>
           <Link
-            to=/login
+            to="/login"
             style={{
               color: '#64748b',
               textDecoration: 'none',
