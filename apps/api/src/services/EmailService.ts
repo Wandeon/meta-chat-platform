@@ -166,6 +166,92 @@ Meta Chat Platform
       // Don't throw - welcome email is not critical
     }
   }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+    const resetUrl = `${this.baseUrl}/reset-password?token=${token}`;
+
+    const mailOptions = {
+      from: this.fromEmail,
+      to: email,
+      subject: 'Reset your password - Meta Chat Platform',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Password Reset</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f4; padding: 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px;">
+                  <tr>
+                    <td style="background-color: #0066cc; padding: 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Meta Chat Platform</h1>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <h2 style="margin: 0 0 20px; color: #333333; font-size: 24px;">Reset Your Password</h2>
+                      <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.5;">
+                        We received a request to reset your password. Click the button below to choose a new password.
+                      </p>
+                      <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                        <tr>
+                          <td align="center">
+                            <a href="${resetUrl}"
+                               style="display: inline-block; padding: 15px 40px; background-color: #0066cc;
+                                      color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 16px;
+                                      font-weight: bold;">
+                              Reset Password
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin: 20px 0 0; color: #666666; font-size: 14px; line-height: 1.5;">
+                        Or copy and paste this link into your browser:<br>
+                        <a href="${resetUrl}" style="color: #0066cc; word-break: break-all;">${resetUrl}</a>
+                      </p>
+                      <p style="margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e0e0e0; color: #999999; font-size: 12px; line-height: 1.5;">
+                        This password reset link will expire in 1 hour. If you didn't request a password reset,
+                        you can safely ignore this email.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+      text: `
+Reset Your Password
+
+We received a request to reset your password. Click the link below to choose a new password:
+${resetUrl}
+
+This password reset link will expire in 1 hour.
+
+If you didn't request a password reset, you can safely ignore this email.
+
+---
+Meta Chat Platform
+      `.trim(),
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+      console.log(`Password reset email sent to ${email}`);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw new Error('Failed to send password reset email');
+    }
+  }
 }
 
 // Singleton instance
