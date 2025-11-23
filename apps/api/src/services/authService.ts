@@ -336,16 +336,20 @@ export async function resetPassword(
     // Hash new password
     const hashedPassword = await hashPassword(newPassword);
 
+    // Mark token as used atomically to prevent reuse
+    const markUsedResult = await tx.passwordResetToken.updateMany({
+      where: { id: resetToken.id, used: false },
+      data: { used: true },
+    });
+
+    if (markUsedResult.count === 0) {
+      throw new Error('Reset token has already been used');
+    }
+
     // Update password
     await tx.tenantUser.update({
       where: { id: resetToken.tenantUserId },
       data: { password: hashedPassword },
-    });
-
-    // Mark token as used
-    await tx.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { used: true },
     });
 
     return true;
