@@ -105,6 +105,7 @@ describe("Auth API Integration Tests", () => {
         .expect(401);
 
       expect(response.body).toHaveProperty("error");
+      expect(response.body.error).toBe("Invalid email or password");
     });
 
     it("should reject invalid password", async () => {
@@ -117,6 +118,7 @@ describe("Auth API Integration Tests", () => {
         .expect(401);
 
       expect(response.body).toHaveProperty("error");
+      expect(response.body.error).toBe("Invalid email or password");
     });
   });
 });
