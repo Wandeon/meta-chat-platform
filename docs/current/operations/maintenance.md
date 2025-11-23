@@ -241,6 +241,20 @@ crontab -e
 0 3 1-7 * 0 [ "$(date +\%u)" = 7 ] && /home/deploy/meta-chat-platform/ops/monthly-db-maintenance.sh >> /var/log/metachat/maintenance.log 2>&1
 ```
 
+### Expired Token Cleanup
+
+- **Script:** `npm run cleanup:tokens` (runs `scripts/cleanup-expired-tokens.ts`)
+- **What it does:**
+  - Deletes verification tokens that have expired
+  - Deletes password reset tokens that have expired
+  - Removes any used verification or password reset tokens older than 7 days
+- **Schedule with cron (as deploy user):**
+
+```cron
+# Nightly at 2:15 AM UTC
+15 2 * * * cd /home/deploy/meta-chat-platform && npm run cleanup:tokens >> /var/log/metachat/token-cleanup.log 2>&1
+```
+
 #### 2. Database Statistics Review
 
 ```bash

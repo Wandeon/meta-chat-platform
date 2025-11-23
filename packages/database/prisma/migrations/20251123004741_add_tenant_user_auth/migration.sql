@@ -1,23 +1,28 @@
 -- CreateEnum
-CREATE TYPE "TenantUserRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tenantuserrole') THEN
+    CREATE TYPE "TenantUserRole" AS ENUM ('OWNER', 'ADMIN', 'MEMBER');
+  END IF;
+END $$;
 
 -- DropForeignKey
-ALTER TABLE "analytics_daily" DROP CONSTRAINT "analytics_daily_tenant_id_fkey";
+ALTER TABLE "analytics_daily" DROP CONSTRAINT IF EXISTS "analytics_daily_tenant_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "invoices" DROP CONSTRAINT "invoices_tenant_id_fkey";
+ALTER TABLE "invoices" DROP CONSTRAINT IF EXISTS "invoices_tenant_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "pending_tenant_setups" DROP CONSTRAINT "pending_tenant_setups_admin_id_fkey";
+ALTER TABLE "pending_tenant_setups" DROP CONSTRAINT IF EXISTS "pending_tenant_setups_admin_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "usage_tracking" DROP CONSTRAINT "usage_tracking_tenant_id_fkey";
+ALTER TABLE "usage_tracking" DROP CONSTRAINT IF EXISTS "usage_tracking_tenant_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "verification_tokens" DROP CONSTRAINT "verification_tokens_admin_id_fkey";
+ALTER TABLE "verification_tokens" DROP CONSTRAINT IF EXISTS "verification_tokens_admin_id_fkey";
 
 -- DropIndex
-DROP INDEX "tenants_widget_config_idx";
+DROP INDEX IF EXISTS "tenants_widget_config_idx";
 
 -- AlterTable
 ALTER TABLE "admin_users" ALTER COLUMN "email_verified" SET NOT NULL;
@@ -93,7 +98,7 @@ ALTER COLUMN "updated_at" SET NOT NULL,
 ALTER COLUMN "updated_at" SET DATA TYPE TIMESTAMP(3);
 
 -- AlterTable
-ALTER TABLE "verification_tokens" ADD COLUMN     "tenant_user_id" TEXT,
+ALTER TABLE "verification_tokens" ADD COLUMN IF NOT EXISTS "tenant_user_id" TEXT,
 ALTER COLUMN "token" SET DATA TYPE TEXT,
 ALTER COLUMN "admin_id" SET DATA TYPE TEXT,
 ALTER COLUMN "expires_at" SET DATA TYPE TIMESTAMP(3),
@@ -112,10 +117,10 @@ ALTER COLUMN "created_at" SET NOT NULL,
 ALTER COLUMN "created_at" SET DATA TYPE TIMESTAMP(3);
 
 -- DropTable
-DROP TABLE "pending_tenant_setups";
+DROP TABLE IF EXISTS "pending_tenant_setups";
 
 -- CreateTable
-CREATE TABLE "tenant_users" (
+CREATE TABLE IF NOT EXISTS "tenant_users" (
     "id" TEXT NOT NULL,
     "tenantId" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -130,7 +135,7 @@ CREATE TABLE "tenant_users" (
 );
 
 -- CreateTable
-CREATE TABLE "password_reset_tokens" (
+CREATE TABLE IF NOT EXISTS "password_reset_tokens" (
     "id" TEXT NOT NULL,
     "tenant_user_id" TEXT NOT NULL,
     "token" TEXT NOT NULL,
@@ -142,53 +147,122 @@ CREATE TABLE "password_reset_tokens" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "tenant_users_email_key" ON "tenant_users"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "tenant_users_email_key" ON "tenant_users"("email");
 
 -- CreateIndex
-CREATE INDEX "tenant_users_tenantId_idx" ON "tenant_users"("tenantId");
+CREATE INDEX IF NOT EXISTS "tenant_users_tenantId_idx" ON "tenant_users"("tenantId");
 
 -- CreateIndex
-CREATE INDEX "tenant_users_email_idx" ON "tenant_users"("email");
+CREATE INDEX IF NOT EXISTS "tenant_users_email_idx" ON "tenant_users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "password_reset_tokens_token_key" ON "password_reset_tokens"("token");
 
 -- CreateIndex
-CREATE INDEX "password_reset_tokens_token_idx" ON "password_reset_tokens"("token");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_token_idx" ON "password_reset_tokens"("token");
 
 -- CreateIndex
-CREATE INDEX "password_reset_tokens_tenant_user_id_idx" ON "password_reset_tokens"("tenant_user_id");
+CREATE INDEX IF NOT EXISTS "password_reset_tokens_tenant_user_id_idx" ON "password_reset_tokens"("tenant_user_id");
 
 -- CreateIndex
-CREATE INDEX "idx_verification_tokens_tenant_user_id" ON "verification_tokens"("tenant_user_id");
+CREATE INDEX IF NOT EXISTS "idx_verification_tokens_tenant_user_id" ON "verification_tokens"("tenant_user_id");
 
 -- AddForeignKey
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'invoices_tenant_id_fkey'
+  ) THEN
+    ALTER TABLE "invoices" ADD CONSTRAINT "invoices_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "usage_tracking" ADD CONSTRAINT "usage_tracking_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'usage_tracking_tenant_id_fkey'
+  ) THEN
+    ALTER TABLE "usage_tracking" ADD CONSTRAINT "usage_tracking_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "tenant_users" ADD CONSTRAINT "tenant_users_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'tenant_users_tenantId_fkey'
+  ) THEN
+    ALTER TABLE "tenant_users" ADD CONSTRAINT "tenant_users_tenantId_fkey" FOREIGN KEY ("tenantId") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_tenant_user_id_fkey" FOREIGN KEY ("tenant_user_id") REFERENCES "tenant_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'password_reset_tokens_tenant_user_id_fkey'
+  ) THEN
+    ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_tenant_user_id_fkey" FOREIGN KEY ("tenant_user_id") REFERENCES "tenant_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admin_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'verification_tokens_admin_id_fkey'
+  ) THEN
+    ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_admin_id_fkey" FOREIGN KEY ("admin_id") REFERENCES "admin_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_tenant_user_id_fkey" FOREIGN KEY ("tenant_user_id") REFERENCES "tenant_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'verification_tokens_tenant_user_id_fkey'
+  ) THEN
+    ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_tenant_user_id_fkey" FOREIGN KEY ("tenant_user_id") REFERENCES "tenant_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "analytics_daily" ADD CONSTRAINT "analytics_daily_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'analytics_daily_tenant_id_fkey'
+  ) THEN
+    ALTER TABLE "analytics_daily" ADD CONSTRAINT "analytics_daily_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "message_metrics" ADD CONSTRAINT "message_metrics_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'message_metrics_tenant_id_fkey'
+  ) THEN
+    ALTER TABLE "message_metrics" ADD CONSTRAINT "message_metrics_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "message_metrics" ADD CONSTRAINT "message_metrics_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'message_metrics_conversation_id_fkey'
+  ) THEN
+    ALTER TABLE "message_metrics" ADD CONSTRAINT "message_metrics_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "conversations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
 
 -- AddForeignKey
-ALTER TABLE "widget_analytics" ADD CONSTRAINT "widget_analytics_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'widget_analytics_tenant_id_fkey'
+  ) THEN
+    ALTER TABLE "widget_analytics" ADD CONSTRAINT "widget_analytics_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+  END IF;
+END $$;
