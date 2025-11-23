@@ -34,7 +34,7 @@ async function request<TResponse, TBody = unknown>(
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-admin-key': apiKey, // Use x-admin-key header instead of Bearer token
+      'Authorization': `Bearer ${apiKey}`, // Use x-admin-key header instead of Bearer token
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
