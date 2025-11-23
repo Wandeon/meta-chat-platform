@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -18,15 +18,17 @@ const createChannelSchema = z.object({
 
 const updateChannelSchema = createChannelSchema.partial();
 
-router.use(authenticateAdmin);
+// Apply JWT authentication to all channel routes
+router.use(authenticateTenantUser);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.query;
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     const channels = await prisma.channel.findMany({
-      where: tenantId ? { tenantId: String(tenantId) } : undefined,
+      where: { tenantId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -37,11 +39,13 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createChannelSchema.extend({ tenantId: z.string() }), req.body);
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    const payload = parseWithSchema(createChannelSchema, req.body);
 
     const channel = await prisma.channel.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId,
         type: payload.type,
         config: payload.config ?? {},
         enabled: payload.enabled ?? true,
