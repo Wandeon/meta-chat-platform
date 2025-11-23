@@ -74,7 +74,7 @@ export function LoginPage() {
         </label>
 
         <Link to="/forgot-password" style={{ fontSize: '14px', color: '#3b82f6', textDecoration: 'none' }}>
-          Forgot password?
+          Forgot Password?
         </Link>
 
         {error && (
