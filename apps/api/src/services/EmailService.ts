@@ -8,18 +8,24 @@ export class EmailService {
 
   constructor() {
     // Initialize SMTP transporter
+    const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+    const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'localhost',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
+      port: smtpPort,
+      secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : smtpPort === 465, // default secure for 465
+      auth: process.env.SMTP_USER && smtpPassword ? {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        pass: smtpPassword,
       } : undefined,
     });
 
-    this.fromEmail = process.env.FROM_EMAIL || 'noreply@meta-chat-platform.com';
-    this.baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const fromAddress = process.env.SMTP_FROM_EMAIL || process.env.FROM_EMAIL || 'noreply@meta-chat-platform.com';
+    const fromName = process.env.SMTP_FROM_NAME;
+
+    this.fromEmail = fromName ? `${fromName} <${fromAddress}>` : fromAddress;
+    this.baseUrl = process.env.BASE_URL || process.env.API_URL || 'http://localhost:3000';
   }
 
   /**
