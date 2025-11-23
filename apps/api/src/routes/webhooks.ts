@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -19,14 +19,16 @@ const createWebhookSchema = z.object({
 
 const updateWebhookSchema = createWebhookSchema.partial();
 
-router.use(authenticateAdmin);
+// Apply JWT authentication to all webhook routes
+router.use(authenticateTenantUser);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.query;
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
     const webhooks = await prisma.webhook.findMany({
-      where: tenantId ? { tenantId: String(tenantId) } : undefined,
+      where: { tenantId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -37,11 +39,13 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createWebhookSchema.extend({ tenantId: z.string() }), req.body);
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    const payload = parseWithSchema(createWebhookSchema, req.body);
 
     const webhook = await prisma.webhook.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId,
         url: payload.url,
         events: payload.events,
         headers: payload.headers ?? {},

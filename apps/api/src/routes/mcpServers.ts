@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
 const prisma = getPrismaClient();
 const router = Router();
 
-router.use(authenticateAdmin);
+// Apply JWT authentication to all MCP server routes
+// Note: MCP servers are global (not tenant-specific) but accessible to all authenticated users
+router.use(authenticateTenantUser);
 
 const createMcpServerSchema = z.object({
   name: z.string().min(1),
