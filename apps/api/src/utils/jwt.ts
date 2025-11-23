@@ -32,7 +32,7 @@ export function generateToken(
   return jwt.sign(
     { ...payload, type: 'tenant_user' },
     getJwtSecret(),
-    { expiresIn, issuer: 'meta-chat-platform' }
+    { expiresIn: expiresIn as any, issuer: 'meta-chat-platform' }
   );
 }
 

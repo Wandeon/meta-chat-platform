@@ -226,7 +226,7 @@ export async function loginTenantUser(
 export async function resendVerificationEmail(email: string): Promise<boolean> {
   const admin = await prisma.adminUser.findUnique({
     where: { email },
-    include: { verificationTokens: { where: { used: false }, orderBy: { createdAt: 'desc' } } },
+    include: { VerificationToken: { where: { used: false }, orderBy: { createdAt: 'desc' } } },
   });
 
   if (!admin) {
@@ -238,8 +238,8 @@ export async function resendVerificationEmail(email: string): Promise<boolean> {
   }
 
   // Check if there's an unexpired token
-  const existingToken = admin.verificationTokens.find(
-    (t) => t.expiresAt > new Date()
+  const existingToken = admin.VerificationToken.find(
+    (t: any) => t.expiresAt > new Date()
   );
 
   if (existingToken) {
