@@ -8,9 +8,15 @@ const logger = createLogger('AggregateAnalytics');
  * Runs at midnight to aggregate previous day's data into analytics_daily table
  */
 export async function aggregateAnalytics(prisma: PrismaClient, targetDate?: Date) {
-  const date = targetDate || new Date();
-  date.setDate(date.getDate() - 1); // Previous day
-  const dateStr = date.toISOString().split('T')[0];
+  const date = targetDate ? new Date(targetDate) : new Date();
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCDate(date.getUTCDate() - 1); // Previous day (UTC)
+
+  const startOfDay = new Date(date);
+  const endOfDay = new Date(date);
+  endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
+
+  const dateStr = startOfDay.toISOString().split('T')[0];
 
   logger.info(`Starting daily analytics aggregation for ${dateStr}`);
 
@@ -57,30 +63,29 @@ async function aggregateTenantDay(
   tenantId: string,
   dateStr: string
 ): Promise<void> {
-  const startOfDay = new Date(dateStr);
-  const endOfDay = new Date(dateStr);
-  endOfDay.setDate(endOfDay.getDate() + 1);
-
   // Calculate usage metrics
   const conversationStats = await prisma.$queryRaw<Array<{ count: bigint }>>`
     SELECT COUNT(*) as count
     FROM conversations
-    WHERE tenant_id = ${tenantId}
-    AND DATE(created_at) = ${dateStr}::date
+    WHERE "tenantId" = ${tenantId}
+    AND "createdAt" >= ${startOfDay}
+    AND "createdAt" < ${endOfDay}
   `;
 
   const messageStats = await prisma.$queryRaw<Array<{ count: bigint }>>`
     SELECT COUNT(*) as count
     FROM messages
-    WHERE tenant_id = ${tenantId}
-    AND DATE(created_at) = ${dateStr}::date
+    WHERE "tenantId" = ${tenantId}
+    AND "createdAt" >= ${startOfDay}
+    AND "createdAt" < ${endOfDay}
   `;
 
   const activeUserStats = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(DISTINCT user_id) as count
+    SELECT COUNT(DISTINCT "userId") as count
     FROM conversations
-    WHERE tenant_id = ${tenantId}
-    AND DATE(created_at) = ${dateStr}::date
+    WHERE "tenantId" = ${tenantId}
+    AND "createdAt" >= ${startOfDay}
+    AND "createdAt" < ${endOfDay}
   `;
 
   // RAG metrics from message_metrics
@@ -93,7 +98,8 @@ async function aggregateTenantDay(
       AVG(rag_similarity) FILTER (WHERE rag_used = true) as avg_similarity
     FROM message_metrics
     WHERE tenant_id = ${tenantId}
-    AND DATE(created_at) = ${dateStr}::date
+    AND created_at >= ${startOfDay}
+    AND created_at < ${endOfDay}
   `;
 
   // Performance metrics
@@ -106,18 +112,20 @@ async function aggregateTenantDay(
       COUNT(*) FILTER (WHERE error_occurred = true) as error_count
     FROM message_metrics
     WHERE tenant_id = ${tenantId}
-    AND DATE(created_at) = ${dateStr}::date
+    AND created_at >= ${startOfDay}
+    AND created_at < ${endOfDay}
   `;
 
   // Escalation metrics
   const escalationStats = await prisma.$queryRaw<Array<{
     escalated: bigint;
   }>>`
-    SELECT COUNT(*) as escalated
+    SELECT COUNT(DISTINCT conversation_id) as escalated
     FROM message_metrics
     WHERE tenant_id = ${tenantId}
     AND escalated = true
-    AND DATE(created_at) = ${dateStr}::date
+    AND created_at >= ${startOfDay}
+    AND created_at < ${endOfDay}
   `;
 
   // Document queries (count distinct documents queried via RAG)
@@ -127,7 +135,8 @@ async function aggregateTenantDay(
     WHERE tenant_id = ${tenantId}
     AND rag_used = true
     AND rag_top_document_id IS NOT NULL
-    AND DATE(created_at) = ${dateStr}::date
+    AND created_at >= ${startOfDay}
+    AND created_at < ${endOfDay}
   `;
 
   // Widget analytics
@@ -140,15 +149,23 @@ async function aggregateTenantDay(
       COUNT(DISTINCT session_id) FILTER (WHERE event_type = 'message_sent') as conversations
     FROM widget_analytics
     WHERE tenant_id = ${tenantId}
-    AND DATE(created_at) = ${dateStr}::date
+    AND created_at >= ${startOfDay}
+    AND created_at < ${endOfDay}
   `;
 
   const totalConversations = Number(conversationStats[0]?.count || 0);
   const totalMessages = Number(messageStats[0]?.count || 0);
   const activeUsers = Number(activeUserStats[0]?.count || 0);
   const ragQueries = Number(ragStats[0]?.rag_queries || 0);
-  const ragAvgSimilarity = ragStats[0]?.avg_similarity;
-  const avgResponseTimeMs = performanceStats[0]?.avg_response_time;
+  const ragAvgSimilarity =
+    ragStats[0]?.avg_similarity !== null && ragStats[0]?.avg_similarity !== undefined
+      ? Number(ragStats[0]?.avg_similarity)
+      : null;
+  const avgResponseTimeMs =
+    performanceStats[0]?.avg_response_time !== null &&
+    performanceStats[0]?.avg_response_time !== undefined
+      ? Number(performanceStats[0]?.avg_response_time)
+      : null;
   const errorCount = Number(performanceStats[0]?.error_count || 0);
   const conversationsEscalated = Number(escalationStats[0]?.escalated || 0);
   const documentsQueried = Number(docStats[0]?.count || 0);
