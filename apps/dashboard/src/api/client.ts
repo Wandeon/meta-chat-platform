@@ -13,10 +13,10 @@ export interface ApiRequestOptions<TBody = unknown> {
 }
 
 /**
- * Make an API request with admin API key authentication
+ * Make an API request with JWT authentication
  */
 async function request<TResponse, TBody = unknown>(
-  apiKey: string,
+  token: string,
   options: ApiRequestOptions<TBody>,
 ): Promise<TResponse> {
   const url = new URL(`${API_BASE}${options.path}`, window.location.origin);
@@ -34,7 +34,7 @@ async function request<TResponse, TBody = unknown>(
     method: options.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'x-admin-key': apiKey, // Use x-admin-key header instead of Bearer token
+      'Authorization': `Bearer ${token}`, // Use Bearer token for JWT authentication
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
@@ -83,7 +83,7 @@ export function useApi() {
   const { apiKey } = useAuth();
 
   if (!apiKey) {
-    throw new Error('Missing admin API key');
+    throw new Error('Missing authentication token');
   }
 
   return {
