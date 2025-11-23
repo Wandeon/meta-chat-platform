@@ -269,3 +269,85 @@ export async function resendVerificationEmail(email: string): Promise<boolean> {
   await emailService.sendVerificationEmail(email, newToken);
   return true;
 }
+
+/**
+ * Generate password reset token and send email
+ */
+export async function requestPasswordReset(email: string): Promise<boolean> {
+  const user = await prisma.tenantUser.findUnique({
+    where: { email },
+  });
+
+  // Always return true to prevent email enumeration
+  if (!user) {
+    return true;
+  }
+
+  // Generate reset token
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await prisma.passwordResetToken.create({
+    data: {
+      tenantUserId: user.id,
+      token,
+      expiresAt,
+      used: false,
+    },
+  });
+
+  // Send password reset email
+  try {
+    await emailService.sendPasswordResetEmail(user.email, token);
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    // Still return true to prevent email enumeration
+  }
+
+  return true;
+}
+
+/**
+ * Reset password using token
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string
+): Promise<boolean> {
+  return await prisma.$transaction(async (tx) => {
+    // Find and validate token
+    const resetToken = await tx.passwordResetToken.findUnique({
+      where: { token },
+      include: { tenantUser: true },
+    });
+
+    if (!resetToken) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    if (resetToken.used) {
+      throw new Error('Reset token has already been used');
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      throw new Error('Reset token has expired');
+    }
+
+    // Hash new password
+    const hashedPassword = await hashPassword(newPassword);
+
+    // Update password
+    await tx.tenantUser.update({
+      where: { id: resetToken.tenantUserId },
+      data: { password: hashedPassword },
+    });
+
+    // Mark token as used
+    await tx.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { used: true },
+    });
+
+    return true;
+  });
+}
