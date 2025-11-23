@@ -18,9 +18,7 @@ export interface SignupResult {
 }
 
 export interface VerifyEmailResult {
-  admin: { id: string; email: string; name: string };
-  tenant: { id: string; name: string };
-  apiKey: string;
+  user: { id: string; email: string; name: string; tenantId: string };
 }
 
 /**
@@ -100,18 +98,22 @@ export async function signupTransaction(data: SignupData): Promise<SignupResult>
 
 
 /**
- * Verify email and activate account in a transaction
- * Creates tenant and API key as part of the verification process
+ * Verify email and mark TenantUser as verified
+ * Tenant was already created during signup
  */
 export async function verifyEmailTransaction(token: string): Promise<VerifyEmailResult | null> {
   return await prisma.$transaction(async (tx) => {
-    // Find and validate token
+    // Find and validate token with tenantUser relation
     const verification = await tx.verificationToken.findUnique({
       where: { token },
-      include: { admin: true },
+      include: { 
+        tenantUser: {
+          include: { tenant: true }
+        }
+      },
     });
 
-    if (!verification) {
+    if (!verification || !verification.tenantUser) {
       return null;
     }
 
@@ -126,7 +128,7 @@ export async function verifyEmailTransaction(token: string): Promise<VerifyEmail
     }
 
     // Check if user is already verified
-    if (verification.admin.emailVerified) {
+    if (verification.tenantUser.emailVerified) {
       throw new Error('Email is already verified');
     }
 
@@ -136,66 +138,27 @@ export async function verifyEmailTransaction(token: string): Promise<VerifyEmail
       data: { used: true },
     });
 
-    // Verify admin email
-    const admin = await tx.adminUser.update({
-      where: { id: verification.adminId },
+    // Mark TenantUser email as verified
+    const tenantUser = await tx.tenantUser.update({
+      where: { id: verification.tenantUserId! },
       data: { emailVerified: true },
     });
 
-    // Get company name for tenant provisioning
-    const pendingSetup = await tx.$queryRaw<
-      Array<{ company_name: string }>
-    >`
-      SELECT company_name FROM pending_tenant_setups
-      WHERE admin_id = ${admin.id}
-      LIMIT 1
-    `;
-
-    const companyName = pendingSetup[0]?.company_name || 'My Company';
-
-    // Create tenant
-    const tenant = await tx.tenant.create({
-      data: {
-        name: companyName,
-        enabled: true,
-        subscriptionStatus: 'free',
-        currentPlanId: 'free',
-        settings: {},
-        widgetConfig: {},
-      },
-    });
-
-    // Generate API key for the tenant
-    const apiKeyPrefix = 'mcp';
-    const apiKeySecret = crypto.randomBytes(32).toString('hex');
-    const apiKeyString = `${apiKeyPrefix}_${apiKeySecret}`;
-    
-    // Hash the API key
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.createHash('sha256').update(apiKeySecret + salt).digest('hex');
-    const lastFour = apiKeySecret.slice(-4);
-
-    await tx.tenantApiKey.create({
-      data: {
-        tenantId: tenant.id,
-        label: 'Default API Key',
-        prefix: apiKeyPrefix,
-        hash,
-        salt,
-        lastFour,
-        active: true,
-      },
-    });
-
-    // Clean up pending setup
-    await tx.$executeRaw`
-      DELETE FROM pending_tenant_setups WHERE admin_id = ${admin.id}
-    `;
+    // Send welcome email (outside transaction error handling)
+    try {
+      await emailService.sendWelcomeEmail(tenantUser.email, tenantUser.name || '');
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+      // Don't fail the transaction if welcome email fails
+    }
 
     return {
-      admin: { id: admin.id, email: admin.email, name: admin.name || '' },
-      tenant: { id: tenant.id, name: tenant.name },
-      apiKey: apiKeyString,
+      user: {
+        id: tenantUser.id,
+        email: tenantUser.email,
+        name: tenantUser.name || '',
+        tenantId: tenantUser.tenantId,
+      },
     };
   });
 }
