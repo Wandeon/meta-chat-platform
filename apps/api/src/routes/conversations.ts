@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -26,16 +26,19 @@ const updateConversationSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-router.use(authenticateAdmin);
+// Apply JWT authentication to all conversation routes
+router.use(authenticateTenantUser);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
     const query = parseWithSchema(listQuerySchema, req.query);
-    const { tenantId } = req.query;
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    
     const conversations = await prisma.conversation.findMany({
       where: {
-        ...(tenantId ? { tenantId: String(tenantId) } : {}),
+        tenantId: tenantId,
         ...(query.status ? { status: query.status } : {}),
         ...(query.channelType ? { channelType: query.channelType } : {}),
         ...(query.userId ? { userId: query.userId } : {}),
@@ -50,11 +53,13 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createConversationSchema.extend({ tenantId: z.string() }), req.body);
+    const payload = parseWithSchema(createConversationSchema, req.body);
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     const conversation = await prisma.conversation.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId: tenantId,
         channelType: payload.channelType,
         externalId: payload.externalId,
         userId: payload.userId,
@@ -70,17 +75,14 @@ router.get(
   '/:conversationId',
   asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     // Use findFirst with tenantId to enforce tenant isolation
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
-        tenantId: String(tenantId),
+        tenantId: tenantId,
       },
       include: {
         messages: {
@@ -102,18 +104,15 @@ router.put(
   '/:conversationId',
   asyncHandler(async (req, res) => {
     const { conversationId } = req.params;
-    const { tenantId } = req.query;
     const payload = parseWithSchema(updateConversationSchema, req.body);
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     // Use findFirst with tenantId to enforce tenant isolation
     const existing = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
-        tenantId: String(tenantId),
+        tenantId: tenantId,
       },
     });
 

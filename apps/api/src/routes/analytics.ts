@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, respondSuccess } from '../utils/http';
 import { AnalyticsService } from '../services/AnalyticsService';
 import { z } from 'zod';
@@ -9,8 +9,8 @@ const prisma = getPrismaClient();
 const router = Router();
 const analyticsService = new AnalyticsService(prisma);
 
-// All analytics routes require admin authentication
-router.use(authenticateAdmin);
+// All analytics routes require JWT authentication
+router.use(authenticateTenantUser);
 
 /**
  * GET /api/analytics/overview
@@ -19,11 +19,8 @@ router.use(authenticateAdmin);
 router.get(
   '/overview',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.query;
-
-    if (!tenantId || typeof tenantId !== 'string') {
-      return res.status(400).json({ error: 'tenantId query parameter is required' });
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     // Get current snapshot metrics
     const current = await analyticsService.getCurrentMetrics(tenantId);
@@ -55,11 +52,9 @@ router.get(
 router.get(
   '/rag-performance',
   asyncHandler(async (req, res) => {
-    const { tenantId, days } = req.query;
-
-    if (!tenantId || typeof tenantId !== 'string') {
-      return res.status(400).json({ error: 'tenantId query parameter is required' });
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    const { days } = req.query;
 
     // Default to last 30 days
     const numDays = days ? parseInt(days as string) : 30;
@@ -80,11 +75,9 @@ router.get(
 router.get(
   '/top-questions',
   asyncHandler(async (req, res) => {
-    const { tenantId, limit } = req.query;
-
-    if (!tenantId || typeof tenantId !== 'string') {
-      return res.status(400).json({ error: 'tenantId query parameter is required' });
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    const { limit } = req.query;
 
     const limitNum = limit ? parseInt(limit as string) : 10;
     const topQuestions = await analyticsService.getTopQuestions(tenantId, limitNum);
@@ -100,13 +93,11 @@ router.get(
 router.get(
   '/response-times',
   asyncHandler(async (req, res) => {
-    const { tenantId, range } = req.query;
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    const { range } = req.query;
 
-    if (!tenantId || typeof tenantId !== 'string') {
-      return res.status(400).json({ error: 'tenantId query parameter is required' });
-    }
-
-    // Parse range (e.g., "7d", "30d", "90d")
+    // Parse range (e.g., 7d, 30d, 90d)
     let days = 7;
     if (range && typeof range === 'string') {
       const match = range.match(/^(\d+)d$/);
@@ -132,12 +123,9 @@ router.get(
 router.get(
   '/daily/:date',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.query;
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
     const { date } = req.params;
-
-    if (!tenantId || typeof tenantId !== 'string') {
-      return res.status(400).json({ error: 'tenantId query parameter is required' });
-    }
 
     // Parse and validate date
     const targetDate = new Date(date);

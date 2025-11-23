@@ -2,7 +2,7 @@ import { Router } from 'express';
 import createHttpError from 'http-errors';
 import crypto from 'crypto';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 import { processDocument, getEmbeddingConfig } from '../services/documentProcessor';
@@ -29,16 +29,19 @@ const updateDocumentSchema = z.object({
   status: z.string().optional(),
 });
 
-router.use(authenticateAdmin);
+// Apply JWT authentication to all document routes
+router.use(authenticateTenantUser);
 
 router.get(
   '/',
   asyncHandler(async (req, res) => {
     const query = parseWithSchema(listQuerySchema, req.query);
-    const { tenantId } = req.query;
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
+    
     const documents = await prisma.document.findMany({
       where: {
-        ...(tenantId ? { tenantId: String(tenantId) } : {}),
+        tenantId: tenantId,
         ...(query.status ? { status: query.status } : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -51,7 +54,9 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createDocumentSchema.extend({ tenantId: z.string() }), req.body);
+    const payload = parseWithSchema(createDocumentSchema, req.body);
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     // Extract content from metadata
     const content = payload.metadata?.content || '';
@@ -65,7 +70,7 @@ router.post(
     const timestamp = Date.now();
     const sanitizedName = payload.name.replace(/[^a-zA-Z0-9-_]/g, '_');
     const filename = `${sanitizedName}.txt`;
-    const path = `documents/${payload.tenantId}/${timestamp}-${filename}`;
+    const path = `documents/${tenantId}/${timestamp}-${filename}`;
 
     // Determine mime type from metadata or default
     const mimeType = (payload.metadata?.fileType as string) || 'text/plain';
@@ -73,7 +78,7 @@ router.post(
 
     const document = await prisma.document.create({
       data: {
-        tenantId: payload.tenantId,
+        tenantId: tenantId,
         filename: filename,
         mimeType: mimeType,
         size: size,
@@ -90,7 +95,7 @@ router.post(
     });
 
     // Trigger document processing asynchronously
-    const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
+    const embeddingConfig = await getEmbeddingConfig(tenantId);
     processDocument(document.id, { embeddingConfig }).catch((error) => {
       console.error(`Failed to process document ${document.id}:`, error);
     });
@@ -103,17 +108,14 @@ router.get(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     // Use findFirst with tenantId to enforce tenant isolation
     const document = await prisma.document.findFirst({
       where: {
         id: documentId,
-        tenantId: String(tenantId),
+        tenantId: tenantId,
       },
     });
 
@@ -127,18 +129,15 @@ router.get(
 
 const updateDocumentHandler = asyncHandler(async (req, res) => {
   const { documentId } = req.params;
-  const { tenantId } = req.query;
   const payload = parseWithSchema(updateDocumentSchema, req.body);
-
-  if (!tenantId) {
-    throw createHttpError(400, 'tenantId is required');
-  }
+  // Use authenticated user's tenantId
+  const tenantId = req.tenantUser!.tenantId;
 
   // Use findFirst with tenantId to enforce tenant isolation
   const existing = await prisma.document.findFirst({
     where: {
       id: documentId,
-      tenantId: String(tenantId),
+      tenantId: tenantId,
     },
   });
 
@@ -186,17 +185,14 @@ router.delete(
   '/:documentId',
   asyncHandler(async (req, res) => {
     const { documentId } = req.params;
-    const { tenantId } = req.query;
-
-    if (!tenantId) {
-      throw createHttpError(400, 'tenantId is required');
-    }
+    // Use authenticated user's tenantId
+    const tenantId = req.tenantUser!.tenantId;
 
     // Use deleteMany with tenantId to enforce tenant isolation
     const result = await prisma.document.deleteMany({
       where: {
         id: documentId,
-        tenantId: String(tenantId),
+        tenantId: tenantId,
       },
     });
 

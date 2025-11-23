@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import createHttpError from 'http-errors';
 import { getPrismaClient } from '@meta-chat/database';
-import { authenticateAdmin } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondCreated, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 
@@ -18,33 +18,33 @@ const createTenantSchema = z.object({
 
 const updateTenantSchema = createTenantSchema.partial();
 
-router.use(authenticateAdmin);
+// Apply JWT authentication to all tenant routes
+router.use(authenticateTenantUser);
 
 router.get(
   '/',
-  asyncHandler(async (_req, res) => {
-    const tenants = await prisma.tenant.findMany({
-      orderBy: { createdAt: 'desc' },
+  asyncHandler(async (req, res) => {
+    const userTenantId = req.tenantUser!.tenantId;
+    
+    // Tenant users can only see their own tenant
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: userTenantId },
     });
 
-    respondSuccess(res, tenants);
+    if (!tenant) {
+      throw createHttpError(404, 'Tenant not found');
+    }
+
+    // Return as array for consistency with previous API
+    respondSuccess(res, [tenant]);
   }),
 );
 
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const payload = parseWithSchema(createTenantSchema, req.body);
-
-    const tenant = await prisma.tenant.create({
-      data: {
-        name: payload.name,
-        settings: payload.settings ?? {},
-        enabled: payload.enabled ?? true,
-      },
-    });
-
-    respondCreated(res, tenant);
+    // Tenant users cannot create new tenants
+    throw createHttpError(403, 'Forbidden: Cannot create tenants');
   }),
 );
 
@@ -52,6 +52,13 @@ router.get(
   '/:tenantId',
   asyncHandler(async (req, res) => {
     const { tenantId } = req.params;
+    const userTenantId = req.tenantUser!.tenantId;
+
+    // Security: users can only access their own tenant
+    if (tenantId !== userTenantId) {
+      throw createHttpError(403, 'Access denied');
+    }
+
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
 
     if (!tenant) {
@@ -66,7 +73,13 @@ router.put(
   '/:tenantId',
   asyncHandler(async (req, res) => {
     const { tenantId } = req.params;
+    const userTenantId = req.tenantUser!.tenantId;
     const payload = parseWithSchema(updateTenantSchema, req.body);
+
+    // Security: users can only update their own tenant
+    if (tenantId !== userTenantId) {
+      throw createHttpError(403, 'Access denied');
+    }
 
     const existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!existing) {
@@ -78,7 +91,8 @@ router.put(
       data: {
         name: payload.name ?? existing.name,
         settings: payload.settings ?? existing.settings,
-        enabled: payload.enabled ?? existing.enabled,
+        // Prevent users from changing enabled status
+        enabled: existing.enabled,
       },
     });
 
@@ -90,7 +104,13 @@ router.patch(
   '/:tenantId',
   asyncHandler(async (req, res) => {
     const { tenantId } = req.params;
+    const userTenantId = req.tenantUser!.tenantId;
     const payload = parseWithSchema(updateTenantSchema, req.body);
+
+    // Security: users can only update their own tenant
+    if (tenantId !== userTenantId) {
+      throw createHttpError(403, 'Access denied');
+    }
 
     const existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!existing) {
@@ -102,7 +122,8 @@ router.patch(
       data: {
         name: payload.name ?? existing.name,
         settings: payload.settings ?? existing.settings,
-        enabled: payload.enabled ?? existing.enabled,
+        // Prevent users from changing enabled status
+        enabled: existing.enabled,
       },
     });
 
@@ -113,19 +134,8 @@ router.patch(
 router.delete(
   '/:tenantId',
   asyncHandler(async (req, res) => {
-    const { tenantId } = req.params;
-
-    const existing = await prisma.tenant.findUnique({ where: { id: tenantId } });
-    if (!existing) {
-      throw createHttpError(404, 'Tenant not found');
-    }
-
-    // Delete the tenant (cascade will handle related records due to schema)
-    await prisma.tenant.delete({
-      where: { id: tenantId },
-    });
-
-    respondSuccess(res, { id: tenantId, deleted: true });
+    // Tenant users cannot delete tenants
+    throw createHttpError(403, 'Forbidden: Cannot delete tenants');
   }),
 );
 
