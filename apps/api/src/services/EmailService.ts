@@ -246,9 +246,9 @@ Meta Chat Platform
 
     try {
       await this.transporter.sendMail(mailOptions);
-      console.log(`Password reset email sent to ${email}`);
+      logger.info({ email }, 'Password reset email sent');
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      logger.error({ email, error }, 'Failed to send password reset email');
       throw new Error('Failed to send password reset email');
     }
   }
