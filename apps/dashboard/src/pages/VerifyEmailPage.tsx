@@ -22,13 +22,12 @@ export function VerifyEmailPage() {
       }
 
       try {
-        const response = await fetch(`${API_BASE}/api/auth/verify-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token }),
-        });
+        const response = await fetch(
+          `${API_BASE}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
+          {
+            method: 'GET',
+          }
+        );
 
         if (!response.ok) {
           let errorMessage: string;
