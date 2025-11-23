@@ -63,8 +63,8 @@ export function ResetPasswordPage() {
               justifyContent: 'center',
             }}
           >
-            <svg width=32 height=32 viewBox=0 0 24 24 fill=none xmlns=http://www.w3.org/2000/svg>
-              <path d=M18 6L6 18M6 6l12 12 stroke=#dc2626 strokeWidth=2 strokeLinecap=round strokeLinejoin=round/>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Invalid Link</h1>
@@ -79,7 +79,7 @@ export function ResetPasswordPage() {
             }}
           >
             <Link
-              to=/forgot-password
+              to="/forgot-password"
               style={{
                 color: '#3b82f6',
                 textDecoration: 'none',
@@ -150,12 +150,12 @@ export function ResetPasswordPage() {
         <label style={{ display: 'grid', gap: 8 }}>
           <span style={{ fontWeight: 500, fontSize: '14px' }}>New Password</span>
           <input
-            type=password
+            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onFocus={() => setShowValidation(true)}
-            placeholder=Enter new password
-            autoComplete=new-password
+            placeholder="Enter new password"
+            autoComplete="new-password"
             required
             disabled={isSubmitting}
             style={{ font: 'inherit', fontSize: '16px', borderRadius: 8, border: '1px solid #cbd5e1', padding: '10px 12px', outline: 'none' }}
@@ -193,11 +193,11 @@ export function ResetPasswordPage() {
         <label style={{ display: 'grid', gap: 8 }}>
           <span style={{ fontWeight: 500, fontSize: '14px' }}>Confirm Password</span>
           <input
-            type=password
+            type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder=Confirm new password
-            autoComplete=new-password
+            placeholder="Confirm new password"
+            autoComplete="new-password"
             required
             disabled={isSubmitting}
             style={{ font: 'inherit', fontSize: '16px', borderRadius: 8, border: '1px solid #cbd5e1', padding: '10px 12px', outline: 'none' }}
@@ -211,7 +211,7 @@ export function ResetPasswordPage() {
         )}
 
         <button
-          type=submit
+          type="submit"
           disabled={isSubmitting}
           style={{ marginTop: '8px', padding: '12px', fontSize: '14px', fontWeight: 500, background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.6 : 1 }}
         >
@@ -220,7 +220,7 @@ export function ResetPasswordPage() {
 
         <p style={{ margin: 0, marginTop: '8px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
           Remember your password?{' '}
-          <Link to=/login style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
+          <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
             Sign in
           </Link>
         </p>

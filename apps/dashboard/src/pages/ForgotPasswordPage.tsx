@@ -55,8 +55,8 @@ export function ForgotPasswordPage() {
               justifyContent: 'center',
             }}
           >
-            <svg width=32 height=32 viewBox=0 0 24 24 fill=none xmlns=http://www.w3.org/2000/svg>
-              <path d=M3 8L10.89 13.26C11.23 13.47 11.61 13.59 12 13.59C12.39 13.59 12.77 13.47 13.11 13.26L21 8M5 19H19C19.53 19 20.04 18.79 20.41 18.41C20.79 18.04 21 17.53 21 17V7C21 6.47 20.79 5.96 20.41 5.59C20.04 5.21 19.53 5 19 5H5C4.47 5 3.96 5.21 3.59 5.59C3.21 5.96 3 6.47 3 7V17C3 17.53 3.21 18.04 3.59 18.41C3.96 18.79 4.47 19 5 19Z stroke=#3b82f6 strokeWidth=2 strokeLinecap=round strokeLinejoin=round/>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 8L10.89 13.26C11.23 13.47 11.61 13.59 12 13.59C12.39 13.59 12.77 13.47 13.11 13.26L21 8M5 19H19C19.53 19 20.04 18.79 20.41 18.41C20.79 18.04 21 17.53 21 17V7C21 6.47 20.79 5.96 20.41 5.59C20.04 5.21 19.53 5 19 5H5C4.47 5 3.96 5.21 3.59 5.59C3.21 5.96 3 6.47 3 7V17C3 17.53 3.21 18.04 3.59 18.41C3.96 18.79 4.47 19 5 19Z" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Check Your Email</h1>
@@ -71,7 +71,7 @@ export function ForgotPasswordPage() {
             }}
           >
             <Link
-              to=/login
+              to="/login"
               style={{
                 color: '#3b82f6',
                 textDecoration: 'none',
@@ -100,11 +100,11 @@ export function ForgotPasswordPage() {
         <label style={{ display: 'grid', gap: 8 }}>
           <span style={{ fontWeight: 500, fontSize: '14px' }}>Email</span>
           <input
-            type=email
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder=you@company.com
-            autoComplete=email
+            placeholder="you@company.com"
+            autoComplete="email"
             required
             disabled={isSubmitting}
             style={{ font: 'inherit', fontSize: '16px', borderRadius: 8, border: '1px solid #cbd5e1', padding: '10px 12px', outline: 'none' }}
@@ -112,7 +112,7 @@ export function ForgotPasswordPage() {
         </label>
 
         <button
-          type=submit
+          type="submit"
           disabled={isSubmitting}
           style={{ marginTop: '8px', padding: '12px', fontSize: '14px', fontWeight: 500, background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.6 : 1 }}
         >
@@ -121,7 +121,7 @@ export function ForgotPasswordPage() {
 
         <p style={{ margin: 0, marginTop: '8px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
           Remember your password?{' '}
-          <Link to=/login style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
+          <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
             Sign in
           </Link>
         </p>
