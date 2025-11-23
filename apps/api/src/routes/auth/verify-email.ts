@@ -9,11 +9,91 @@ const verifyEmailSchema = z.object({
   token: z.string().min(1, 'Token is required'),
 });
 
+const parseToken = (value: unknown) =>
+  Array.isArray(value) ? value[0] : value;
+
+async function handleVerification(token: string, res: Response) {
+  // Execute transactional email verification
+  // This verifies the token, marks email as verified, and sends welcome email
+  // All in a single transaction - if any step fails, everything rolls back
+  const result = await verifyEmailTransaction(token);
+
+  if (!result) {
+    return res.status(404).json({
+      success: false,
+      error: 'Invalid verification token',
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'Email verified successfully. Your account is now active.',
+    data: {
+      email: result.user.email,
+      name: result.user.name,
+      emailVerified: true,
+      tenantId: result.user.tenantId,
+    },
+  });
+}
+
 /**
- * POST /api/auth/verify-email
+ * GET/POST /api/auth/verify-email
  * Verify email address using token and auto-provision tenant
  * Uses transactional approach to ensure all-or-nothing semantics
  */
+router.get('/verify-email', async (req: Request, res: Response) => {
+  try {
+    const validationResult = verifyEmailSchema.safeParse({
+      token: parseToken(req.query.token),
+    });
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: validationResult.error.issues.map((err: any) => ({
+          field: err.path.join('.'),
+          message: err.message,
+        })),
+      });
+    }
+
+    const { token } = validationResult.data;
+    return await handleVerification(token, res);
+  } catch (error) {
+    console.error('Email verification error:', error);
+
+    // Handle specific error cases
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    if (errorMessage.includes('already been used')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token has already been used',
+      });
+    }
+
+    if (errorMessage.includes('expired')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token has expired',
+      });
+    }
+
+    if (errorMessage.includes('already verified')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is already verified',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'An error occurred during email verification. Please try again.',
+    });
+  }
+});
+
 router.post('/verify-email', async (req: Request, res: Response) => {
   try {
     // Validate request body
@@ -30,35 +110,13 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     }
 
     const { token } = validationResult.data;
-
-    // Execute transactional email verification
-    // This verifies the token, marks email as verified, and sends welcome email
-    // All in a single transaction - if any step fails, everything rolls back
-    const result = await verifyEmailTransaction(token);
-
-    if (!result) {
-      return res.status(404).json({
-        success: false,
-        error: 'Invalid verification token',
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Email verified successfully. Your account is now active.',
-      data: {
-        email: result.user.email,
-        name: result.user.name,
-        emailVerified: true,
-        tenantId: result.user.tenantId,
-      },
-    });
+    return await handleVerification(token, res);
   } catch (error) {
     console.error('Email verification error:', error);
 
     // Handle specific error cases
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     if (errorMessage.includes('already been used')) {
       return res.status(400).json({
         success: false,
