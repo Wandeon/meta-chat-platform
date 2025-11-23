@@ -20,6 +20,57 @@ export const widgetConfigLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const authLimiter = rateLimit({
+  // Use a longer window for login/signup to block brute-force attempts
+  windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
+  max: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '10', 10), // 10 attempts per window
+
+  keyGenerator: (req: Request) => {
+    const body = req.body as { tenantId?: string; email?: string; adminId?: string };
+
+    if (req.adminUser?.id || body?.adminId) {
+      return `admin:${req.adminUser?.id || body.adminId}`;
+    }
+
+    if (req.tenant?.id || body?.tenantId) {
+      return `tenant:${req.tenant?.id || body.tenantId}`;
+    }
+
+    if (body?.email) {
+      return `email:${body.email.toLowerCase()}`;
+    }
+
+    return `ip:${req.ip}`;
+  },
+
+  message: {
+    success: false,
+    error: 'Too many authentication attempts. Please try again later.',
+    code: 'AUTH_RATE_LIMIT_EXCEEDED',
+  },
+
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  handler: (req: Request, res: Response) => {
+    console.warn('[RATE_LIMIT] Auth rate limit exceeded', {
+      ip: req.ip,
+      path: req.path,
+      tenant: req.tenant?.id || (req.body as { tenantId?: string }).tenantId || 'unknown',
+      admin: req.adminUser?.id || (req.body as { adminId?: string }).adminId || null,
+      email: (req.body as { email?: string }).email || null,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(429).json({
+      success: false,
+      error: 'Too many authentication attempts. Please try again later.',
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+      retryAfter: res.getHeader('Retry-After'),
+    });
+  },
+});
+
 // Combined limiter for chat endpoints - applies both IP and tenant-based limits
 // This provides defense in depth
 export const chatLimiter = rateLimit({
