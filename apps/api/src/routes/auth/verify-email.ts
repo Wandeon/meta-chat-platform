@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { verifyEmailTransaction } from '../../services/authService';
-import { emailService } from '../../services/EmailService';
 
 const router = Router();
 
@@ -33,7 +32,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     const { token } = validationResult.data;
 
     // Execute transactional email verification
-    // This verifies the token, marks email as verified, creates tenant, and generates API key
+    // This verifies the token, marks email as verified, and sends welcome email
     // All in a single transaction - if any step fails, everything rolls back
     const result = await verifyEmailTransaction(token);
 
@@ -44,23 +43,14 @@ router.post('/verify-email', async (req: Request, res: Response) => {
       });
     }
 
-    // Send welcome email (outside transaction - non-critical)
-    try {
-      await emailService.sendWelcomeEmail(result.admin.email, result.admin.name);
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
-      // Don't fail the request if welcome email fails
-    }
-
     res.status(200).json({
       success: true,
       message: 'Email verified successfully. Your account is now active.',
       data: {
-        email: result.admin.email,
-        name: result.admin.name,
+        email: result.user.email,
+        name: result.user.name,
         emailVerified: true,
-        tenantId: result.tenant.id,
-        apiKey: result.apiKey,
+        tenantId: result.user.tenantId,
       },
     });
   } catch (error) {
