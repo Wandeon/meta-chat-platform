@@ -1,6 +1,6 @@
 // Re-export Prisma client
 export { PrismaClient, Prisma } from '@prisma/client';
-export type { 
+export type {
   Tenant, Channel, Conversation, Message, Document, Chunk,
   AdminUser, AdminApiKey, VerificationToken,
   TenantApiKey, Invoice, UsageTracking,
@@ -15,6 +15,6 @@ export * from './client';
 export * from './maintenance';
 
 // Export enums
-export { 
+export {
   AdminRole, AdminKeyStatus
 } from '@prisma/client';

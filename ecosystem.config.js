@@ -1,4 +1,4 @@
-require('dotenv').config({ path: './apps/api/.env' });
+require('dotenv').config({ path: './apps/api/.env.production' });
 
 module.exports = {
   apps: [
@@ -11,12 +11,12 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: process.env.PORT || 3007,
-        DATABASE_URL: process.env.DATABASE_URL || 'postgresql://metachat:QDpBLzzgyRbp_tU*^-RM6%GcctYoCFKe@localhost:5432/metachat?schema=public',
-        REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379/0',
-        RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://metachat:vxY%25prw5pBLEAL%3D%26F%23wqvXHN@localhost:5672',
-        ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET || 'D367r7UT+BcitB5rxohtp1zuYIEgUPbXMIF0OL9gePjw5ZjRG14OXFVUs1pOJTQbOOl9qLSGM75Fqu0/M+b8WA==',
-        ADMIN_KEY_PEPPER: process.env.ADMIN_KEY_PEPPER || 'bc0a3de5561410209482fd9e04c36b8a45f9f645e7ce5c6ec56a4f9aebbb567c',
-        ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'dB860O4xb/SRO7iZ6PTJVEZSb49c1zZCXi8vmfIqBr8=',
+        DATABASE_URL: process.env.DATABASE_URL,
+        REDIS_URL: process.env.REDIS_URL,
+        RABBITMQ_URL: process.env.RABBITMQ_URL,
+        ADMIN_JWT_SECRET: process.env.ADMIN_JWT_SECRET,
+        ADMIN_KEY_PEPPER: process.env.ADMIN_KEY_PEPPER,
+        ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
         STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
         STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
         STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
@@ -54,9 +54,9 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        DATABASE_URL: process.env.DATABASE_URL || 'postgresql://metachat:QDpBLzzgyRbp_tU*^-RM6%GcctYoCFKe@localhost:5432/metachat?schema=public',
-        RABBITMQ_URL: process.env.RABBITMQ_URL || 'amqp://metachat:vxY%25prw5pBLEAL%3D%26F%23wqvXHN@localhost:5672',
-        ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'dB860O4xb/SRO7iZ6PTJVEZSb49c1zZCXi8vmfIqBr8=',
+        DATABASE_URL: process.env.DATABASE_URL,
+        RABBITMQ_URL: process.env.RABBITMQ_URL,
+        ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
         ENABLE_CONFIDENCE_ESCALATION: 'true',
         WORKER_VISIBILITY_TIMEOUT_MS: '300000',
         WORKER_MAX_RETRIES: '3',

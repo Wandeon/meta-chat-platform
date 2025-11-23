@@ -106,10 +106,62 @@ router.post(
     if (enableRag) {
       try {
         const embeddingConfig = await getEmbeddingConfig(payload.tenantId);
-    const messages: LlmMessage[] = [];
+
+        // Import generateQueryEmbedding
+        const { generateQueryEmbedding } = await import('../services/embedding');
+
+        // Generate embedding for the user's query
+        const queryEmbedding = await generateQueryEmbedding(payload.message, embeddingConfig);
+
+        // Search for similar chunks using the pgvector implementation
+        const ragTopK = ragConfig.topK || 5;
+        const ragMinSimilarity = ragConfig.minSimilarity || 0.7;
+
+        searchResults = await searchSimilarChunks(
+          payload.tenantId,
+          queryEmbedding,
+          {
+            limit: ragTopK,
+            minSimilarity: ragMinSimilarity,
+            useHybridSearch: true,
+            keywordQuery: payload.message
+          }
+        );
+
+        if (searchResults.length > 0) {
+          contextUsed = true;
+
+          // Build context string from search results
+          const contextText = searchResults
+            .map((result, idx) => {
+              const similarity = (result.similarity * 100).toFixed(1);
+              return `[Document ${idx + 1}] (Similarity: ${similarity}%)\nSource: ${result.document?.title || 'Unknown'}\n${result.content}`;
+            })
+            .join('\n\n');
+
+          // Prepend context to system prompt
+          const ragPrompt = `You are a helpful assistant. Use the following context from the knowledge base to answer questions accurately. If the context doesn't contain relevant information, you can still provide a helpful response based on your general knowledge, but mention that it's not from the knowledge base.
+
+CONTEXT FROM KNOWLEDGE BASE:
+${contextText}
+
+---
+
+Now answer the user's question using this context when relevant.`;
+
+          systemPrompt = ragPrompt + (systemPrompt ? '\n\n' + systemPrompt : '');
+
+          console.log('[RAG] Retrieved context:', {
+            chunks: searchResults.length,
+            topSimilarity: searchResults[0]?.similarity,
+            hybridSearch: true
+          });
+        } else {
+          console.log('[RAG] No relevant context found');
+        }
       } catch (error) {
-        console.error("[RAG] Error getting embedding config:", error);
-        // Continue without RAG if embedding config fails
+        console.error("[RAG] Error during RAG retrieval:", error);
+        // Continue without RAG if embedding or search fails
       }
     }
     const messages: LlmMessage[] = [];
