@@ -18,8 +18,8 @@ interface TokenPayload {
 }
 
 interface AuthContextValue {
-  apiKey: string | null;
-  login: (apiKey: string) => void;
+  token: string | null;
+  login: (token: string) => void;
   logout: () => void;
   getUser: () => TokenPayload | null;
 }
@@ -47,7 +47,7 @@ function isTokenExpired(token: string): boolean {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   // Update AuthProvider state
-  const [apiKey, setApiKey] = useState<string | null>(() => {
+  const [token, setToken] = useState<string | null>(() => {
     const token = localStorage.getItem(STORAGE_KEY);
     if (token && isTokenExpired(token)) {
       localStorage.removeItem(STORAGE_KEY);
@@ -59,36 +59,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   useEffect(() => {
-    if (!apiKey) {
+    if (!token) {
       localStorage.removeItem(STORAGE_KEY);
     } else {
-      localStorage.setItem(STORAGE_KEY, apiKey);
+      localStorage.setItem(STORAGE_KEY, token);
     }
-  }, [apiKey]);
+  }, [token]);
 
   const login = useCallback(
-    (nextApiKey: string) => {
-      setApiKey(nextApiKey);
+    (nextToken: string) => {
+      setToken(nextToken);
       navigate(location.state?.from?.pathname ?? '/tenants', { replace: true });
     },
     [location.state, navigate],
   );
 
   const logout = useCallback(() => {
-    setApiKey(null);
+    setToken(null);
     navigate('/login', { replace: true });
   }, [navigate]);
 
   // Add getUser function
   const getUser = useCallback(() => {
-    if (!apiKey) return null;
-    return decodeJWT(apiKey);
-  }, [apiKey]);
+    if (!token) return null;
+    return decodeJWT(token);
+  }, [token]);
 
   // Update context value
   const value = useMemo<AuthContextValue>(
-    () => ({ apiKey, login, logout, getUser }),
-    [apiKey, login, logout, getUser]
+    () => ({ token, login, logout, getUser }),
+    [token, login, logout, getUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

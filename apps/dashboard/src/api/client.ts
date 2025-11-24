@@ -80,26 +80,26 @@ async function request<TResponse, TBody = unknown>(
  * React hook for making authenticated API requests
  */
 export function useApi() {
-  const { apiKey } = useAuth();
+  const { token } = useAuth();
 
-  if (!apiKey) {
+  if (!token) {
     throw new Error('Missing authentication token');
   }
 
   return {
     get: <TResponse>(path: string, query?: Record<string, string | number | boolean | undefined>) =>
-      request<TResponse>(apiKey, { path, method: 'GET', query }),
+      request<TResponse>(token, { path, method: 'GET', query }),
 
     post: <TResponse, TBody = unknown>(path: string, body: TBody) =>
-      request<TResponse, TBody>(apiKey, { path, method: 'POST', body }),
+      request<TResponse, TBody>(token, { path, method: 'POST', body }),
 
     put: <TResponse, TBody = unknown>(path: string, body: TBody) =>
-      request<TResponse, TBody>(apiKey, { path, method: 'PUT', body }),
+      request<TResponse, TBody>(token, { path, method: 'PUT', body }),
 
     patch: <TResponse, TBody = unknown>(path: string, body: TBody) =>
-      request<TResponse, TBody>(apiKey, { path, method: 'PATCH', body }),
+      request<TResponse, TBody>(token, { path, method: 'PATCH', body }),
 
     delete: <TResponse>(path: string) =>
-      request<TResponse>(apiKey, { path, method: 'DELETE' }),
+      request<TResponse>(token, { path, method: 'DELETE' }),
   };
 }

@@ -21,9 +21,9 @@ import { BillingPage } from './pages/BillingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 
 export function App() {
-  const { apiKey } = useAuth();
+  const { token } = useAuth();
 
-  if (!apiKey) {
+  if (!token) {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
