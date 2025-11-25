@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getPrismaClient } from '@meta-chat/database';
 import { authenticateAdminOrTenant } from '../middleware/auth';
+import { authenticateTenantUser } from '../middleware/authenticateTenantUser';
 import { asyncHandler, parseWithSchema, respondSuccess } from '../utils/http';
 import { z } from 'zod';
 import createHttpError from 'http-errors';
@@ -28,7 +29,28 @@ const chatRequestSchema = z.object({
   conversationId: z.string().optional().nullable(),
 });
 
-router.use(authenticateAdminOrTenant);
+// Combined auth middleware: supports both JWT (dashboard) and API key (widget)
+router.use(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  // If Bearer token is present, use JWT auth
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authenticateTenantUser(req, res, (err?: any) => {
+      if (err) {
+        // JWT auth failed, try API key auth as fallback
+        return authenticateAdminOrTenant(req, res, next);
+      }
+      // JWT auth succeeded - set tenant context from tenantUser
+      if (req.tenantUser?.tenantId) {
+        req.tenant = { id: req.tenantUser.tenantId, apiKeyId: 'jwt' };
+      }
+      return next();
+    });
+  }
+
+  // No Bearer token, use API key auth
+  return authenticateAdminOrTenant(req, res, next);
+});
 router.use(chatLimiter);
 
 router.post(
