@@ -117,11 +117,26 @@ router.patch(
       throw createHttpError(404, 'Tenant not found');
     }
 
+    // Deep merge settings to preserve LLM config when updating other settings
+    const existingSettings = (existing.settings as Record<string, any>) || {};
+    const payloadSettings = (payload.settings as Record<string, any>) || {};
+
+    // Deep merge: preserve nested objects like llm config
+    const mergedSettings = payload.settings ? {
+      ...existingSettings,
+      ...payloadSettings,
+      // Deep merge llm settings specifically
+      llm: payloadSettings.llm ? {
+        ...(existingSettings.llm || {}),
+        ...payloadSettings.llm,
+      } : existingSettings.llm,
+    } : existing.settings;
+
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         name: payload.name ?? existing.name,
-        settings: payload.settings ?? existing.settings,
+        settings: mergedSettings,
         // Prevent users from changing enabled status
         enabled: existing.enabled,
       },
