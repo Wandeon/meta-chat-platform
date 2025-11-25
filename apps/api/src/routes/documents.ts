@@ -204,4 +204,51 @@ router.delete(
   }),
 );
 
+// Retry processing for a failed document
+router.post(
+  '/:documentId/retry',
+  asyncHandler(async (req, res) => {
+    const { documentId } = req.params;
+    const tenantId = req.tenantUser!.tenantId;
+
+    // Find the document with tenant isolation
+    const document = await prisma.document.findFirst({
+      where: {
+        id: documentId,
+        tenantId: tenantId,
+      },
+    });
+
+    if (!document) {
+      throw createHttpError(404, 'Document not found');
+    }
+
+    // Only allow retry for failed documents
+    if (document.status !== 'failed') {
+      throw createHttpError(400, `Cannot retry document with status: ${document.status}`);
+    }
+
+    // Update status to pending
+    await prisma.document.update({
+      where: { id: documentId },
+      data: {
+        status: 'pending',
+        metadata: {
+          ...(document.metadata as object || {}),
+          retryCount: ((document.metadata as any)?.retryCount || 0) + 1,
+          lastRetryAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    // Trigger document processing asynchronously
+    const embeddingConfig = await getEmbeddingConfig(tenantId);
+    processDocument(documentId, { embeddingConfig }).catch((error) => {
+      console.error(`Failed to process document ${documentId} on retry:`, error);
+    });
+
+    respondSuccess(res, { id: documentId, status: 'pending', message: 'Document queued for reprocessing' });
+  }),
+);
+
 export default router;
