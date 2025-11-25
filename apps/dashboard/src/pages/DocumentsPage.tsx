@@ -6,35 +6,81 @@ import type { Document, CreateDocumentRequest, UpdateDocumentRequest } from '../
 
 type ViewMode = 'list' | 'upload' | 'write';
 
-// Helper to format dates safely
+// Helper to format dates safely - use UTC to avoid timezone issues
 const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
+  try {
+    const date = new Date(dateString);
+    const now = new Date();
 
-  // Check if date is in the future (likely a bug) - show relative time or just "Recently"
-  if (date > now) {
-    return 'Recently';
+    // Check if date is invalid
+    if (isNaN(date.getTime())) {
+      return 'Unknown';
+    }
+
+    // Check if date is in the future (likely a timezone bug) - show relative time
+    if (date > now) {
+      // Check if it's within 24 hours - likely today but server timezone is ahead
+      const diffHours = (date.getTime() - now.getTime()) / (1000 * 60 * 60);
+      if (diffHours < 24) {
+        return 'Today';
+      }
+      return 'Recently';
+    }
+
+    // Check if it's today (compare date strings to avoid timezone issues)
+    const todayStr = now.toDateString();
+    const dateStr = date.toDateString();
+    if (dateStr === todayStr) {
+      return 'Today';
+    }
+
+    // Check if it's yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    }
+
+    // Otherwise format nicely
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  } catch {
+    return 'Unknown';
   }
+};
 
-  // Check if it's today
-  const isToday = date.toDateString() === now.toDateString();
-  if (isToday) {
-    return 'Today';
+// Format datetime consistently
+const formatDateTime = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Unknown';
+    }
+
+    const now = new Date();
+
+    // If date appears to be in the future due to timezone, adjust display
+    if (date > now) {
+      const diffHours = (date.getTime() - now.getTime()) / (1000 * 60 * 60);
+      if (diffHours < 24) {
+        // It's likely today, just show time
+        return `Today at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    }
+
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return 'Unknown';
   }
-
-  // Check if it's yesterday
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) {
-    return 'Yesterday';
-  }
-
-  // Otherwise format nicely
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-  });
 };
 
 // Helper to format file size
@@ -57,6 +103,8 @@ export function DocumentsPage() {
   const [contentInput, setContentInput] = useState('');
   const [fileUpload, setFileUpload] = useState<File | null>(null);
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
+  const [retryingDocId, setRetryingDocId] = useState<string | null>(null);
+  const [retryToast, setRetryToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const documentsQuery = useQuery({
     queryKey: ['documents'],
@@ -93,6 +141,14 @@ export function DocumentsPage() {
     mutationFn: (id: string) => api.post<void>(`/api/documents/${id}/retry`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      setRetryToast({ type: 'success', message: 'Document queued for reprocessing' });
+      setRetryingDocId(null);
+      setTimeout(() => setRetryToast(null), 4000);
+    },
+    onError: (error: any) => {
+      setRetryToast({ type: 'error', message: error.message || 'Failed to retry processing' });
+      setRetryingDocId(null);
+      setTimeout(() => setRetryToast(null), 4000);
     },
   });
 
@@ -149,16 +205,39 @@ export function DocumentsPage() {
   };
 
   const handleRetry = (id: string) => {
+    setRetryingDocId(id);
     retryDocument.mutate(id);
   };
 
   const getStatusBadge = (status: string, doc: Document) => {
+    const isRetrying = retryingDocId === doc.id;
     const styles: Record<string, { bg: string; color: string; label: string; icon: string }> = {
       indexed: { bg: '#d1fae5', color: '#065f46', label: 'Ready', icon: '✓' },
       processing: { bg: '#dbeafe', color: '#1e40af', label: 'Processing', icon: '⏳' },
       failed: { bg: '#fee2e2', color: '#991b1b', label: 'Failed', icon: '✗' },
     };
     const s = styles[status] || { bg: '#f1f5f9', color: '#475569', label: status, icon: '•' };
+
+    // Show processing state if retrying
+    if (isRetrying) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontSize: '12px',
+            fontWeight: 600,
+            background: '#dbeafe',
+            color: '#1e40af',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span> Retrying...
+          </span>
+        </div>
+      );
+    }
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -193,7 +272,7 @@ export function DocumentsPage() {
               fontWeight: 500,
             }}
           >
-            {retryDocument.isPending ? '...' : 'Retry'}
+            Retry
           </button>
         )}
       </div>
@@ -317,6 +396,28 @@ export function DocumentsPage() {
   // List view
   return (
     <section className="dashboard-section" style={{ maxWidth: '1000px' }}>
+      {/* Toast notification */}
+      {retryToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          background: retryToast.type === 'success' ? '#d1fae5' : '#fee2e2',
+          border: `1px solid ${retryToast.type === 'success' ? '#10b981' : '#ef4444'}`,
+          color: retryToast.type === 'success' ? '#065f46' : '#991b1b',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'slideIn 0.3s ease-out',
+        }}>
+          {retryToast.type === 'success' ? '✓' : '✗'} {retryToast.message}
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ margin: 0 }}>Knowledge Base</h1>
@@ -344,6 +445,7 @@ export function DocumentsPage() {
             const docName = metadata.name || doc.filename || 'Unnamed';
             const isExpanded = expandedDoc === doc.id;
             const hasFailed = doc.status === 'failed';
+            const isRetrying = retryingDocId === doc.id;
             const errorMessage = metadata.error || metadata.errorMessage;
 
             return (
@@ -351,7 +453,7 @@ export function DocumentsPage() {
                 key={doc.id}
                 style={{
                   background: '#fff',
-                  border: hasFailed ? '1px solid #fecaca' : '1px solid #e2e8f0',
+                  border: hasFailed && !isRetrying ? '1px solid #fecaca' : '1px solid #e2e8f0',
                   borderRadius: '10px',
                   overflow: 'hidden',
                 }}
@@ -432,12 +534,12 @@ export function DocumentsPage() {
                       </div>
                       <div>
                         <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Created</div>
-                        <div style={{ fontSize: '14px' }}>{new Date(doc.createdAt).toLocaleString()}</div>
+                        <div style={{ fontSize: '14px' }}>{formatDateTime(doc.createdAt)}</div>
                       </div>
                       {doc.updatedAt && doc.updatedAt !== doc.createdAt && (
                         <div>
                           <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Last Updated</div>
-                          <div style={{ fontSize: '14px' }}>{new Date(doc.updatedAt).toLocaleString()}</div>
+                          <div style={{ fontSize: '14px' }}>{formatDateTime(doc.updatedAt)}</div>
                         </div>
                       )}
                       <div>
@@ -447,7 +549,7 @@ export function DocumentsPage() {
                     </div>
 
                     {/* Error details for failed documents */}
-                    {hasFailed && errorMessage && (
+                    {hasFailed && !isRetrying && errorMessage && (
                       <div style={{
                         marginTop: '16px',
                         padding: '12px',
@@ -467,8 +569,27 @@ export function DocumentsPage() {
                           className="primary-button"
                           style={{ marginTop: '12px', fontSize: '13px', padding: '8px 16px' }}
                         >
-                          {retryDocument.isPending ? 'Retrying...' : 'Retry Processing'}
+                          Retry Processing
                         </button>
+                      </div>
+                    )}
+
+                    {/* Show retrying state */}
+                    {isRetrying && (
+                      <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: '#dbeafe',
+                        border: '1px solid #93c5fd',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
+                        <span style={{ fontSize: '13px', color: '#1e40af' }}>
+                          Retrying document processing...
+                        </span>
                       </div>
                     )}
 
@@ -500,6 +621,18 @@ export function DocumentsPage() {
           })}
         </div>
       )}
+
+      {/* CSS animation for spinner */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
     </section>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../api/client';
 import { useAuth } from '../routes/AuthProvider';
+import { Link } from 'react-router-dom';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -24,6 +25,45 @@ interface ChatResponse {
     contextUsed?: boolean;
   };
 }
+
+// Helper to detect specific error types
+const getErrorInfo = (errorMessage: string): { type: string; title: string; description: string; actionLink?: string; actionText?: string } => {
+  const lowerError = errorMessage.toLowerCase();
+
+  if (lowerError.includes('missing api key') || lowerError.includes('api key') || lowerError.includes('apikey')) {
+    return {
+      type: 'config',
+      title: 'API Key Not Configured',
+      description: 'Your chatbot needs an API key to connect to the AI model. Please configure your LLM settings.',
+      actionLink: '/settings',
+      actionText: 'Go to Settings'
+    };
+  }
+
+  if (lowerError.includes('model') || lowerError.includes('ollama') || lowerError.includes('openai')) {
+    return {
+      type: 'config',
+      title: 'Model Configuration Issue',
+      description: 'There may be an issue with your AI model configuration. Check your settings.',
+      actionLink: '/settings',
+      actionText: 'Check Settings'
+    };
+  }
+
+  if (lowerError.includes('network') || lowerError.includes('fetch') || lowerError.includes('connection')) {
+    return {
+      type: 'network',
+      title: 'Connection Error',
+      description: 'Could not reach the server. Please check your internet connection and try again.',
+    };
+  }
+
+  return {
+    type: 'unknown',
+    title: 'Error',
+    description: errorMessage,
+  };
+};
 
 export function TestingPage() {
   const api = useApi();
@@ -70,7 +110,6 @@ export function TestingPage() {
         message: inputMessage,
         tenantId: user?.tenantId,
         conversationId: conversationId,
-        // tenantId is inferred from JWT auth
       });
       const latency = Date.now() - startTime;
 
@@ -106,6 +145,11 @@ export function TestingPage() {
     setError(null);
   };
 
+  const handleRetry = () => {
+    // Clear error and allow retry
+    setError(null);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -114,6 +158,7 @@ export function TestingPage() {
   };
 
   const modelInfo = tenantQuery.data?.settings?.llm;
+  const errorInfo = error ? getErrorInfo(error) : null;
 
   return (
     <section className="dashboard-section" style={{ maxWidth: '1200px' }}>
@@ -221,30 +266,75 @@ export function TestingPage() {
               </div>
             )}
 
-            {error && (
+            {/* Enhanced Error Display */}
+            {error && errorInfo && (
               <div style={{
-                padding: 16,
-                background: '#fee2e2',
-                border: '1px solid #fca5a5',
-                borderRadius: 8,
+                padding: 20,
+                background: errorInfo.type === 'config' ? '#fef3c7' : '#fee2e2',
+                border: `1px solid ${errorInfo.type === 'config' ? '#fcd34d' : '#fca5a5'}`,
+                borderRadius: 12,
                 marginBottom: 16,
               }}>
-                <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>Error</div>
-                <div style={{ color: '#991b1b', fontSize: '14px' }}>{error}</div>
-                <button
-                  onClick={() => setError(null)}
-                  style={{
-                    marginTop: 8,
-                    padding: '4px 12px',
-                    fontSize: '13px',
-                    background: '#fff',
-                    border: '1px solid #fca5a5',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Dismiss
-                </button>
+                <div style={{
+                  fontWeight: 600,
+                  color: errorInfo.type === 'config' ? '#92400e' : '#991b1b',
+                  marginBottom: 8,
+                  fontSize: '15px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                  {errorInfo.type === 'config' ? '⚙️' : '⚠️'} {errorInfo.title}
+                </div>
+                <div style={{
+                  color: errorInfo.type === 'config' ? '#78350f' : '#991b1b',
+                  fontSize: '14px',
+                  marginBottom: 16,
+                  lineHeight: 1.5,
+                }}>
+                  {errorInfo.description}
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {errorInfo.actionLink && (
+                    <Link
+                      to={errorInfo.actionLink}
+                      className="primary-button"
+                      style={{
+                        textDecoration: 'none',
+                        fontSize: '13px',
+                        padding: '8px 16px',
+                      }}
+                    >
+                      {errorInfo.actionText}
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleRetry}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      background: '#fff',
+                      border: `1px solid ${errorInfo.type === 'config' ? '#fcd34d' : '#fca5a5'}`,
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => setError(null)}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
               </div>
             )}
 
@@ -337,7 +427,7 @@ export function TestingPage() {
           <button
             onClick={handleClearChat}
             className="secondary-button"
-            disabled={messages.length === 0 && !error}
+            disabled={messages.length === 0 && !error && !conversationId}
             style={{ width: '100%' }}
           >
             Start New Conversation

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './routes/AuthProvider';
@@ -32,12 +32,30 @@ import { McpServersPage } from './pages/McpServersPage';
 import { BillingPage } from './pages/BillingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 
+// Helper to get wizard dismissal key for a tenant
+const getWizardDismissalKey = (tenantId: string) => `meta-chat-wizard-dismissed-${tenantId}`;
+
 // Separate component for authenticated users (can safely use useApi)
 function AuthenticatedApp() {
   const api = useApi();
   const { getUser } = useAuth();
   const user = getUser();
-  const [wizardDismissed, setWizardDismissed] = useState(false);
+
+  // Initialize from localStorage if available
+  const [wizardDismissed, setWizardDismissed] = useState(() => {
+    if (user?.tenantId) {
+      return localStorage.getItem(getWizardDismissalKey(user.tenantId)) === 'true';
+    }
+    return false;
+  });
+
+  // Sync with localStorage when tenantId changes
+  useEffect(() => {
+    if (user?.tenantId) {
+      const dismissed = localStorage.getItem(getWizardDismissalKey(user.tenantId)) === 'true';
+      setWizardDismissed(dismissed);
+    }
+  }, [user?.tenantId]);
 
   // Fetch tenant to check setup status
   const tenantQuery = useQuery({
@@ -46,12 +64,25 @@ function AuthenticatedApp() {
     enabled: !!user?.tenantId,
   });
 
+  const handleWizardComplete = () => {
+    setWizardDismissed(true);
+    // Persist to localStorage
+    if (user?.tenantId) {
+      localStorage.setItem(getWizardDismissalKey(user.tenantId), 'true');
+    }
+  };
+
   const setupCompleted = (tenantQuery.data as any)?.settings?.setupCompleted === true;
+
+  // Show wizard only if:
+  // 1. Setup is not completed in the backend
+  // 2. User hasn't dismissed it (either in state or localStorage)
+  // 3. Not currently loading
   const showWizard = !setupCompleted && !wizardDismissed && !tenantQuery.isLoading;
 
   return (
     <>
-      {showWizard && <SetupWizard onComplete={() => setWizardDismissed(true)} />}
+      {showWizard && <SetupWizard onComplete={handleWizardComplete} />}
       <Routes>
         {/* Admin Dashboard Routes - Phase 3 */}
         <Route path="/admin" element={<AdminDashboardLayout />}>
