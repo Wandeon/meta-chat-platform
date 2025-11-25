@@ -26,7 +26,7 @@ export class EmailService {
    * Send verification email to user
    */
   async sendVerificationEmail(email: string, token: string): Promise<void> {
-    const verificationUrl = `${this.baseUrl}/auth/verify-email?token=${token}`;
+    const verificationUrl = `${this.baseUrl}/verify-email?token=${token}`;
 
     const mailOptions = {
       from: this.fromEmail,

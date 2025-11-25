@@ -42,15 +42,28 @@ router.post('/signup', async (req: Request, res: Response) => {
 
     const { email, password, name, companyName } = validationResult.data;
 
-    // Check if user already exists
-    const existingUser = await prisma.adminUser.findUnique({
+    // Check if user already exists in AdminUser table
+    const existingAdminUser = await prisma.adminUser.findUnique({
       where: { email },
     });
 
-    if (existingUser) {
+    if (existingAdminUser) {
       return res.status(409).json({
         success: false,
-        error: 'User with this email already exists',
+        error: 'An account with this email already exists. Please log in instead.',
+        code: 'EMAIL_EXISTS',
+      });
+    }
+
+    // Check if user already exists in TenantUser table
+    const existingTenantUser = await prisma.tenantUser.findUnique({
+      where: { email },
+    });
+
+    if (existingTenantUser) {
+      return res.status(409).json({
+        success: false,
+        error: 'An account with this email already exists. Please log in instead.',
         code: 'EMAIL_EXISTS',
       });
     }
@@ -73,8 +86,17 @@ router.post('/signup', async (req: Request, res: Response) => {
         name: result.admin.name,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signup error:', error);
+    
+    // Handle Prisma unique constraint violation (race condition)
+    if (error?.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        error: 'An account with this email already exists. Please log in instead.',
+        code: 'EMAIL_EXISTS',
+      });
+    }
     
     // Don't expose internal errors to the client
     res.status(500).json({
