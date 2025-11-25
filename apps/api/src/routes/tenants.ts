@@ -131,6 +131,42 @@ router.patch(
   }),
 );
 
+// Mark setup as complete
+router.post(
+  '/setup-complete',
+  asyncHandler(async (req, res) => {
+    const tenantId = req.tenantUser!.tenantId;
+    
+    const existingTenant = await prisma.tenant.findUnique({ 
+      where: { id: tenantId } 
+    });
+    
+    if (!existingTenant) {
+      throw createHttpError(404, 'Tenant not found');
+    }
+    
+    const existingSettings = (existingTenant.settings as object) || {};
+    
+    // Idempotent: if already completed, just return
+    if ((existingSettings as any).setupCompleted) {
+      return respondSuccess(res, existingTenant);
+    }
+    
+    const tenant = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        settings: {
+          ...existingSettings,
+          setupCompleted: true,
+          setupCompletedAt: new Date().toISOString(),
+        },
+      },
+    });
+    
+    respondSuccess(res, tenant);
+  }),
+);
+
 router.delete(
   '/:tenantId',
   asyncHandler(async (req, res) => {
