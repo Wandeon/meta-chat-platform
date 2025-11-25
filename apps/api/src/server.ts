@@ -32,6 +32,7 @@ import authRouter from './routes/auth';
 import billingRouter from "./routes/billing";
 import stripeWebhookRouter from "./routes/webhooks/stripe";
 import analyticsRouter from "./routes/analytics";
+import adminRouter from './routes/admin';
 
 import { createWebhookIntegrationsRouter } from './routes/webhookIntegrations';
 import healthRouter from './routes/health';
@@ -296,6 +297,7 @@ function registerRoutes(
   app.use('/api/public/widget', widgetConfigRouter);
   app.use("/api/billing", billingRouter);
   app.use("/api/analytics", analyticsRouter);
+  app.use('/api/admin', adminRouter);
   app.use("/api/webhooks", stripeWebhookRouter);
 
   app.use((req, _res, next) => {
