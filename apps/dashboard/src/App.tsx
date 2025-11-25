@@ -32,9 +32,10 @@ import { McpServersPage } from './pages/McpServersPage';
 import { BillingPage } from './pages/BillingPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 
-export function App() {
-  const { apiKey, getUser } = useAuth();
+// Separate component for authenticated users (can safely use useApi)
+function AuthenticatedApp() {
   const api = useApi();
+  const { getUser } = useAuth();
   const user = getUser();
   const [wizardDismissed, setWizardDismissed] = useState(false);
 
@@ -42,25 +43,11 @@ export function App() {
   const tenantQuery = useQuery({
     queryKey: ['tenant-settings', user?.tenantId],
     queryFn: () => api.get(`/api/tenants/${user?.tenantId}`),
-    enabled: !!apiKey && !!user?.tenantId,
+    enabled: !!user?.tenantId,
   });
 
   const setupCompleted = (tenantQuery.data as any)?.settings?.setupCompleted === true;
-  const showWizard = apiKey && !setupCompleted && !wizardDismissed && !tenantQuery.isLoading;
-
-  if (!apiKey) {
-    return (
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    );
-  }
+  const showWizard = !setupCompleted && !wizardDismissed && !tenantQuery.isLoading;
 
   return (
     <>
@@ -110,4 +97,26 @@ export function App() {
       </Routes>
     </>
   );
+}
+
+export function App() {
+  const { apiKey } = useAuth();
+
+  // Unauthenticated routes
+  if (!apiKey) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+  // Authenticated routes (useApi is safe to call here)
+  return <AuthenticatedApp />;
 }
