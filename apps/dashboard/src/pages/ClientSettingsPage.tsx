@@ -27,6 +27,7 @@ export function ClientSettingsPage() {
   const [welcomeMessage, setWelcomeMessage] = useState('Hello! How can I help you today?');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [errors, setErrors] = useState<{ botName?: string; welcomeMessage?: string }>({});
 
   // Fetch tenant settings
   const settingsQuery = useQuery({
@@ -56,16 +57,38 @@ export function ClientSettingsPage() {
     },
   });
 
+  // Validation
+  const validate = (): boolean => {
+    const newErrors: typeof errors = {};
+    
+    if (!botName.trim()) {
+      newErrors.botName = 'Bot name is required';
+    } else if (botName.length > 50) {
+      newErrors.botName = 'Bot name must be 50 characters or less';
+    }
+    
+    if (!welcomeMessage.trim()) {
+      newErrors.welcomeMessage = 'Welcome message is required';
+    } else if (welcomeMessage.length > 200) {
+      newErrors.welcomeMessage = 'Welcome message must be 200 characters or less';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = () => {
+    if (!validate()) return;
+    
     updateSettings.mutate({
       settings: {
-        brandName: botName,
+        brandName: botName.trim(),
         llm: {
-          systemPrompt: instructions,
+          systemPrompt: instructions.trim(),
         },
       },
       widgetConfig: {
-        welcomeMessage,
+        welcomeMessage: welcomeMessage.trim(),
       },
     });
   };
@@ -73,6 +96,14 @@ export function ClientSettingsPage() {
   const handleChange = (setter: (v: string) => void, value: string) => {
     setter(value);
     setHasChanges(true);
+    // Clear errors when user starts typing
+    setErrors({});
+  };
+
+  const handleResetInstructions = () => {
+    if (confirm('Reset bot instructions to default?\n\nThis will replace your custom instructions with the default template.')) {
+      handleChange(setInstructions, DEFAULT_INSTRUCTIONS);
+    }
   };
 
   if (settingsQuery.isLoading) {
@@ -82,6 +113,13 @@ export function ClientSettingsPage() {
       </div>
     );
   }
+
+  // Determine why save is disabled
+  const getSaveButtonTooltip = () => {
+    if (!hasChanges) return 'No changes to save';
+    if (Object.keys(errors).length > 0) return 'Please fix validation errors';
+    return '';
+  };
 
   return (
     <div style={{ maxWidth: '800px' }}>
@@ -97,29 +135,49 @@ export function ClientSettingsPage() {
           
           <div className="form-grid">
             <label>
-              Bot Name
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Bot Name <span style={{ color: '#ef4444' }}>*</span>
+              </span>
               <input
                 type="text"
                 value={botName}
                 onChange={(e) => handleChange(setBotName, e.target.value)}
                 placeholder="My Assistant"
+                style={{ 
+                  borderColor: errors.botName ? '#ef4444' : undefined,
+                  background: errors.botName ? '#fef2f2' : undefined
+                }}
               />
-              <small style={{ color: '#64748b' }}>
-                This name appears in the chat header
-              </small>
+              {errors.botName ? (
+                <small style={{ color: '#ef4444' }}>{errors.botName}</small>
+              ) : (
+                <small style={{ color: '#64748b' }}>
+                  This name appears in the chat header ({50 - botName.length} chars left)
+                </small>
+              )}
             </label>
 
             <label>
-              Welcome Message
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Welcome Message <span style={{ color: '#ef4444' }}>*</span>
+              </span>
               <input
                 type="text"
                 value={welcomeMessage}
                 onChange={(e) => handleChange(setWelcomeMessage, e.target.value)}
                 placeholder="Hello! How can I help you today?"
+                style={{ 
+                  borderColor: errors.welcomeMessage ? '#ef4444' : undefined,
+                  background: errors.welcomeMessage ? '#fef2f2' : undefined
+                }}
               />
-              <small style={{ color: '#64748b' }}>
-                First message visitors see when they open the chat
-              </small>
+              {errors.welcomeMessage ? (
+                <small style={{ color: '#ef4444' }}>{errors.welcomeMessage}</small>
+              ) : (
+                <small style={{ color: '#64748b' }}>
+                  First message visitors see when they open the chat ({200 - welcomeMessage.length} chars left)
+                </small>
+              )}
             </label>
           </div>
         </div>
@@ -144,23 +202,41 @@ export function ClientSettingsPage() {
             <button
               type="button"
               className="secondary-button"
-              onClick={() => handleChange(setInstructions, DEFAULT_INSTRUCTIONS)}
-              style={{ fontSize: '0.85rem', padding: '6px 12px' }}
+              onClick={handleResetInstructions}
+              style={{ 
+                fontSize: '0.85rem', 
+                padding: '6px 12px',
+                color: '#dc2626',
+                borderColor: '#fecaca',
+                background: '#fef2f2'
+              }}
             >
               Reset to Default
             </button>
+            <span style={{ marginLeft: '12px', fontSize: '13px', color: '#64748b' }}>
+              This will replace your custom instructions
+            </span>
           </div>
         </div>
 
         {/* Save Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            className="primary-button"
-            onClick={handleSave}
-            disabled={updateSettings.isPending || !hasChanges}
-          >
-            {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="primary-button"
+              onClick={handleSave}
+              disabled={updateSettings.isPending || !hasChanges}
+              title={getSaveButtonTooltip()}
+            >
+              {updateSettings.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+          
+          {!hasChanges && !saveSuccess && !updateSettings.isError && (
+            <span style={{ color: '#64748b', fontSize: '14px' }}>
+              No unsaved changes
+            </span>
+          )}
           
           {saveSuccess && (
             <span style={{ color: '#10b981', fontWeight: 500 }}>

@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../api/client';
-import { TenantSelector } from '../components/TenantSelector';
-import type { Tenant } from '../api/types';
+import { useAuth } from '../routes/AuthProvider';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -23,15 +22,15 @@ interface ChatResponse {
     latency?: number;
     ragEnabled?: boolean;
     contextUsed?: boolean;
-    toolsUsed?: boolean;
-    mcpEnabled?: boolean;
-    debug?: any;
   };
 }
 
 export function TestingPage() {
   const api = useApi();
-  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const { getUser } = useAuth();
+  const user = getUser();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -39,26 +38,20 @@ export function TestingPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastMetadata, setLastMetadata] = useState<any>(null);
 
-  // Fetch selected tenant details
-  const tenantQuery = useQuery({
-    queryKey: ['tenant', selectedTenantId],
-    queryFn: () => api.get<Tenant>(`/api/tenants/${selectedTenantId}`),
-    enabled: !!selectedTenantId,
-  });
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
 
-  // Fetch tenant API key for making chat requests
-  const apiKeysQuery = useQuery({
-    queryKey: ['tenant-api-keys', selectedTenantId],
-    queryFn: async () => {
-      // This assumes there's an endpoint to get tenant API keys
-      // If not, we'll need to use the admin key and pass tenantId
-      return null;
-    },
-    enabled: !!selectedTenantId,
+  // Fetch tenant settings
+  const tenantQuery = useQuery({
+    queryKey: ['tenant-settings', user?.tenantId],
+    queryFn: () => api.get<any>(`/api/tenants/${user?.tenantId}`),
+    enabled: !!user?.tenantId,
   });
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !selectedTenantId) return;
+    if (!inputMessage.trim() || !user?.tenantId) return;
 
     const userMessage: Message = {
       role: 'user',
@@ -72,18 +65,18 @@ export function TestingPage() {
     setError(null);
 
     try {
-      // Make chat request - this will need to be adjusted based on your actual chat endpoint
       const startTime = Date.now();
       const response = await api.post<ChatResponse, any>('/api/chat', {
         message: inputMessage,
+        tenantId: user?.tenantId,
         conversationId: conversationId,
-        tenantId: selectedTenantId,
+        // tenantId is inferred from JWT auth
       });
       const latency = Date.now() - startTime;
 
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.message || 'No response',
+        content: response.message || 'No response received',
         timestamp: new Date(),
       };
 
@@ -98,7 +91,8 @@ export function TestingPage() {
         latency,
       });
     } catch (err: any) {
-      setError(err.message || 'Failed to send message');
+      const errorMessage = err.message || 'Failed to send message';
+      setError(errorMessage);
       console.error('Chat error:', err);
     } finally {
       setIsLoading(false);
@@ -119,441 +113,237 @@ export function TestingPage() {
     }
   };
 
+  const modelInfo = tenantQuery.data?.settings?.llm;
+
   return (
-    <section className="dashboard-section">
+    <section className="dashboard-section" style={{ maxWidth: '1200px' }}>
       <div style={{ marginBottom: 24 }}>
-        <h1>Chat Testing</h1>
+        <h1>Test Your Chatbot</h1>
         <p style={{ margin: '8px 0 0 0', color: '#64748b' }}>
-          Test AI responses for different tenants in real-time
+          Have a conversation with your chatbot to see how it responds to questions.
         </p>
       </div>
 
-      <div style={{ marginBottom: 24, maxWidth: 400 }}>
-        <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
-          Select Tenant
-        </label>
-        <TenantSelector
-          value={selectedTenantId}
-          onChange={setSelectedTenantId}
-          placeholder="Choose a tenant to test..."
-        />
-        {selectedTenantId && tenantQuery.data && (
+      {/* Model Info Banner */}
+      {tenantQuery.data && (
+        <div style={{
+          marginBottom: 20,
+          padding: '12px 16px',
+          background: '#f0f9ff',
+          border: '1px solid #bae6fd',
+          borderRadius: 8,
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+        }}>
+          <span>Using: <strong>{modelInfo?.provider || 'ollama'}</strong> / <strong>{modelInfo?.model || 'default'}</strong></span>
+          {conversationId && (
+            <span style={{ color: '#64748b', fontSize: '12px' }}>
+              Conversation: {conversationId.slice(0, 8)}...
+            </span>
+          )}
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24 }}>
+        {/* Chat Area */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '550px',
+          border: '1px solid #e2e8f0',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}>
+          {/* Messages */}
           <div style={{
-            marginTop: 8,
-            padding: 12,
-            background: '#f8fafc',
-            borderRadius: 8,
-            fontSize: '13px',
+            flex: 1,
+            overflowY: 'auto',
+            padding: 16,
+            background: '#fafafa',
           }}>
-            <div><strong>Provider:</strong> {(tenantQuery.data.settings as any)?.llm?.provider || 'openai'}</div>
-            <div><strong>Model:</strong> {(tenantQuery.data.settings as any)?.llm?.model || 'gpt-4o'}</div>
-            {conversationId && (
-              <div style={{ marginTop: 4, color: '#64748b' }}>
-                <strong>Conversation ID:</strong> {conversationId}
+            {messages.length === 0 && !error && (
+              <div style={{
+                textAlign: 'center',
+                color: '#94a3b8',
+                padding: '60px 20px',
+              }}>
+                <div style={{ fontSize: '48px', marginBottom: 16 }}>💬</div>
+                <p style={{ fontSize: '16px', marginBottom: 8 }}>Start a conversation</p>
+                <p style={{ fontSize: '14px', color: '#94a3b8' }}>
+                  Type a message below to test how your chatbot responds.
+                  <br />Try asking about content from your Knowledge Base!
+                </p>
               </div>
             )}
-          </div>
-        )}
-      </div>
 
-      {selectedTenantId && (
-        <div className="testing-layout">
-          {/* Chat Area */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '600px',
-            border: '1px solid #e2e8f0',
-            borderRadius: 12,
-            overflow: 'hidden',
-          }}>
-            {/* Messages */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: 16,
-              background: '#fafafa',
-            }}>
-              {messages.length === 0 && (
-                <div style={{
-                  textAlign: 'center',
-                  color: '#94a3b8',
-                  padding: '40px 20px',
-                }}>
-                  <p style={{ fontSize: '18px', marginBottom: 8 }}>👋 Start a conversation</p>
-                  <p style={{ fontSize: '14px' }}>Type a message below to test the AI assistant</p>
-                </div>
-              )}
-
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    marginBottom: 16,
-                    display: 'flex',
-                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                  }}
-                >
-                  <div
-                    style={{
-                      maxWidth: '70%',
-                      padding: '10px 14px',
-                      borderRadius: 12,
-                      background: msg.role === 'user' ? '#4f46e5' : '#fff',
-                      color: msg.role === 'user' ? '#fff' : '#0f172a',
-                      boxShadow: msg.role === 'assistant' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    }}
-                  >
-                    <div style={{ fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                      {msg.content}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        marginTop: 4,
-                        opacity: 0.7,
-                      }}
-                    >
-                      {msg.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {isLoading && (
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'flex-start',
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                style={{
                   marginBottom: 16,
-                }}>
-                  <div style={{
+                  display: 'flex',
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    maxWidth: '75%',
                     padding: '10px 14px',
                     borderRadius: 12,
-                    background: '#fff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                  }}>
-                    <div style={{ fontSize: '14px', color: '#64748b' }}>
-                      <span className="dot">●</span>
-                      <span className="dot">●</span>
-                      <span className="dot">●</span>
-                    </div>
+                    background: msg.role === 'user' ? '#4f46e5' : '#fff',
+                    color: msg.role === 'user' ? '#fff' : '#0f172a',
+                    boxShadow: msg.role === 'assistant' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  }}
+                >
+                  <div style={{ fontSize: '14px', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                    {msg.content}
+                  </div>
+                  <div style={{ fontSize: '11px', marginTop: 4, opacity: 0.7 }}>
+                    {msg.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
-              )}
-
-              {error && (
-                <div style={{
-                  padding: 12,
-                  background: '#fee2e2',
-                  border: '1px solid #fca5a5',
-                  borderRadius: 8,
-                  color: '#991b1b',
-                  fontSize: '14px',
-                  marginBottom: 16,
-                }}>
-                  <strong>Error:</strong> {error}
-                </div>
-              )}
-            </div>
-
-            {/* Input Area */}
-            <div style={{
-              padding: 16,
-              borderTop: '1px solid #e2e8f0',
-              background: '#fff',
-            }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <textarea
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message... (Shift+Enter for new line)"
-                  disabled={isLoading}
-                  rows={3}
-                  style={{
-                    flex: 1,
-                    padding: '10px 12px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: 8,
-                    fontSize: '14px',
-                    resize: 'none',
-                    fontFamily: 'inherit',
-                  }}
-                />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={isLoading || !inputMessage.trim()}
-                    className="primary-button"
-                    style={{ height: '100%', minWidth: 80 }}
-                  >
-                    {isLoading ? '...' : 'Send'}
-                  </button>
-                </div>
               </div>
-            </div>
-          </div>
+            ))}
 
-          {/* Info Sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '600px' }}>
-            <div style={{
-              padding: 16,
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: 12,
-            }}>
-              <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600 }}>
-                Response Metadata
-              </h3>
-              {lastMetadata ? (
-                <div style={{ fontSize: '13px', lineHeight: '1.6' }}>
-                  {lastMetadata.model && (
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>Model:</strong> {lastMetadata.model}
-                    </div>
-                  )}
-                  {lastMetadata.latency && (
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>Latency:</strong> {lastMetadata.latency}ms
-                    </div>
-                  )}
-                  {lastMetadata.tokens && (
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>Tokens:</strong>
-                      <div style={{ marginLeft: 12, marginTop: 4 }}>
-                        {lastMetadata.tokens.prompt && <div>Prompt: {lastMetadata.tokens.prompt}</div>}
-                        {lastMetadata.tokens.completion && <div>Completion: {lastMetadata.tokens.completion}</div>}
-                        {lastMetadata.tokens.total && <div>Total: {lastMetadata.tokens.total}</div>}
-                      </div>
-                    </div>
-                  )}
-                  {lastMetadata.ragEnabled !== undefined && (
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>RAG Enabled:</strong> {lastMetadata.ragEnabled ? 'Yes' : 'No'}
-                    </div>
-                  )}
-                  {lastMetadata.contextUsed !== undefined && (
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>RAG Context Used:</strong> {lastMetadata.contextUsed ? 'Yes' : 'No'}
-                    </div>
-                  )}
-                  {lastMetadata.toolsUsed !== undefined && (
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>Tools Used:</strong> {lastMetadata.toolsUsed ? 'Yes' : 'No'}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>
-                  Send a message to see response metadata
-                </p>
-              )}
-            </div>
-
-            {/* Debug Information */}
-            {lastMetadata?.debug && (
-              <div style={{
-                padding: 16,
-                background: '#fef3c7',
-                border: '1px solid #fbbf24',
-                borderRadius: 12,
-              }}>
-                <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 600, color: '#92400e' }}>
-                  🔍 Debug Information
-                </h3>
-                <div style={{ fontSize: '12px', lineHeight: '1.6', color: '#78350f' }}>
-                  {/* System Prompt */}
-                  {lastMetadata.debug.systemPrompt && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        System Prompt ({lastMetadata.debug.systemPrompt.length} chars)
-                      </summary>
-                      <pre style={{
-                        background: '#fff',
-                        padding: 8,
-                        borderRadius: 6,
-                        fontSize: '11px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}>
-                        {lastMetadata.debug.systemPrompt.fullPrompt}
-                      </pre>
-                    </details>
-                  )}
-
-                  {/* Messages Sent to LLM */}
-                  {lastMetadata.debug.messages && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        Messages Array ({lastMetadata.debug.messages.messageCount} messages)
-                      </summary>
-                      <div style={{ background: '#fff', padding: 8, borderRadius: 6, fontSize: '11px' }}>
-                        {lastMetadata.debug.messages.fullMessages.map((msg: any, idx: number) => (
-                          <div key={idx} style={{ marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #e2e8f0' }}>
-                            <div style={{ fontWeight: 600, color: '#1e40af' }}>
-                              [{idx}] {msg.role}
-                            </div>
-                            <pre style={{
-                              margin: '4px 0 0 0',
-                              whiteSpace: 'pre-wrap',
-                              wordWrap: 'break-word',
-                            }}>
-                              {msg.content}
-                            </pre>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-
-                  {/* RAG Context */}
-                  {lastMetadata.debug.ragContext && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        RAG Context
-                      </summary>
-                      <pre style={{
-                        background: '#fff',
-                        padding: 8,
-                        borderRadius: 6,
-                        fontSize: '11px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}>
-                        {JSON.stringify(lastMetadata.debug.ragContext, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-
-                  {/* MCP Tools */}
-                  {lastMetadata.debug.mcpTools && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        MCP Tools ({lastMetadata.debug.mcpTools.toolCount} tools)
-                      </summary>
-                      <pre style={{
-                        background: '#fff',
-                        padding: 8,
-                        borderRadius: 6,
-                        fontSize: '11px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}>
-                        {JSON.stringify(lastMetadata.debug.mcpTools, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-
-                  {/* LLM Configuration */}
-                  {lastMetadata.debug.llmConfig && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        LLM Configuration
-                      </summary>
-                      <pre style={{
-                        background: '#fff',
-                        padding: 8,
-                        borderRadius: 6,
-                        fontSize: '11px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}>
-                        {JSON.stringify(lastMetadata.debug.llmConfig, null, 2)}
-                      </pre>
-                    </details>
-                  )}
-
-                  {/* LLM Response */}
-                  {lastMetadata.debug.llmResponse && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        Raw LLM Response
-                      </summary>
-                      <pre style={{
-                        background: '#fff',
-                        padding: 8,
-                        borderRadius: 6,
-                        fontSize: '11px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}>
-                        {lastMetadata.debug.llmResponse.fullMessage}
-                      </pre>
-                    </details>
-                  )}
-
-                  {/* Final Response */}
-                  {lastMetadata.debug.finalResponse && (
-                    <details style={{ marginBottom: 12 }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                        Final Response to User
-                      </summary>
-                      <pre style={{
-                        background: '#fff',
-                        padding: 8,
-                        borderRadius: 6,
-                        fontSize: '11px',
-                        overflow: 'auto',
-                        maxHeight: '200px',
-                        whiteSpace: 'pre-wrap',
-                        wordWrap: 'break-word',
-                      }}>
-                        {lastMetadata.debug.finalResponse.fullMessage}
-                      </pre>
-                    </details>
-                  )}
+            {isLoading && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 16 }}>
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  background: '#fff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  color: '#64748b',
+                }}>
+                  Thinking...
                 </div>
               </div>
             )}
 
-            <div style={{
-              padding: 16,
-              background: '#fef3c7',
-              border: '1px solid #fbbf24',
-              borderRadius: 12,
-              fontSize: '13px',
-            }}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: '#92400e' }}>
-                💡 Tips
-              </h3>
-              <ul style={{ margin: 0, paddingLeft: 20, color: '#78350f' }}>
-                <li>Each message continues the conversation</li>
-                <li>Press Enter to send, Shift+Enter for new line</li>
-                <li>Clear chat to start fresh</li>
-                <li>Check metadata for token usage</li>
-              </ul>
-            </div>
+            {error && (
+              <div style={{
+                padding: 16,
+                background: '#fee2e2',
+                border: '1px solid #fca5a5',
+                borderRadius: 8,
+                marginBottom: 16,
+              }}>
+                <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: 4 }}>Error</div>
+                <div style={{ color: '#991b1b', fontSize: '14px' }}>{error}</div>
+                <button
+                  onClick={() => setError(null)}
+                  style={{
+                    marginTop: 8,
+                    padding: '4px 12px',
+                    fontSize: '13px',
+                    background: '#fff',
+                    border: '1px solid #fca5a5',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
 
-            <button
-              onClick={handleClearChat}
-              className="secondary-button"
-              disabled={messages.length === 0}
-            >
-              Clear Chat
-            </button>
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div style={{
+            padding: 16,
+            borderTop: '1px solid #e2e8f0',
+            background: '#fff',
+          }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <textarea
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                disabled={isLoading}
+                rows={2}
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: 8,
+                  fontSize: '14px',
+                  resize: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isLoading || !inputMessage.trim()}
+                className="primary-button"
+                style={{ alignSelf: 'stretch', minWidth: 80 }}
+              >
+                {isLoading ? '...' : 'Send'}
+              </button>
+            </div>
           </div>
         </div>
-      )}
 
-      {!selectedTenantId && (
-        <div style={{
-          textAlign: 'center',
-          padding: '60px 20px',
-          color: '#94a3b8',
-        }}>
-          <p style={{ fontSize: '16px' }}>Select a tenant above to start testing</p>
+        {/* Sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Response Metadata */}
+          <div style={{
+            padding: 16,
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: 12,
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 600 }}>
+              Response Info
+            </h3>
+            {lastMetadata ? (
+              <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
+                {lastMetadata.latency && <div><strong>Response time:</strong> {lastMetadata.latency}ms</div>}
+                {lastMetadata.model && <div><strong>Model:</strong> {lastMetadata.model}</div>}
+                {lastMetadata.tokens?.total && <div><strong>Tokens used:</strong> {lastMetadata.tokens.total}</div>}
+                {lastMetadata.contextUsed !== undefined && (
+                  <div><strong>Used knowledge base:</strong> {lastMetadata.contextUsed ? 'Yes' : 'No'}</div>
+                )}
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>
+                Send a message to see response details
+              </p>
+            )}
+          </div>
+
+          {/* Tips */}
+          <div style={{
+            padding: 16,
+            background: '#fef3c7',
+            border: '1px solid #fcd34d',
+            borderRadius: 12,
+            fontSize: '13px',
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: 600, color: '#92400e' }}>
+              Tips
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: 18, color: '#78350f', lineHeight: 1.6 }}>
+              <li>Test questions about your uploaded content</li>
+              <li>Check if the bot follows your instructions</li>
+              <li>Each message continues the same conversation</li>
+            </ul>
+          </div>
+
+          {/* Actions */}
+          <button
+            onClick={handleClearChat}
+            className="secondary-button"
+            disabled={messages.length === 0 && !error}
+            style={{ width: '100%' }}
+          >
+            Start New Conversation
+          </button>
         </div>
-      )}
+      </div>
     </section>
   );
 }

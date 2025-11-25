@@ -6,6 +6,45 @@ import type { Document, CreateDocumentRequest, UpdateDocumentRequest } from '../
 
 type ViewMode = 'list' | 'upload' | 'write';
 
+// Helper to format dates safely
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+
+  // Check if date is in the future (likely a bug) - show relative time or just "Recently"
+  if (date > now) {
+    return 'Recently';
+  }
+
+  // Check if it's today
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return 'Today';
+  }
+
+  // Check if it's yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  }
+
+  // Otherwise format nicely
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  });
+};
+
+// Helper to format file size
+const formatFileSize = (bytes: number): string => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export function DocumentsPage() {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -17,6 +56,7 @@ export function DocumentsPage() {
   const [form, setForm] = useState({ name: '', source: '' });
   const [contentInput, setContentInput] = useState('');
   const [fileUpload, setFileUpload] = useState<File | null>(null);
+  const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
 
   const documentsQuery = useQuery({
     queryKey: ['documents'],
@@ -43,6 +83,14 @@ export function DocumentsPage() {
 
   const deleteDocument = useMutation({
     mutationFn: (id: string) => api.delete<void>(`/api/documents/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+    },
+  });
+
+  // Retry processing a failed document
+  const retryDocument = useMutation({
+    mutationFn: (id: string) => api.post<void>(`/api/documents/${id}/retry`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
     },
@@ -100,17 +148,55 @@ export function DocumentsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, { bg: string; color: string; label: string }> = {
-      indexed: { bg: '#d1fae5', color: '#065f46', label: '✓ Ready' },
-      processing: { bg: '#dbeafe', color: '#1e40af', label: '⏳ Processing' },
-      failed: { bg: '#fee2e2', color: '#991b1b', label: '✗ Failed' },
+  const handleRetry = (id: string) => {
+    retryDocument.mutate(id);
+  };
+
+  const getStatusBadge = (status: string, doc: Document) => {
+    const styles: Record<string, { bg: string; color: string; label: string; icon: string }> = {
+      indexed: { bg: '#d1fae5', color: '#065f46', label: 'Ready', icon: '✓' },
+      processing: { bg: '#dbeafe', color: '#1e40af', label: 'Processing', icon: '⏳' },
+      failed: { bg: '#fee2e2', color: '#991b1b', label: 'Failed', icon: '✗' },
     };
-    const s = styles[status] || { bg: '#f1f5f9', color: '#475569', label: status };
+    const s = styles[status] || { bg: '#f1f5f9', color: '#475569', label: status, icon: '•' };
+
     return (
-      <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600, background: s.bg, color: s.color }}>
-        {s.label}
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{
+          padding: '4px 10px',
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: 600,
+          background: s.bg,
+          color: s.color,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          {s.icon} {s.label}
+        </span>
+        {status === 'failed' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRetry(doc.id);
+            }}
+            disabled={retryDocument.isPending}
+            style={{
+              padding: '4px 8px',
+              fontSize: '11px',
+              background: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #fcd34d',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
+            {retryDocument.isPending ? '...' : 'Retry'}
+          </button>
+        )}
+      </div>
     );
   };
 
@@ -131,10 +217,10 @@ export function DocumentsPage() {
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => setViewMode('upload')} className="primary-button">
-              📄 Upload Documents
+              Upload Documents
             </button>
             <button onClick={() => setViewMode('write')} className="secondary-button">
-              ✍️ Write or Paste Text
+              Write or Paste Text
             </button>
           </div>
         </div>
@@ -200,13 +286,7 @@ export function DocumentsPage() {
                 value={contentInput}
                 onChange={(e) => setContentInput(e.target.value)}
                 rows={15}
-                placeholder="Paste your text content here...
-
-For example:
-- Product descriptions
-- FAQ answers
-- Company policies
-- Support documentation"
+                placeholder={'Paste your text content here...\n\nFor example:\n- Product descriptions\n- FAQ answers\n- Company policies\n- Support documentation'}
                 required
                 style={{ width: '100%', fontFamily: 'inherit', fontSize: '14px', resize: 'vertical' }}
               />
@@ -246,10 +326,10 @@ For example:
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => setViewMode('upload')} className="primary-button">
-            📄 Upload
+            Upload
           </button>
           <button onClick={() => setViewMode('write')} className="secondary-button">
-            ✍️ Write
+            Write
           </button>
         </div>
       </div>
@@ -260,45 +340,161 @@ For example:
       {documentsQuery.data && documentsQuery.data.length > 0 && (
         <div style={{ display: 'grid', gap: '12px' }}>
           {documentsQuery.data.map((doc) => {
-            const docName = (doc.metadata as any)?.name || doc.filename || 'Unnamed';
+            const metadata = doc.metadata as any || {};
+            const docName = metadata.name || doc.filename || 'Unnamed';
+            const isExpanded = expandedDoc === doc.id;
+            const hasFailed = doc.status === 'failed';
+            const errorMessage = metadata.error || metadata.errorMessage;
+
             return (
               <div
                 key={doc.id}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '16px 20px',
                   background: '#fff',
-                  border: '1px solid #e2e8f0',
+                  border: hasFailed ? '1px solid #fecaca' : '1px solid #e2e8f0',
                   borderRadius: '10px',
-                  flexWrap: 'wrap',
-                  gap: '12px',
+                  overflow: 'hidden',
                 }}
               >
-                <div style={{ flex: 1, minWidth: '200px' }}>
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>{docName}</div>
-                  <div style={{ fontSize: '13px', color: '#64748b' }}>
-                    Added {new Date(doc.createdAt).toLocaleDateString()}
+                {/* Main row */}
+                <div
+                  onClick={() => setExpandedDoc(isExpanded ? null : doc.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '16px 20px',
+                    cursor: 'pointer',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {docName}
+                      <span style={{ color: '#94a3b8', fontSize: '12px', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                        ▼
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>
+                      Added {formatDate(doc.createdAt)}
+                      {metadata.fileSize && (
+                        <span> • {formatFileSize(metadata.fileSize)}</span>
+                      )}
+                      {metadata.fileType && (
+                        <span style={{
+                          marginLeft: '8px',
+                          padding: '2px 6px',
+                          background: '#f1f5f9',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontFamily: 'monospace'
+                        }}>
+                          {metadata.fileType.split('/').pop()?.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {getStatusBadge(doc.status, doc)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(doc.id, docName);
+                      }}
+                      disabled={deleteDocument.isPending}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'transparent',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                      title="Delete document"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {getStatusBadge(doc.status)}
-                  <button
-                    onClick={() => handleDelete(doc.id, docName)}
-                    disabled={deleteDocument.isPending}
-                    style={{
-                      padding: '6px 12px',
-                      background: 'transparent',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                    }}
-                  >
-                    🗑️
-                  </button>
-                </div>
+
+                {/* Expanded details */}
+                {isExpanded && (
+                  <div style={{
+                    padding: '16px 20px',
+                    borderTop: '1px solid #e2e8f0',
+                    background: '#f8fafc'
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Source</div>
+                        <div style={{ fontSize: '14px' }}>{doc.source || metadata.fileName || 'Manual Entry'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Created</div>
+                        <div style={{ fontSize: '14px' }}>{new Date(doc.createdAt).toLocaleString()}</div>
+                      </div>
+                      {doc.updatedAt && doc.updatedAt !== doc.createdAt && (
+                        <div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Last Updated</div>
+                          <div style={{ fontSize: '14px' }}>{new Date(doc.updatedAt).toLocaleString()}</div>
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Document ID</div>
+                        <div style={{ fontSize: '13px', fontFamily: 'monospace', color: '#64748b' }}>{doc.id}</div>
+                      </div>
+                    </div>
+
+                    {/* Error details for failed documents */}
+                    {hasFailed && errorMessage && (
+                      <div style={{
+                        marginTop: '16px',
+                        padding: '12px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ fontSize: '12px', color: '#991b1b', fontWeight: 600, marginBottom: '4px' }}>
+                          Error Details
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#b91c1c' }}>
+                          {errorMessage}
+                        </div>
+                        <button
+                          onClick={() => handleRetry(doc.id)}
+                          disabled={retryDocument.isPending}
+                          className="primary-button"
+                          style={{ marginTop: '12px', fontSize: '13px', padding: '8px 16px' }}
+                        >
+                          {retryDocument.isPending ? 'Retrying...' : 'Retry Processing'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Content preview */}
+                    {metadata.content && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Content Preview</div>
+                        <div style={{
+                          fontSize: '13px',
+                          color: '#475569',
+                          background: '#fff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '12px',
+                          maxHeight: '150px',
+                          overflow: 'auto',
+                          whiteSpace: 'pre-wrap',
+                          fontFamily: 'monospace'
+                        }}>
+                          {metadata.content.substring(0, 500)}
+                          {metadata.content.length > 500 && '...'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -113,7 +113,7 @@ export async function processDocument(
     await prisma.document.update({
       where: { id: documentId },
       data: {
-        status: 'indexed',
+        status: 'ready',
         metadata: {
           ...(document.metadata as any),
           processedAt: new Date().toISOString(),
@@ -128,7 +128,11 @@ export async function processDocument(
 
     console.log(`[DocumentProcessor] Successfully processed document ${documentId}`);
   } catch (error) {
-    console.error(`[DocumentProcessor] Error processing document ${documentId}:`, error);
+    console.error(`[DocumentProcessor] Failed to process document ${documentId}:`, {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      documentId,
+    });
 
     // Update status to failed
     await prisma.document.update({
