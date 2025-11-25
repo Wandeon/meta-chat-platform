@@ -2,7 +2,6 @@ import 'dotenv/config';
 
 import cors from 'cors';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import { createServer as createHttpServer, Server as HttpServer } from 'http';
 import { AddressInfo } from 'net';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
@@ -14,6 +13,7 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import createHttpError from 'http-errors';
 import { httpsRedirect } from './middleware/httpsRedirect';
 import { securityHeaders } from './middleware/securityHeaders';
+import { apiLimiter, systemStatusLimiter } from './middleware/rateLimiting';
 
 import { getPrismaClient } from '@meta-chat/database';
 import { createLogger, ensureCorrelationId, withRequestContext } from '@meta-chat/shared';
@@ -129,17 +129,8 @@ function registerCors(app: express.Express): void {
 }
 
 function registerRateLimiting(app: express.Express): void {
-  const windowMs = Number.parseInt(process.env.API_RATE_LIMIT_WINDOW_MS ?? '', 10) || 60_000;
-  const max = Number.parseInt(process.env.API_RATE_LIMIT_MAX ?? '', 10) || 120;
-
-  const limiter = rateLimit({
-    windowMs,
-    max,
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
-  app.use('/api', limiter);
+  app.use('/api', apiLimiter);
+  app.use(['/health', '/metrics'], systemStatusLimiter);
 }
 
 function registerLogging(app: express.Express): void {
