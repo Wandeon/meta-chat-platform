@@ -1,0 +1,14 @@
+{
+  "nav": {
+    "tenants": "Tenants",
+    "analytics": "Analytics",
+    "mcpServers": "MCP Servers",
+    "channels": "Channels",
+    "documents": "Documents",
+    "conversations": "Conversations",
+    "webhooks": "Webhooks",
+    "testing": "Testing",
+    "health": "System Health",
+    "logout": "Log out"
+  }
+}

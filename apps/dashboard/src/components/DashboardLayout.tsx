@@ -2,22 +2,25 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../routes/AuthProvider';
 import { clsx } from 'clsx';
 import { ThemeToggle } from './shared/ThemeToggle';
+import { LanguagePicker } from './shared/LanguagePicker';
+import { useTranslation } from 'react-i18next';
 
 const NAV_LINKS = [
-  { to: '/tenants', label: 'Tenants' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/mcp-servers', label: 'MCP Servers' },
-  { to: '/channels', label: 'Channels' },
-  { to: '/documents', label: 'Documents' },
-  { to: '/conversations', label: 'Conversations' },
-  { to: '/webhooks', label: 'Webhooks' },
-  { to: '/testing', label: 'Testing' },
-  { to: '/health', label: 'System Health' },
+  { to: '/tenants', labelKey: 'nav.tenants' },
+  { to: '/analytics', labelKey: 'nav.analytics' },
+  { to: '/mcp-servers', labelKey: 'nav.mcpServers' },
+  { to: '/channels', labelKey: 'nav.channels' },
+  { to: '/documents', labelKey: 'nav.documents' },
+  { to: '/conversations', labelKey: 'nav.conversations' },
+  { to: '/webhooks', labelKey: 'nav.webhooks' },
+  { to: '/testing', labelKey: 'nav.testing' },
+  { to: '/health', labelKey: 'nav.health' },
 ];
 
 export function DashboardLayout() {
   const { logout } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
     <div className="dashboard-shell">
@@ -32,7 +35,7 @@ export function DashboardLayout() {
               return (
                 <li key={link.to}>
                   <Link className={clsx({ active })} to={link.to}>
-                    {link.label}
+                    {t(link.labelKey)}
                   </Link>
                 </li>
               );
@@ -40,11 +43,12 @@ export function DashboardLayout() {
           </ul>
         </nav>
         <button className="logout" onClick={logout} type="button">
-          Log out
+          {t('nav.logout')}
         </button>
       </aside>
       <main className="dashboard-content">
-        <header className="flex items-center justify-end p-4 border-b border-border">
+        <header className="flex items-center justify-end gap-2 p-4 border-b border-border">
+          <LanguagePicker />
           <ThemeToggle />
         </header>
         <div className="p-6">

@@ -1,0 +1,14 @@
+{
+  "nav": {
+    "tenants": "Stanari",
+    "analytics": "Analitika",
+    "mcpServers": "MCP Serveri",
+    "channels": "Kanali",
+    "documents": "Dokumenti",
+    "conversations": "Razgovori",
+    "webhooks": "Webhookovi",
+    "testing": "Testiranje",
+    "health": "Zdravlje Sustava",
+    "logout": "Odjava"
+  }
+}
