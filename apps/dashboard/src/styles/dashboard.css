@@ -383,3 +383,49 @@ small {
     grid-template-columns: 1fr 320px;
   }
 }
+
+/* Mobile nav improvements - icons only */
+.dashboard-sidebar .nav-icon {
+  margin-right: 8px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-sidebar .nav-label {
+    display: none;
+  }
+
+  .dashboard-sidebar .nav-icon {
+    margin-right: 0;
+    font-size: 1.5rem;
+  }
+
+  .dashboard-sidebar a {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dashboard-sidebar nav {
+    flex: 1;
+    overflow-x: visible;
+  }
+
+  .dashboard-sidebar nav ul {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .dashboard-sidebar nav ul li {
+    flex: 1;
+    display: flex;
+  }
+
+  .dashboard-sidebar nav ul li a {
+    flex: 1;
+  }
+}
