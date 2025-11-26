@@ -1,23 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import {
-  FileText,
-  MessageSquare,
-  Rocket,
-  Activity,
-  Users
-} from 'lucide-react';
-
-// Mobile shows only 5 most important items
-const MOBILE_NAV_ITEMS = [
-  { path: '/documents', icon: FileText, label: 'Documents' },
-  { path: '/conversations', icon: MessageSquare, label: 'Conversations' },
-  { path: '/testing', icon: Rocket, label: 'Testing' },
-  { path: '/health', icon: Activity, label: 'Health' },
-  { path: '/tenants', icon: Users, label: 'Tenants' },
-];
+import { useTranslation } from 'react-i18next';
+import { MOBILE_NAV_ITEMS } from '@/constants/navigation';
 
 export function MobileNav() {
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
@@ -31,7 +18,7 @@ export function MobileNav() {
               key={item.path}
               to={item.path}
               className="flex flex-col items-center justify-center w-full h-full relative"
-              aria-label={item.label}
+              aria-label={t(item.labelKey)}
             >
               <Icon
                 className={`w-6 h-6 transition-colors ${

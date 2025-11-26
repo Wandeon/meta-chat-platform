@@ -1,28 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  Users,
-  Activity,
-  Server,
-  Hash,
-  FileText,
-  MessageSquare,
-  Webhook,
-  Rocket,
-  LogOut
-} from 'lucide-react';
-
-const NAV_LINKS = [
-  { path: '/tenants', labelKey: 'nav.tenants', icon: Users },
-  { path: '/analytics', labelKey: 'nav.analytics', icon: Activity },
-  { path: '/mcp-servers', labelKey: 'nav.mcpServers', icon: Server },
-  { path: '/channels', labelKey: 'nav.channels', icon: Hash },
-  { path: '/documents', labelKey: 'nav.documents', icon: FileText },
-  { path: '/conversations', labelKey: 'nav.conversations', icon: MessageSquare },
-  { path: '/webhooks', labelKey: 'nav.webhooks', icon: Webhook },
-  { path: '/testing', labelKey: 'nav.testing', icon: Rocket },
-  { path: '/health', labelKey: 'nav.health', icon: Activity },
-];
+import { LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { NAV_LINKS } from '@/constants/navigation';
 
 interface DesktopSidebarProps {
   onLogout: () => void;
@@ -47,11 +27,13 @@ export function DesktopSidebar({ onLogout }: DesktopSidebarProps) {
             <Link
               key={link.path}
               to={link.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+              aria-current={isActive ? 'page' : undefined}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
                 isActive
-                  ? 'bg-primary text-primary-foreground font-medium'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              }`}
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
             >
               <Icon className="w-5 h-5 shrink-0" />
               <span>{t(link.labelKey)}</span>
