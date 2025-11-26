@@ -4,6 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Meta Chat Admin Dashboard</title>
+    <script>
+      // Prevent flash of wrong theme - runs before React hydrates
+      (function() {
+        try {
+          const stored = localStorage.getItem('theme');
+          const theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {
+          // localStorage might be blocked
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

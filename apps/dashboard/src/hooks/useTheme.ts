@@ -4,6 +4,9 @@ type Theme = 'light' | 'dark';
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>(() => {
+    // SSR safety: Check if we're in a browser environment
+    if (typeof window === 'undefined') return 'light';
+
     // Check localStorage first
     const stored = localStorage.getItem('theme') as Theme | null;
     if (stored) return stored;
@@ -19,11 +22,12 @@ export function useTheme() {
   useEffect(() => {
     const root = document.documentElement;
 
-    // Remove both classes first
-    root.classList.remove('light', 'dark');
-
-    // Add current theme class
-    root.classList.add(theme);
+    // Only manage the 'dark' class (Tailwind's darkMode: ["class"])
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
 
     // Persist to localStorage
     localStorage.setItem('theme', theme);
