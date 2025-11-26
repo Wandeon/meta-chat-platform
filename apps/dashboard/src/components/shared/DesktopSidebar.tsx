@@ -2,7 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NAV_LINKS } from '@/constants/navigation';
+import { ADMIN_NAV_LINKS, CLIENT_NAV_LINKS } from '@/constants/navigation';
+import { useAuth } from '@/routes/AuthProvider';
 
 interface DesktopSidebarProps {
   onLogout: () => void;
@@ -11,15 +12,20 @@ interface DesktopSidebarProps {
 export function DesktopSidebar({ onLogout }: DesktopSidebarProps) {
   const location = useLocation();
   const { t } = useTranslation();
+  const { isAdmin } = useAuth();
+
+  const navLinks = isAdmin ? ADMIN_NAV_LINKS : CLIENT_NAV_LINKS;
 
   return (
     <aside className="hidden md:flex md:flex-col w-60 border-r border-border bg-card">
       <div className="p-6">
-        <h1 className="text-xl font-bold text-foreground">Meta Chat</h1>
+        <h1 className="text-xl font-bold text-foreground">
+          {isAdmin ? 'Meta Chat Admin' : 'Meta Chat'}
+        </h1>
       </div>
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-        {NAV_LINKS.map((link) => {
+        {navLinks.map((link) => {
           const Icon = link.icon;
           const isActive = location.pathname.startsWith(link.path);
 

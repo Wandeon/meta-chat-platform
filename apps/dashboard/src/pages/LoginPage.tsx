@@ -32,7 +32,7 @@ export function LoginPage() {
       }
 
       const data = await response.json();
-      login(data.token);
+      login(data.token, data.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to login');
     } finally {

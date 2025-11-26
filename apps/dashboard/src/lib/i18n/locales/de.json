@@ -9,7 +9,9 @@
     "webhooks": "Webhooks",
     "testing": "Testen",
     "health": "Systemzustand",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "settings": "Einstellungen",
+    "billing": "Abrechnung"
   },
   "documents": {
     "title": "Wissensbasis",

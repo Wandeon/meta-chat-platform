@@ -9,7 +9,9 @@
     "webhooks": "Webhookovi",
     "testing": "Testiranje",
     "health": "Zdravlje Sustava",
-    "logout": "Odjava"
+    "logout": "Odjava",
+    "settings": "Postavke",
+    "billing": "Naplata"
   },
   "documents": {
     "title": "Baza Znanja",

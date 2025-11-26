@@ -9,7 +9,9 @@
     "webhooks": "Webhooks",
     "testing": "Testing",
     "health": "System Health",
-    "logout": "Log out"
+    "logout": "Log out",
+    "settings": "Settings",
+    "billing": "Billing"
   },
   "documents": {
     "title": "Knowledge Base",
