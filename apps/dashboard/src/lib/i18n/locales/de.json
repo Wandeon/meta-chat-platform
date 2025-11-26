@@ -56,5 +56,16 @@
       "ragEnabled": "RAG Aktiviert",
       "mcpEnabled": "MCP Aktiviert"
     }
+  },
+  "widget": {
+    "title": "Widget Bereitstellen",
+    "subtitle": "Betten Sie Ihren Chatbot auf Ihrer Website ein",
+    "customize": "Widget Anpassen",
+    "preview": "Live-Vorschau",
+    "installation": "Installation",
+    "copyCode": "Code Kopieren",
+    "copied": "Kopiert!",
+    "instructions": "Fügen Sie diesen Code-Ausschnitt in das HTML Ihrer Website ein, kurz vor dem schließenden </body>-Tag.",
+    "selectTenant": "Wählen Sie einen Mieter aus, um das Widget zu konfigurieren"
   }
 }

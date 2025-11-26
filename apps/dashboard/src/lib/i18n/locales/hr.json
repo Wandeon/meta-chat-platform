@@ -56,5 +56,16 @@
       "ragEnabled": "RAG Omogućen",
       "mcpEnabled": "MCP Omogućen"
     }
+  },
+  "widget": {
+    "title": "Implementiraj Widget",
+    "subtitle": "Ugradi svoj chatbot na svoju web stranicu",
+    "customize": "Prilagodi Widget",
+    "preview": "Pregled Uživo",
+    "installation": "Instalacija",
+    "copyCode": "Kopiraj Kod",
+    "copied": "Kopirano!",
+    "instructions": "Dodajte ovaj kod na svoju web stranicu, neposredno prije zatvarajuće </body> oznake.",
+    "selectTenant": "Odaberite stanara za konfiguraciju widgeta"
   }
 }
