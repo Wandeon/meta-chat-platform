@@ -429,3 +429,28 @@ small {
     flex: 1;
   }
 }
+
+/* Test Chat page responsive layout */
+.test-chat-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .test-chat-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  /* Hide sidebar on mobile, show chat only */
+  .test-chat-sidebar {
+    display: none;
+  }
+  
+  /* Adjust chat height for mobile */
+  .test-chat-area {
+    height: calc(100vh - 250px) !important;
+    min-height: 400px !important;
+  }
+}
