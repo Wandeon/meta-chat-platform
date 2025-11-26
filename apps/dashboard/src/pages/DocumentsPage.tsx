@@ -15,6 +15,7 @@ export function DocumentsPage() {
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const documentsQuery = useQuery({
     queryKey: ['documents'],
@@ -51,7 +52,7 @@ export function DocumentsPage() {
     },
   });
 
-  const handleFileSelect = async (file: File) => {
+  const handleFileSelect = async (file: File, tenantId: string) => {
     setIsUploading(true);
 
     const reader = new FileReader();
@@ -59,9 +60,11 @@ export function DocumentsPage() {
       const content = event.target?.result as string;
 
       await createDocument.mutateAsync({
+        tenantId,
         name: file.name,
         source: 'upload',
-        metadata: { name: file.name, type: file.type, content },
+        content,
+        metadata: { name: file.name, type: file.type },
       });
     };
     reader.readAsText(file);
@@ -97,6 +100,8 @@ export function DocumentsPage() {
           onFileSelect={handleFileSelect}
           onCancel={() => setShowUpload(false)}
           isUploading={isUploading}
+          selectedTenantId={selectedTenantId}
+          onTenantChange={setSelectedTenantId}
         />
       ) : (
         <div className="mb-6">

@@ -78,8 +78,10 @@ export interface Document {
     updatedAt: string;
 }
 export interface CreateDocumentRequest {
+    tenantId: string;
     name: string;
     source: string;
+    content: string;
     metadata?: Record<string, unknown>;
 }
 export interface UpdateDocumentRequest {

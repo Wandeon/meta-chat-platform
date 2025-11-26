@@ -4,14 +4,23 @@ import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { TenantSelector } from '../TenantSelector';
 
 interface DocumentUploadProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (file: File, tenantId: string) => void;
   onCancel: () => void;
   isUploading?: boolean;
+  selectedTenantId: string;
+  onTenantChange: (id: string) => void;
 }
 
-export function DocumentUpload({ onFileSelect, onCancel, isUploading }: DocumentUploadProps) {
+export function DocumentUpload({
+  onFileSelect,
+  onCancel,
+  isUploading,
+  selectedTenantId,
+  onTenantChange
+}: DocumentUploadProps) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
 
@@ -31,16 +40,16 @@ export function DocumentUpload({ onFileSelect, onCancel, isUploading }: Document
 
     const file = e.dataTransfer.files[0];
     if (file) {
-      onFileSelect(file);
+      onFileSelect(file, selectedTenantId);
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, selectedTenantId]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onFileSelect(file);
+      onFileSelect(file, selectedTenantId);
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, selectedTenantId]);
 
   return (
     <Card className="p-6">
@@ -49,6 +58,15 @@ export function DocumentUpload({ onFileSelect, onCancel, isUploading }: Document
         <Button variant="ghost" size="icon" onClick={onCancel}>
           <X className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Tenant Selection */}
+      <div className="mb-4">
+        <label className="text-sm font-medium mb-2 block">Select Tenant</label>
+        <TenantSelector
+          value={selectedTenantId}
+          onChange={onTenantChange}
+        />
       </div>
 
       <div
@@ -73,10 +91,10 @@ export function DocumentUpload({ onFileSelect, onCancel, isUploading }: Document
             type="file"
             accept=".pdf,.txt,.md,.docx"
             onChange={handleFileInput}
-            disabled={isUploading}
+            disabled={isUploading || !selectedTenantId}
             className="hidden"
           />
-          <Button asChild disabled={isUploading}>
+          <Button asChild disabled={isUploading || !selectedTenantId}>
             <span>{isUploading ? 'Uploading...' : 'Browse Files'}</span>
           </Button>
         </label>
