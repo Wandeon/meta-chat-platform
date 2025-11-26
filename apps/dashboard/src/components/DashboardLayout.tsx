@@ -1,7 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../routes/AuthProvider';
 import { clsx } from 'clsx';
-import '../styles/dashboard.css';
 
 const NAV_LINKS = [
   { to: '/tenants', label: 'Tenants' },
