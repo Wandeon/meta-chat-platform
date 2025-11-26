@@ -41,6 +41,7 @@ import { TenantQueuePublisher } from './queues/task-publisher';
 import { WebhookAckStrategy } from './webhooks/ack-strategy';
 import type { Request, Response, NextFunction } from 'express';
 import { HealthCheck } from '@meta-chat/shared';
+import { asyncHandler } from './utils/http';
 
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
@@ -270,15 +271,15 @@ function registerRoutes(
   deps: { publisher: TenantQueuePublisher; ackStrategy: WebhookAckStrategy },
   redisClients: { publisher: Redis | null; subscriber: Redis | null },
 ): void {
-  app.get('/health', async (_req, res) => {
+  app.get('/health', asyncHandler(async (_req, res) => {
     const health = await getHealthStatus(redisClients, deps);
     res.json(health);
-  });
+  }));
 
-  app.get('/metrics', async (_req, res) => {
+  app.get('/metrics', asyncHandler(async (_req, res) => {
     res.setHeader('Content-Type', metricsRegistry.contentType);
     res.send(await metricsRegistry.metrics());
-  });
+  }));
 
   // Health check endpoints (no auth required)
   app.use('/api', healthRouter);
@@ -309,6 +310,7 @@ function registerErrorHandling(app: express.Express): void {
   app.use((error: any, req: Request, res: Response, _next: NextFunction) => {
     const status = error.status ?? 500;
     const code = error.code ?? (status === 500 ? 'internal_error' : 'error');
+    const expose = error.expose === true || (status >= 400 && status < 500);
 
     logger.error('Request failed', error);
 
@@ -316,8 +318,8 @@ function registerErrorHandling(app: express.Express): void {
       success: false,
       error: {
         code,
-        message: error.message ?? 'Internal Server Error',
-        details: error.errors ?? error.details,
+        message: expose ? error.message : 'Internal Server Error',
+        details: expose ? error.errors ?? error.details : undefined,
       },
     });
   });
