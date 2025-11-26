@@ -3,12 +3,17 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "types": ["vite/client"],
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "outDir": "dist",
+    "rootDir": ".",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "rootDir": "./src",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "resolveJsonModule": true,
+    "allowArbitraryExtensions": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src/**/*", "src/**/*.json"]
 }

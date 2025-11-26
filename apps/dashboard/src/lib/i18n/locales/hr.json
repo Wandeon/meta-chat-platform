@@ -1,0 +1,91 @@
+{
+  "nav": {
+    "tenants": "Stanari",
+    "analytics": "Analitika",
+    "mcpServers": "MCP Serveri",
+    "channels": "Kanali",
+    "documents": "Dokumenti",
+    "conversations": "Razgovori",
+    "webhooks": "Webhookovi",
+    "testing": "Testiranje",
+    "health": "Zdravlje Sustava",
+    "logout": "Odjava"
+  },
+  "documents": {
+    "title": "Baza Znanja",
+    "subtitle": "Upravljajte dokumentima koje vaš chatbot koristi za odgovore",
+    "uploadButton": "Učitaj Dokument",
+    "noDocuments": "Još nema dokumenata",
+    "noDocumentsDescription": "Učitajte svoj prvi dokument za početak",
+    "selectTenant": "Odaberite Stanara",
+    "uploading": "Učitavanje...",
+    "browseFiles": "Pregledaj Datoteke",
+    "loading": "Učitavanje dokumenata...",
+    "uploadPrompt": "Povucite i ispustite datoteke ovdje ili kliknite za pregled",
+    "uploadSupported": "Podržano: PDF, TXT, MD, DOCX (maks 10MB)",
+    "table": {
+      "name": "Naziv",
+      "tenant": "Stanar",
+      "status": "Status",
+      "uploadedAt": "Učitano",
+      "actions": "Akcije"
+    },
+    "status": {
+      "processing": "Obrada",
+      "ready": "Spremno",
+      "failed": "Nije uspjelo"
+    },
+    "actions": {
+      "view": "Pregledaj",
+      "edit": "Uredi",
+      "delete": "Izbriši",
+      "confirmDelete": "Jeste li sigurni da želite izbrisati ovaj dokument?"
+    }
+  },
+  "testing": {
+    "title": "Testirajte Svoj Chatbot",
+    "subtitle": "Razgovarajte da vidite kako reagira",
+    "selectTenant": "Odaberite stanara za početak testiranja",
+    "startConversation": "Započni razgovor",
+    "typeMessage": "Upišite poruku da testirate kako vaš chatbot reagira",
+    "tryExample": "Pokušajte pitati o sadržaju iz vaše Baze Znanja!",
+    "placeholder": "Upišite vašu poruku...",
+    "send": "Pošalji",
+    "newConversation": "Započni Novi Razgovor",
+    "metadata": {
+      "title": "Info o Odgovoru",
+      "model": "Model",
+      "latency": "Kašnjenje",
+      "tokens": "Tokeni",
+      "ragEnabled": "RAG Omogućen",
+      "mcpEnabled": "MCP Omogućen"
+    }
+  },
+  "widget": {
+    "title": "Implementiraj Widget",
+    "subtitle": "Ugradi svoj chatbot na svoju web stranicu",
+    "customize": "Prilagodi Widget",
+    "preview": "Pregled Uživo",
+    "installation": "Instalacija",
+    "copyCode": "Kopiraj Kod",
+    "copied": "Kopirano!",
+    "instructions": "Dodajte ovaj kod na svoju web stranicu, neposredno prije zatvarajuće </body> oznake.",
+    "selectTenant": "Odaberite stanara za konfiguraciju widgeta"
+  },
+  "conversations": {
+    "title": "Razgovori",
+    "subtitle": "Pregledajte i upravljajte razgovorima chatbota",
+    "noConversations": "Još nema razgovora",
+    "noConversationsDescription": "Razgovori će se pojaviti ovdje kada korisnici razgovaraju s vašim botom",
+    "filterAll": "Svi",
+    "filterActive": "Aktivni",
+    "filterResolved": "Riješeni",
+    "searchPlaceholder": "Pretraži razgovore...",
+    "lastMessage": "Zadnja poruka",
+    "messages": "poruke",
+    "loading": "Učitavanje razgovora..."
+  },
+  "common": {
+    "loading": "Učitavanje..."
+  }
+}

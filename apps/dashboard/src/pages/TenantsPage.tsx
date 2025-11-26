@@ -10,7 +10,6 @@ export function TenantsPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<CreateTenantRequest>({ name: '', slug: '' });
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const tenantsQuery = useQuery({
     queryKey: ['tenants'],
@@ -20,17 +19,12 @@ export function TenantsPage() {
   const createTenant = useMutation({
     mutationFn: () => api.post<CreateTenantResponse, CreateTenantRequest>('/api/tenants', form),
     onSuccess: (data) => {
-      const tenantName = form.name;
       setForm({ name: '', slug: '' });
       setNewApiKey(data.apiKey); // Show the generated API key
-      setSuccessMessage(`Tenant "${tenantName}" created successfully!`);
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
 
       // Clear the API key after 30 seconds
       setTimeout(() => setNewApiKey(null), 30000);
-
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(null), 5000);
     },
   });
 
@@ -38,8 +32,6 @@ export function TenantsPage() {
     mutationFn: (id: string) => api.delete<void>(`/api/tenants/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      setSuccessMessage('Tenant deleted successfully!');
-      setTimeout(() => setSuccessMessage(null), 5000);
     },
   });
 
@@ -61,24 +53,6 @@ export function TenantsPage() {
     <section className="dashboard-section">
       <h1>Tenants</h1>
       <p>Provision and manage tenant workspaces.</p>
-
-      {successMessage && (
-        <div style={{
-          background: '#d1fae5',
-          border: '1px solid #10b981',
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <span style={{ fontSize: '20px' }}>✓</span>
-          <p style={{ margin: 0, color: '#065f46', fontWeight: 500 }}>
-            {successMessage}
-          </p>
-        </div>
-      )}
 
       {newApiKey && (
         <div style={{
@@ -104,20 +78,6 @@ export function TenantsPage() {
           }}>
             {newApiKey}
           </code>
-        </div>
-      )}
-
-      {createTenant.error && (
-        <div style={{
-          background: '#fee2e2',
-          border: '1px solid #ef4444',
-          borderRadius: '8px',
-          padding: '12px',
-          marginBottom: '16px',
-        }}>
-          <p style={{ margin: 0, color: '#991b1b', fontSize: '14px' }}>
-            Error creating tenant: {createTenant.error.message}
-          </p>
         </div>
       )}
 

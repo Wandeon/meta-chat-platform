@@ -1,131 +1,49 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
+import { Plus, FileText } from 'lucide-react';
 import { useApi } from '../api/client';
-import { useAuth } from '../routes/AuthProvider';
-import type { Document, CreateDocumentRequest, UpdateDocumentRequest } from '../api/types';
-
-type ViewMode = 'list' | 'upload' | 'write';
-
-// Helper to format dates safely - use UTC to avoid timezone issues
-const formatDate = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    const now = new Date();
-
-    // Check if date is invalid
-    if (isNaN(date.getTime())) {
-      return 'Unknown';
-    }
-
-    // Check if date is in the future (likely a timezone bug) - show relative time
-    if (date > now) {
-      // Check if it's within 24 hours - likely today but server timezone is ahead
-      const diffHours = (date.getTime() - now.getTime()) / (1000 * 60 * 60);
-      if (diffHours < 24) {
-        return 'Today';
-      }
-      return 'Recently';
-    }
-
-    // Check if it's today (compare date strings to avoid timezone issues)
-    const todayStr = now.toDateString();
-    const dateStr = date.toDateString();
-    if (dateStr === todayStr) {
-      return 'Today';
-    }
-
-    // Check if it's yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    }
-
-    // Otherwise format nicely
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
-  } catch {
-    return 'Unknown';
-  }
-};
-
-// Format datetime consistently
-const formatDateTime = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return 'Unknown';
-    }
-
-    const now = new Date();
-
-    // If date appears to be in the future due to timezone, adjust display
-    if (date > now) {
-      const diffHours = (date.getTime() - now.getTime()) / (1000 * 60 * 60);
-      if (diffHours < 24) {
-        // It's likely today, just show time
-        return `Today at ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-      }
-    }
-
-    return date.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch {
-    return 'Unknown';
-  }
-};
-
-// Helper to format file size
-const formatFileSize = (bytes: number): string => {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DocumentUpload } from '@/components/documents/DocumentUpload';
+import { DocumentTable } from '@/components/documents/DocumentTable';
+import { DocumentCard } from '@/components/documents/DocumentCard';
+import type { Document, CreateDocumentRequest } from '../api/types';
 
 export function DocumentsPage() {
+  const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
-  const { getUser } = useAuth();
-  const user = getUser();
-
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', source: '' });
-  const [contentInput, setContentInput] = useState('');
-  const [fileUpload, setFileUpload] = useState<File | null>(null);
-  const [expandedDoc, setExpandedDoc] = useState<string | null>(null);
-  const [retryingDocId, setRetryingDocId] = useState<string | null>(null);
-  const [retryToast, setRetryToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const documentsQuery = useQuery({
     queryKey: ['documents'],
     queryFn: () => api.get<Document[]>('/api/documents'),
   });
 
+  const tenantsQuery = useQuery({
+    queryKey: ['tenants'],
+    queryFn: () => api.get<any[]>('/api/tenants'),
+  });
+
+  const getTenantName = (tenantId: string) => {
+    const tenant = tenantsQuery.data?.find((t: any) => t.id === tenantId);
+    return tenant?.name || tenantId.slice(0, 8) + '...';
+  };
+
   const createDocument = useMutation({
     mutationFn: (data: CreateDocumentRequest) =>
       api.post<Document, CreateDocumentRequest>('/api/documents', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
-      resetForm();
+      setShowUpload(false);
+      setIsUploading(false);
     },
-  });
-
-  const updateDocument = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateDocumentRequest }) =>
-      api.patch<Document, UpdateDocumentRequest>(`/api/documents/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-      resetForm();
+    onError: () => {
+      setIsUploading(false);
     },
   });
 
@@ -136,503 +54,130 @@ export function DocumentsPage() {
     },
   });
 
-  // Retry processing a failed document
-  const retryDocument = useMutation({
-    mutationFn: (id: string) => api.post<void>(`/api/documents/${id}/retry`, {}),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-      setRetryToast({ type: 'success', message: 'Document queued for reprocessing' });
-      setRetryingDocId(null);
-      setTimeout(() => setRetryToast(null), 4000);
-    },
-    onError: (error: any) => {
-      setRetryToast({ type: 'error', message: error.message || 'Failed to retry processing' });
-      setRetryingDocId(null);
-      setTimeout(() => setRetryToast(null), 4000);
-    },
-  });
-
-  const resetForm = () => {
-    setForm({ name: '', source: '' });
-    setContentInput('');
-    setFileUpload(null);
-    setEditingId(null);
-    setViewMode('list');
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setFileUpload(file);
-    setForm((prev) => ({ ...prev, name: prev.name || file.name.replace(/\.[^/.]+$/, '') }));
+  const handleFileSelect = async (file: File, tenantId: string) => {
+    setIsUploading(true);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setContentInput(event.target?.result as string);
+    reader.onload = async (event) => {
+      const content = event.target?.result as string;
+
+      await createDocument.mutateAsync({
+        tenantId,
+        name: file.name,
+        source: 'upload',
+        content,
+        metadata: { name: file.name, type: file.type },
+      });
     };
     reader.readAsText(file);
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!user?.tenantId) return;
-
-    const payload = {
-      name: form.name,
-      source: form.source || (fileUpload ? fileUpload.name : 'Manual Entry'),
-      metadata: {
-        content: contentInput,
-        ...(fileUpload && {
-          fileName: fileUpload.name,
-          fileSize: fileUpload.size,
-          fileType: fileUpload.type,
-        }),
-      },
-    };
-
-    if (editingId) {
-      updateDocument.mutate({ id: editingId, data: payload });
-    } else {
-      createDocument.mutate({ ...payload, tenantId: user.tenantId } as CreateDocumentRequest);
-    }
+  const handleEdit = (doc: Document) => {
+    // TODO: Implement edit modal
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (confirm(`Delete "${name}"?\n\nYour chatbot will no longer be able to answer questions about this content.`)) {
+  const handleDelete = (id: string) => {
+    if (confirm(t('documents.actions.confirmDelete'))) {
       deleteDocument.mutate(id);
     }
   };
 
-  const handleRetry = (id: string) => {
-    setRetryingDocId(id);
-    retryDocument.mutate(id);
-  };
+  const documents = documentsQuery.data || [];
+  const hasDocuments = documents.length > 0;
 
-  const getStatusBadge = (status: string, doc: Document) => {
-    const isRetrying = retryingDocId === doc.id;
-    const styles: Record<string, { bg: string; color: string; label: string; icon: string }> = {
-      indexed: { bg: '#d1fae5', color: '#065f46', label: 'Ready', icon: '✓' },
-      processing: { bg: '#dbeafe', color: '#1e40af', label: 'Processing', icon: '⏳' },
-      failed: { bg: '#fee2e2', color: '#991b1b', label: 'Failed', icon: '✗' },
-    };
-    const s = styles[status] || { bg: '#f1f5f9', color: '#475569', label: status, icon: '•' };
-
-    // Show processing state if retrying
-    if (isRetrying) {
-      return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{
-            padding: '4px 10px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            fontWeight: 600,
-            background: '#dbeafe',
-            color: '#1e40af',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}>
-            <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span> Retrying...
-          </span>
-        </div>
-      );
-    }
-
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{
-          padding: '4px 10px',
-          borderRadius: '12px',
-          fontSize: '12px',
-          fontWeight: 600,
-          background: s.bg,
-          color: s.color,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px'
-        }}>
-          {s.icon} {s.label}
-        </span>
-        {status === 'failed' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRetry(doc.id);
-            }}
-            disabled={retryDocument.isPending}
-            style={{
-              padding: '4px 8px',
-              fontSize: '11px',
-              background: '#fef3c7',
-              color: '#92400e',
-              border: '1px solid #fcd34d',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 500,
-            }}
-          >
-            Retry
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  // Empty state
-  if (documentsQuery.data?.length === 0 && viewMode === 'list') {
-    return (
-      <section className="dashboard-section" style={{ maxWidth: '800px' }}>
-        <h1>Knowledge Base</h1>
-        <p style={{ color: '#64748b', marginBottom: '32px' }}>
-          Add content to teach your chatbot about your business.
-        </p>
-
-        <div style={{ textAlign: 'center', padding: '48px 24px', border: '2px dashed #e2e8f0', borderRadius: '12px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-          <h2 style={{ margin: '0 0 8px 0', fontSize: '20px' }}>No content yet</h2>
-          <p style={{ color: '#64748b', marginBottom: '24px' }}>
-            Your chatbot needs information to answer questions. Add documents or paste text to get started.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => setViewMode('upload')} className="primary-button">
-              Upload Documents
-            </button>
-            <button onClick={() => setViewMode('write')} className="secondary-button">
-              Write or Paste Text
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
-  // Upload or Write form
-  if (viewMode === 'upload' || viewMode === 'write') {
-    return (
-      <section className="dashboard-section" style={{ maxWidth: '800px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-          <button onClick={resetForm} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px' }}>
-            ←
-          </button>
-          <h1 style={{ margin: 0 }}>{viewMode === 'upload' ? 'Upload Documents' : 'Add Text Content'}</h1>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
-              Name *
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Product FAQ, Pricing Info, Company Policy"
-              required
-              style={{ width: '100%' }}
-            />
-            <small style={{ color: '#64748b' }}>Give this content a descriptive name</small>
-          </div>
-
-          {viewMode === 'upload' ? (
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
-                Choose File *
-              </label>
-              <input
-                type="file"
-                accept=".txt,.md,.pdf,.doc,.docx"
-                onChange={handleFileChange}
-                required={!contentInput}
-                style={{
-                  width: '100%',
-                  padding: '24px',
-                  border: '2px dashed #cbd5e1',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  background: '#f8fafc',
-                }}
-              />
-              <small style={{ color: '#64748b' }}>
-                Supported: PDF, Word documents, text files (.txt, .md)
-              </small>
-            </div>
-          ) : (
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
-                Content *
-              </label>
-              <textarea
-                value={contentInput}
-                onChange={(e) => setContentInput(e.target.value)}
-                rows={15}
-                placeholder={'Paste your text content here...\n\nFor example:\n- Product descriptions\n- FAQ answers\n- Company policies\n- Support documentation'}
-                required
-                style={{ width: '100%', fontFamily: 'inherit', fontSize: '14px', resize: 'vertical' }}
-              />
-            </div>
-          )}
-
-          {(createDocument.error || updateDocument.error) && (
-            <div style={{ background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '20px' }}>
-              <p style={{ margin: 0, color: '#991b1b' }}>
-                Error: {createDocument.error?.message || updateDocument.error?.message}
-              </p>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button type="submit" disabled={createDocument.isPending || updateDocument.isPending} className="primary-button">
-              {createDocument.isPending || updateDocument.isPending ? 'Saving...' : (editingId ? 'Update' : 'Add to Knowledge Base')}
-            </button>
-            <button type="button" onClick={resetForm} className="secondary-button">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </section>
-    );
-  }
-
-  // List view
   return (
-    <section className="dashboard-section" style={{ maxWidth: '1000px' }}>
-      {/* Toast notification */}
-      {retryToast && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          background: retryToast.type === 'success' ? '#d1fae5' : '#fee2e2',
-          border: `1px solid ${retryToast.type === 'success' ? '#10b981' : '#ef4444'}`,
-          color: retryToast.type === 'success' ? '#065f46' : '#991b1b',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          animation: 'slideIn 0.3s ease-out',
-        }}>
-          {retryToast.type === 'success' ? '✓' : '✗'} {retryToast.message}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>Knowledge Base</h1>
-          <p style={{ margin: '8px 0 0 0', color: '#64748b' }}>
-            {documentsQuery.data?.length || 0} item{(documentsQuery.data?.length || 0) !== 1 ? 's' : ''} • Your chatbot uses this to answer questions
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setViewMode('upload')} className="primary-button">
-            Upload
-          </button>
-          <button onClick={() => setViewMode('write')} className="secondary-button">
-            Write
-          </button>
-        </div>
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground mb-2">
+          {t('documents.title')}
+        </h1>
+        <p className="text-muted-foreground">{t('documents.subtitle')}</p>
       </div>
 
-      {documentsQuery.isLoading && <p>Loading...</p>}
-      {documentsQuery.error && <p style={{ color: '#dc2626' }}>Error: {documentsQuery.error.message}</p>}
-
-      {documentsQuery.data && documentsQuery.data.length > 0 && (
-        <div style={{ display: 'grid', gap: '12px' }}>
-          {documentsQuery.data.map((doc) => {
-            const metadata = doc.metadata as any || {};
-            const docName = metadata.name || doc.filename || 'Unnamed';
-            const isExpanded = expandedDoc === doc.id;
-            const hasFailed = doc.status === 'failed';
-            const isRetrying = retryingDocId === doc.id;
-            const errorMessage = metadata.error || metadata.errorMessage;
-
-            return (
-              <div
-                key={doc.id}
-                style={{
-                  background: '#fff',
-                  border: hasFailed && !isRetrying ? '1px solid #fecaca' : '1px solid #e2e8f0',
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Main row */}
-                <div
-                  onClick={() => setExpandedDoc(isExpanded ? null : doc.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '16px 20px',
-                    cursor: 'pointer',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {docName}
-                      <span style={{ color: '#94a3b8', fontSize: '12px', transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                        ▼
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#64748b' }}>
-                      Added {formatDate(doc.createdAt)}
-                      {metadata.fileSize && (
-                        <span> • {formatFileSize(metadata.fileSize)}</span>
-                      )}
-                      {metadata.fileType && (
-                        <span style={{
-                          marginLeft: '8px',
-                          padding: '2px 6px',
-                          background: '#f1f5f9',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontFamily: 'monospace'
-                        }}>
-                          {metadata.fileType.split('/').pop()?.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {getStatusBadge(doc.status, doc)}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(doc.id, docName);
-                      }}
-                      disabled={deleteDocument.isPending}
-                      style={{
-                        padding: '6px 12px',
-                        background: 'transparent',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                      }}
-                      title="Delete document"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded details */}
-                {isExpanded && (
-                  <div style={{
-                    padding: '16px 20px',
-                    borderTop: '1px solid #e2e8f0',
-                    background: '#f8fafc'
-                  }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                      <div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Source</div>
-                        <div style={{ fontSize: '14px' }}>{doc.source || metadata.fileName || 'Manual Entry'}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Created</div>
-                        <div style={{ fontSize: '14px' }}>{formatDateTime(doc.createdAt)}</div>
-                      </div>
-                      {doc.updatedAt && doc.updatedAt !== doc.createdAt && (
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Last Updated</div>
-                          <div style={{ fontSize: '14px' }}>{formatDateTime(doc.updatedAt)}</div>
-                        </div>
-                      )}
-                      <div>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Document ID</div>
-                        <div style={{ fontSize: '13px', fontFamily: 'monospace', color: '#64748b' }}>{doc.id}</div>
-                      </div>
-                    </div>
-
-                    {/* Error details for failed documents */}
-                    {hasFailed && !isRetrying && errorMessage && (
-                      <div style={{
-                        marginTop: '16px',
-                        padding: '12px',
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '8px'
-                      }}>
-                        <div style={{ fontSize: '12px', color: '#991b1b', fontWeight: 600, marginBottom: '4px' }}>
-                          Error Details
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#b91c1c' }}>
-                          {errorMessage}
-                        </div>
-                        <button
-                          onClick={() => handleRetry(doc.id)}
-                          disabled={retryDocument.isPending}
-                          className="primary-button"
-                          style={{ marginTop: '12px', fontSize: '13px', padding: '8px 16px' }}
-                        >
-                          Retry Processing
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Show retrying state */}
-                    {isRetrying && (
-                      <div style={{
-                        marginTop: '16px',
-                        padding: '12px',
-                        background: '#dbeafe',
-                        border: '1px solid #93c5fd',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                        <span style={{ fontSize: '13px', color: '#1e40af' }}>
-                          Retrying document processing...
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Content preview */}
-                    {metadata.content && (
-                      <div style={{ marginTop: '16px' }}>
-                        <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>Content Preview</div>
-                        <div style={{
-                          fontSize: '13px',
-                          color: '#475569',
-                          background: '#fff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          padding: '12px',
-                          maxHeight: '150px',
-                          overflow: 'auto',
-                          whiteSpace: 'pre-wrap',
-                          fontFamily: 'monospace'
-                        }}>
-                          {metadata.content.substring(0, 500)}
-                          {metadata.content.length > 500 && '...'}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {/* Upload Section */}
+      {showUpload ? (
+        <DocumentUpload
+          onFileSelect={handleFileSelect}
+          onCancel={() => setShowUpload(false)}
+          isUploading={isUploading}
+          selectedTenantId={selectedTenantId}
+          onTenantChange={setSelectedTenantId}
+        />
+      ) : (
+        <div className="mb-6">
+          <Button onClick={() => setShowUpload(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('documents.uploadButton')}
+          </Button>
         </div>
       )}
 
-      {/* CSS animation for spinner */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
-    </section>
+      {/* Documents List/Table */}
+      {documentsQuery.isLoading ? (
+        <div className="space-y-3">
+          {/* Desktop skeleton */}
+          <Card className="hidden md:block p-6">
+            <Skeleton className="h-10 w-full mb-4" />
+            <Skeleton className="h-12 w-full mb-2" />
+            <Skeleton className="h-12 w-full mb-2" />
+            <Skeleton className="h-12 w-full" />
+          </Card>
+          {/* Mobile skeletons */}
+          <div className="md:hidden space-y-3">
+            <Card className="p-4">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </Card>
+            <Card className="p-4">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </Card>
+            <Card className="p-4">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </Card>
+          </div>
+        </div>
+      ) : hasDocuments ? (
+        <>
+          {/* Desktop: Table */}
+          <DocumentTable
+            documents={documents}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            getTenantName={getTenantName}
+          />
+
+          {/* Mobile: Cards */}
+          <div className="md:hidden space-y-3">
+            {documents.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                document={doc}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                getTenantName={getTenantName}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-border rounded-lg">
+          <FileText className="w-12 h-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {t('documents.noDocuments')}
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {t('documents.noDocumentsDescription')}
+          </p>
+          <Button onClick={() => setShowUpload(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('documents.uploadButton')}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

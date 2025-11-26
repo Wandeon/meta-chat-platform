@@ -1,0 +1,91 @@
+{
+  "nav": {
+    "tenants": "Tenants",
+    "analytics": "Analytics",
+    "mcpServers": "MCP Servers",
+    "channels": "Channels",
+    "documents": "Documents",
+    "conversations": "Conversations",
+    "webhooks": "Webhooks",
+    "testing": "Testing",
+    "health": "System Health",
+    "logout": "Log out"
+  },
+  "documents": {
+    "title": "Knowledge Base",
+    "subtitle": "Manage documents your chatbot uses to answer questions",
+    "uploadButton": "Upload Document",
+    "noDocuments": "No documents yet",
+    "noDocumentsDescription": "Upload your first document to get started",
+    "selectTenant": "Select Tenant",
+    "uploading": "Uploading...",
+    "browseFiles": "Browse Files",
+    "loading": "Loading documents...",
+    "uploadPrompt": "Drag and drop files here, or click to browse",
+    "uploadSupported": "Supported: PDF, TXT, MD, DOCX (max 10MB)",
+    "table": {
+      "name": "Name",
+      "tenant": "Tenant",
+      "status": "Status",
+      "uploadedAt": "Uploaded",
+      "actions": "Actions"
+    },
+    "status": {
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this document?"
+    }
+  },
+  "testing": {
+    "title": "Test Your Chatbot",
+    "subtitle": "Have a conversation to see how it responds",
+    "selectTenant": "Select a tenant to start testing",
+    "startConversation": "Start a conversation",
+    "typeMessage": "Type a message to test how your chatbot responds",
+    "tryExample": "Try asking about content from your Knowledge Base!",
+    "placeholder": "Type your message...",
+    "send": "Send",
+    "newConversation": "Start New Conversation",
+    "metadata": {
+      "title": "Response Info",
+      "model": "Model",
+      "latency": "Latency",
+      "tokens": "Tokens",
+      "ragEnabled": "RAG Enabled",
+      "mcpEnabled": "MCP Enabled"
+    }
+  },
+  "widget": {
+    "title": "Deploy Widget",
+    "subtitle": "Embed your chatbot on your website",
+    "customize": "Customize Widget",
+    "preview": "Live Preview",
+    "installation": "Installation",
+    "copyCode": "Copy Code",
+    "copied": "Copied!",
+    "instructions": "Add this code snippet to your website's HTML, just before the closing </body> tag.",
+    "selectTenant": "Select a tenant to configure the widget"
+  },
+  "conversations": {
+    "title": "Conversations",
+    "subtitle": "View and manage chatbot conversations",
+    "noConversations": "No conversations yet",
+    "noConversationsDescription": "Conversations will appear here when users chat with your bot",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "filterResolved": "Resolved",
+    "searchPlaceholder": "Search conversations...",
+    "lastMessage": "Last message",
+    "messages": "messages",
+    "loading": "Loading conversations..."
+  },
+  "common": {
+    "loading": "Loading..."
+  }
+}

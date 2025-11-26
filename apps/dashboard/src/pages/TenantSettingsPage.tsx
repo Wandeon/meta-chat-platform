@@ -155,6 +155,8 @@ export function TenantSettingsPage() {
   const openaiModelsQuery = useQuery({
     queryKey: ['openai-models', settings.llm?.apiKey, apiKeyConfirmed],
     queryFn: () => {
+      console.log('[OpenAI Models] Fetching with API key:', settings.llm?.apiKey ? `${settings.llm.apiKey.substring(0, 10)}...` : 'EMPTY');
+      console.log('[OpenAI Models] Provider:', settings.llm?.provider);
       return api.get<{ models: Array<{ id: string; name: string; created: number }> }>(
         '/api/ollama/openai-models',
         { apiKey: settings.llm?.apiKey || '' }
@@ -681,6 +683,7 @@ export function TenantSettingsPage() {
                     value={settings.llm?.apiKey || ''}
                     onChange={(e) => {
                       const newKey = e.target.value;
+                      console.log('[API Key] Changed, length:', newKey.length, 'provider:', settings.llm?.provider);
                       setSettings({
                         ...settings,
                         llm: { ...settings.llm, apiKey: newKey },
@@ -698,6 +701,7 @@ export function TenantSettingsPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      console.log('[API Key] Confirming API key for provider:', settings.llm?.provider);
                       setApiKeyConfirmed(true);
                     }}
                     disabled={!settings.llm?.apiKey || settings.llm.apiKey.length === 0}

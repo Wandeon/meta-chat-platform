@@ -303,6 +303,7 @@ export function AnalyticsPage() {
             <TopQuestionsTable
               questions={topQuestions || []}
               onImproveAnswer={(question) => {
+                console.log('Improve answer for:', question);
                 // Could navigate to documents page or open a modal
               }}
             />

@@ -22,18 +22,19 @@ export function VerifyEmailPage() {
       }
 
       try {
-        const response = await fetch(
-          `${API_BASE}/api/auth/verify-email?token=${encodeURIComponent(token)}`,
-          {
-            method: 'GET',
-          }
-        );
+        const response = await fetch(`${API_BASE}/api/auth/verify-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token }),
+        });
 
         if (!response.ok) {
           let errorMessage: string;
           try {
             const errorData = await response.json();
-            errorMessage = errorData.error?.message || errorData.error || `Verification failed with status ${response.status}`;
+            errorMessage = errorData.error?.message || `Verification failed with status ${response.status}`;
           } catch {
             errorMessage = `Verification failed with status ${response.status}`;
           }
@@ -41,7 +42,7 @@ export function VerifyEmailPage() {
         }
 
         setStatus('success');
-        // Redirect to login after 2 seconds
+        // Redirect to dashboard after 2 seconds
         setTimeout(() => {
           navigate('/login', { replace: true });
         }, 2000);
@@ -134,12 +135,12 @@ export function VerifyEmailPage() {
             }}
           >
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 6L9 17L4 12" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M20 6L9 17L4 12" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
           <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Email Verified!</h1>
           <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
-            Your email has been successfully verified. Your account is now active and you can log in.
+            Your email has been successfully verified. You will be redirected to the login page shortly.
           </p>
           <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
             <Link
@@ -185,7 +186,7 @@ export function VerifyEmailPage() {
           }}
         >
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M18 6L6 18M6 6l12 12" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
         <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Verification Failed</h1>

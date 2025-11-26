@@ -1,0 +1,91 @@
+{
+  "nav": {
+    "tenants": "Mieter",
+    "analytics": "Analytik",
+    "mcpServers": "MCP-Server",
+    "channels": "Kanäle",
+    "documents": "Dokumente",
+    "conversations": "Gespräche",
+    "webhooks": "Webhooks",
+    "testing": "Testen",
+    "health": "Systemzustand",
+    "logout": "Abmelden"
+  },
+  "documents": {
+    "title": "Wissensbasis",
+    "subtitle": "Verwalten Sie Dokumente, die Ihr Chatbot für Antworten verwendet",
+    "uploadButton": "Dokument Hochladen",
+    "noDocuments": "Noch keine Dokumente",
+    "noDocumentsDescription": "Laden Sie Ihr erstes Dokument hoch, um zu beginnen",
+    "selectTenant": "Mieter Auswählen",
+    "uploading": "Hochladen...",
+    "browseFiles": "Dateien Durchsuchen",
+    "loading": "Dokumente werden geladen...",
+    "uploadPrompt": "Dateien hier ablegen oder zum Durchsuchen klicken",
+    "uploadSupported": "Unterstützt: PDF, TXT, MD, DOCX (max 10MB)",
+    "table": {
+      "name": "Name",
+      "tenant": "Mieter",
+      "status": "Status",
+      "uploadedAt": "Hochgeladen",
+      "actions": "Aktionen"
+    },
+    "status": {
+      "processing": "Verarbeitung",
+      "ready": "Bereit",
+      "failed": "Fehlgeschlagen"
+    },
+    "actions": {
+      "view": "Ansehen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "confirmDelete": "Möchten Sie dieses Dokument wirklich löschen?"
+    }
+  },
+  "testing": {
+    "title": "Testen Sie Ihren Chatbot",
+    "subtitle": "Führen Sie ein Gespräch, um zu sehen, wie er antwortet",
+    "selectTenant": "Wählen Sie einen Mieter aus, um mit dem Testen zu beginnen",
+    "startConversation": "Gespräch beginnen",
+    "typeMessage": "Geben Sie eine Nachricht ein, um zu testen, wie Ihr Chatbot antwortet",
+    "tryExample": "Versuchen Sie, nach Inhalten aus Ihrer Wissensbasis zu fragen!",
+    "placeholder": "Geben Sie Ihre Nachricht ein...",
+    "send": "Senden",
+    "newConversation": "Neues Gespräch Beginnen",
+    "metadata": {
+      "title": "Antwort-Info",
+      "model": "Modell",
+      "latency": "Latenz",
+      "tokens": "Token",
+      "ragEnabled": "RAG Aktiviert",
+      "mcpEnabled": "MCP Aktiviert"
+    }
+  },
+  "widget": {
+    "title": "Widget Bereitstellen",
+    "subtitle": "Betten Sie Ihren Chatbot auf Ihrer Website ein",
+    "customize": "Widget Anpassen",
+    "preview": "Live-Vorschau",
+    "installation": "Installation",
+    "copyCode": "Code Kopieren",
+    "copied": "Kopiert!",
+    "instructions": "Fügen Sie diesen Code-Ausschnitt in das HTML Ihrer Website ein, kurz vor dem schließenden </body>-Tag.",
+    "selectTenant": "Wählen Sie einen Mieter aus, um das Widget zu konfigurieren"
+  },
+  "conversations": {
+    "title": "Gespräche",
+    "subtitle": "Chatbot-Gespräche anzeigen und verwalten",
+    "noConversations": "Noch keine Gespräche",
+    "noConversationsDescription": "Gespräche werden hier angezeigt, wenn Benutzer mit Ihrem Bot chatten",
+    "filterAll": "Alle",
+    "filterActive": "Aktiv",
+    "filterResolved": "Gelöst",
+    "searchPlaceholder": "Gespräche durchsuchen...",
+    "lastMessage": "Letzte Nachricht",
+    "messages": "Nachrichten",
+    "loading": "Gespräche werden geladen..."
+  },
+  "common": {
+    "loading": "Wird geladen..."
+  }
+}
