@@ -55,8 +55,8 @@ export function DashboardLayout() {
               return (
                 <li key={link.to}>
                   <Link className={clsx({ active })} to={link.to}>
-                    {link.icon && <span style={{ marginRight: '8px' }}>{link.icon}</span>}
-                    {link.label}
+                    {link.icon && <span className="nav-icon">{link.icon}</span>}
+                    <span className="nav-label">{link.label}</span>
                   </Link>
                 </li>
               );
