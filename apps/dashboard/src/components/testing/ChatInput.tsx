@@ -37,13 +37,13 @@ export function ChatInput({ onSend, isLoading, disabled }: ChatInputProps) {
         onKeyDown={handleKeyDown}
         placeholder={t('testing.placeholder')}
         disabled={disabled || isLoading}
-        className="min-h-[60px] max-h-[200px] resize-none"
+        className="min-h-[44px] max-h-[200px] resize-none"
       />
       <Button
         type="submit"
         disabled={disabled || isLoading || !message.trim()}
         size="icon"
-        className="h-[60px] w-[60px] shrink-0"
+        className="h-11 w-11 shrink-0"
       >
         <Send className="h-5 w-5" />
       </Button>

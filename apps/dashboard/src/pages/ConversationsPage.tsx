@@ -6,6 +6,7 @@ import { useApi } from '../api/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ConversationCard } from '@/components/conversations/ConversationCard';
 
 export function ConversationsPage() {
@@ -20,7 +21,6 @@ export function ConversationsPage() {
   });
 
   const handleConversationClick = (id: string) => {
-    console.log('Open conversation:', id);
     // TODO: Navigate to conversation detail or open modal
   };
 
@@ -77,8 +77,17 @@ export function ConversationsPage() {
 
       {/* Conversations List */}
       {conversationsQuery.isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="grid gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-6">
+              <div className="flex justify-between items-start mb-3">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-5 w-16" />
+              </div>
+              <Skeleton className="h-4 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/4" />
+            </Card>
+          ))}
         </div>
       ) : filteredConversations.length > 0 ? (
         <div className="grid gap-4">

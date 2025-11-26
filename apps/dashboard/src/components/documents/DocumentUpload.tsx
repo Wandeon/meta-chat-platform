@@ -62,7 +62,7 @@ export function DocumentUpload({
 
       {/* Tenant Selection */}
       <div className="mb-4">
-        <label className="text-sm font-medium mb-2 block">Select Tenant</label>
+        <label className="text-sm font-medium mb-2 block">{t('documents.selectTenant')}</label>
         <TenantSelector
           value={selectedTenantId}
           onChange={onTenantChange}
@@ -95,7 +95,7 @@ export function DocumentUpload({
             className="hidden"
           />
           <Button asChild disabled={isUploading || !selectedTenantId}>
-            <span>{isUploading ? 'Uploading...' : 'Browse Files'}</span>
+            <span>{isUploading ? t('documents.uploading') : t('documents.browseFiles')}</span>
           </Button>
         </label>
       </div>

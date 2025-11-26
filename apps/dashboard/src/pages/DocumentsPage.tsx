@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Plus, FileText } from 'lucide-react';
 import { useApi } from '../api/client';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { DocumentTable } from '@/components/documents/DocumentTable';
 import { DocumentCard } from '@/components/documents/DocumentCard';
@@ -72,7 +74,6 @@ export function DocumentsPage() {
 
   const handleEdit = (doc: Document) => {
     // TODO: Implement edit modal
-    console.log('Edit document:', doc);
   };
 
   const handleDelete = (id: string) => {
@@ -114,8 +115,29 @@ export function DocumentsPage() {
 
       {/* Documents List/Table */}
       {documentsQuery.isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="space-y-3">
+          {/* Desktop skeleton */}
+          <Card className="hidden md:block p-6">
+            <Skeleton className="h-10 w-full mb-4" />
+            <Skeleton className="h-12 w-full mb-2" />
+            <Skeleton className="h-12 w-full mb-2" />
+            <Skeleton className="h-12 w-full" />
+          </Card>
+          {/* Mobile skeletons */}
+          <div className="md:hidden space-y-3">
+            <Card className="p-4">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </Card>
+            <Card className="p-4">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </Card>
+            <Card className="p-4">
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </Card>
+          </div>
         </div>
       ) : hasDocuments ? (
         <>

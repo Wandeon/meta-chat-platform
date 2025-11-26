@@ -17,6 +17,10 @@
     "uploadButton": "Upload Document",
     "noDocuments": "No documents yet",
     "noDocumentsDescription": "Upload your first document to get started",
+    "selectTenant": "Select Tenant",
+    "uploading": "Uploading...",
+    "browseFiles": "Browse Files",
+    "loading": "Loading documents...",
     "uploadPrompt": "Drag and drop files here, or click to browse",
     "uploadSupported": "Supported: PDF, TXT, MD, DOCX (max 10MB)",
     "table": {
@@ -78,6 +82,10 @@
     "filterResolved": "Resolved",
     "searchPlaceholder": "Search conversations...",
     "lastMessage": "Last message",
-    "messages": "messages"
+    "messages": "messages",
+    "loading": "Loading conversations..."
+  },
+  "common": {
+    "loading": "Loading..."
   }
 }

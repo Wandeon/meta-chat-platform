@@ -17,6 +17,10 @@
     "uploadButton": "Učitaj Dokument",
     "noDocuments": "Još nema dokumenata",
     "noDocumentsDescription": "Učitajte svoj prvi dokument za početak",
+    "selectTenant": "Odaberite Stanara",
+    "uploading": "Učitavanje...",
+    "browseFiles": "Pregledaj Datoteke",
+    "loading": "Učitavanje dokumenata...",
     "uploadPrompt": "Povucite i ispustite datoteke ovdje ili kliknite za pregled",
     "uploadSupported": "Podržano: PDF, TXT, MD, DOCX (maks 10MB)",
     "table": {
@@ -78,6 +82,10 @@
     "filterResolved": "Riješeni",
     "searchPlaceholder": "Pretraži razgovore...",
     "lastMessage": "Zadnja poruka",
-    "messages": "poruke"
+    "messages": "poruke",
+    "loading": "Učitavanje razgovora..."
+  },
+  "common": {
+    "loading": "Učitavanje..."
   }
 }

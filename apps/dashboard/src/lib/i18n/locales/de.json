@@ -17,6 +17,10 @@
     "uploadButton": "Dokument Hochladen",
     "noDocuments": "Noch keine Dokumente",
     "noDocumentsDescription": "Laden Sie Ihr erstes Dokument hoch, um zu beginnen",
+    "selectTenant": "Mieter Auswählen",
+    "uploading": "Hochladen...",
+    "browseFiles": "Dateien Durchsuchen",
+    "loading": "Dokumente werden geladen...",
     "uploadPrompt": "Dateien hier ablegen oder zum Durchsuchen klicken",
     "uploadSupported": "Unterstützt: PDF, TXT, MD, DOCX (max 10MB)",
     "table": {
@@ -78,6 +82,10 @@
     "filterResolved": "Gelöst",
     "searchPlaceholder": "Gespräche durchsuchen...",
     "lastMessage": "Letzte Nachricht",
-    "messages": "Nachrichten"
+    "messages": "Nachrichten",
+    "loading": "Gespräche werden geladen..."
+  },
+  "common": {
+    "loading": "Wird geladen..."
   }
 }
