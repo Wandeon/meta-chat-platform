@@ -10,5 +10,32 @@
     "testing": "Testing",
     "health": "System Health",
     "logout": "Log out"
+  },
+  "documents": {
+    "title": "Knowledge Base",
+    "subtitle": "Manage documents your chatbot uses to answer questions",
+    "uploadButton": "Upload Document",
+    "noDocuments": "No documents yet",
+    "noDocumentsDescription": "Upload your first document to get started",
+    "uploadPrompt": "Drag and drop files here, or click to browse",
+    "uploadSupported": "Supported: PDF, TXT, MD, DOCX (max 10MB)",
+    "table": {
+      "name": "Name",
+      "tenant": "Tenant",
+      "status": "Status",
+      "uploadedAt": "Uploaded",
+      "actions": "Actions"
+    },
+    "status": {
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "actions": {
+      "view": "View",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this document?"
+    }
   }
 }

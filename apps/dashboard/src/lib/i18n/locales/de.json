@@ -10,5 +10,32 @@
     "testing": "Testen",
     "health": "Systemzustand",
     "logout": "Abmelden"
+  },
+  "documents": {
+    "title": "Wissensbasis",
+    "subtitle": "Verwalten Sie Dokumente, die Ihr Chatbot für Antworten verwendet",
+    "uploadButton": "Dokument Hochladen",
+    "noDocuments": "Noch keine Dokumente",
+    "noDocumentsDescription": "Laden Sie Ihr erstes Dokument hoch, um zu beginnen",
+    "uploadPrompt": "Dateien hier ablegen oder zum Durchsuchen klicken",
+    "uploadSupported": "Unterstützt: PDF, TXT, MD, DOCX (max 10MB)",
+    "table": {
+      "name": "Name",
+      "tenant": "Mieter",
+      "status": "Status",
+      "uploadedAt": "Hochgeladen",
+      "actions": "Aktionen"
+    },
+    "status": {
+      "processing": "Verarbeitung",
+      "ready": "Bereit",
+      "failed": "Fehlgeschlagen"
+    },
+    "actions": {
+      "view": "Ansehen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "confirmDelete": "Möchten Sie dieses Dokument wirklich löschen?"
+    }
   }
 }

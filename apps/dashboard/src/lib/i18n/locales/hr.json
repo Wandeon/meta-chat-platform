@@ -10,5 +10,32 @@
     "testing": "Testiranje",
     "health": "Zdravlje Sustava",
     "logout": "Odjava"
+  },
+  "documents": {
+    "title": "Baza Znanja",
+    "subtitle": "Upravljajte dokumentima koje vaš chatbot koristi za odgovore",
+    "uploadButton": "Učitaj Dokument",
+    "noDocuments": "Još nema dokumenata",
+    "noDocumentsDescription": "Učitajte svoj prvi dokument za početak",
+    "uploadPrompt": "Povucite i ispustite datoteke ovdje ili kliknite za pregled",
+    "uploadSupported": "Podržano: PDF, TXT, MD, DOCX (maks 10MB)",
+    "table": {
+      "name": "Naziv",
+      "tenant": "Stanar",
+      "status": "Status",
+      "uploadedAt": "Učitano",
+      "actions": "Akcije"
+    },
+    "status": {
+      "processing": "Obrada",
+      "ready": "Spremno",
+      "failed": "Nije uspjelo"
+    },
+    "actions": {
+      "view": "Pregledaj",
+      "edit": "Uredi",
+      "delete": "Izbriši",
+      "confirmDelete": "Jeste li sigurni da želite izbrisati ovaj dokument?"
+    }
   }
 }
