@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../routes/AuthProvider';
 import { clsx } from 'clsx';
+import { ThemeToggle } from './shared/ThemeToggle';
 
 const NAV_LINKS = [
   { to: '/tenants', label: 'Tenants' },
@@ -43,7 +44,12 @@ export function DashboardLayout() {
         </button>
       </aside>
       <main className="dashboard-content">
-        <Outlet />
+        <header className="flex items-center justify-end p-4 border-b border-border">
+          <ThemeToggle />
+        </header>
+        <div className="p-6">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
