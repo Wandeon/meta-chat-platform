@@ -67,5 +67,17 @@
     "copied": "Kopirano!",
     "instructions": "Dodajte ovaj kod na svoju web stranicu, neposredno prije zatvarajuće </body> oznake.",
     "selectTenant": "Odaberite stanara za konfiguraciju widgeta"
+  },
+  "conversations": {
+    "title": "Razgovori",
+    "subtitle": "Pregledajte i upravljajte razgovorima chatbota",
+    "noConversations": "Još nema razgovora",
+    "noConversationsDescription": "Razgovori će se pojaviti ovdje kada korisnici razgovaraju s vašim botom",
+    "filterAll": "Svi",
+    "filterActive": "Aktivni",
+    "filterResolved": "Riješeni",
+    "searchPlaceholder": "Pretraži razgovore...",
+    "lastMessage": "Zadnja poruka",
+    "messages": "poruke"
   }
 }

@@ -67,5 +67,17 @@
     "copied": "Copied!",
     "instructions": "Add this code snippet to your website's HTML, just before the closing </body> tag.",
     "selectTenant": "Select a tenant to configure the widget"
+  },
+  "conversations": {
+    "title": "Conversations",
+    "subtitle": "View and manage chatbot conversations",
+    "noConversations": "No conversations yet",
+    "noConversationsDescription": "Conversations will appear here when users chat with your bot",
+    "filterAll": "All",
+    "filterActive": "Active",
+    "filterResolved": "Resolved",
+    "searchPlaceholder": "Search conversations...",
+    "lastMessage": "Last message",
+    "messages": "messages"
   }
 }
