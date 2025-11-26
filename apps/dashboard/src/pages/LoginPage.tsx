@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../routes/AuthProvider';
 import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -38,66 +41,74 @@ export function LoginPage() {
   };
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc', padding: '16px' }}>
-      <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: 400, background: '#fff', padding: '32px', borderRadius: '16px', boxShadow: '0 20px 40px -24px rgba(15,23,42,.45)', display: 'grid', gap: '16px' }}>
-        <div>
-          <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Welcome Back</h1>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
-            Sign in to your Meta Chat account
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+          <CardDescription>Sign in to your Meta Chat account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                autoComplete="email"
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontWeight: 500, fontSize: '14px' }}>Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@company.com"
-            autoComplete="email"
-            disabled={isSubmitting}
-            style={{ font: 'inherit', fontSize: '16px', borderRadius: 8, border: '1px solid #cbd5e1', padding: '10px 12px', outline: 'none' }}
-          />
-        </label>
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontWeight: 500, fontSize: '14px' }}>Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            disabled={isSubmitting}
-            style={{ font: 'inherit', fontSize: '16px', borderRadius: 8, border: '1px solid #cbd5e1', padding: '10px 12px', outline: 'none' }}
-          />
-        </label>
+            <Link 
+              to="/forgot-password" 
+              className="text-sm text-primary hover:underline block"
+            >
+              Forgot password?
+            </Link>
 
-        <Link to="/forgot-password" style={{ fontSize: '14px', color: '#3b82f6', textDecoration: 'none' }}>
-          Forgot password?
-        </Link>
+            {error && (
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
-        {error && (
-          <div style={{ color: '#dc2626', background: '#fee2e2', padding: '10px 12px', borderRadius: 8, fontSize: '14px' }}>
-            {error}
-          </div>
-        )}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Signing in...' : 'Sign in'}
+            </Button>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{ marginTop: '8px', padding: '12px', fontSize: '14px', fontWeight: 500, background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8, cursor: isSubmitting ? 'not-allowed' : 'pointer', opacity: isSubmitting ? 0.6 : 1 }}
-        >
-          {isSubmitting ? 'Signing in...' : 'Sign in'}
-        </button>
-
-        <p style={{ margin: 0, marginTop: '8px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
-          Don't have an account?{' '}
-          <Link to="/signup" style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}>
-            Sign up
-          </Link>
-        </p>
-      </form>
+            <p className="text-center text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-primary font-medium hover:underline">
+                Sign up
+              </Link>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

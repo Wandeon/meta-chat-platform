@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -15,333 +18,182 @@ export function SignupPage() {
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePassword = (password: string): { valid: boolean; message?: string } => {
-    if (password.length < 8) {
-      return { valid: false, message: 'Password must be at least 8 characters long' };
-    }
-    if (!/[A-Z]/.test(password)) {
-      return { valid: false, message: 'Password must contain at least one uppercase letter' };
-    }
-    if (!/[a-z]/.test(password)) {
-      return { valid: false, message: 'Password must contain at least one lowercase letter' };
-    }
-    if (!/[0-9]/.test(password)) {
-      return { valid: false, message: 'Password must contain at least one number' };
-    }
-    return { valid: true };
+  const handleChange = (field: string, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 
-    // Client-side validation
     if (!formData.company.trim()) {
       setError('Company name is required');
       return;
     }
-
     if (!formData.email.trim()) {
       setError('Email is required');
       return;
     }
-
-    if (!validateEmail(formData.email)) {
-      setError('Please enter a valid email address');
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
-
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.valid) {
-      setError(passwordValidation.message || 'Invalid password');
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-
     if (!formData.terms) {
       setError('You must accept the terms and conditions');
       return;
     }
 
-    // Submit to API
     setIsSubmitting(true);
+
     try {
       const response = await fetch(`${API_BASE}/api/auth/signup`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          company: formData.company.trim(),
-          email: formData.email.trim(),
+          companyName: formData.company,
+          email: formData.email,
           password: formData.password,
+          name: formData.company,
         }),
       });
 
       if (!response.ok) {
-        let errorMessage: string;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error?.message || `Signup failed with status ${response.status}`;
-        } catch {
-          errorMessage = `Signup failed with status ${response.status}`;
-        }
-        throw new Error(errorMessage);
+        const data = await response.json();
+        throw new Error(data.error || 'Signup failed');
       }
 
       setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to complete signup');
+      setError(err instanceof Error ? err.message : 'Unable to create account');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    setError(null);
-  };
-
   if (success) {
     return (
-      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc', padding: '16px' }}>
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 400,
-            background: '#fff',
-            padding: '32px',
-            borderRadius: '16px',
-            boxShadow: '0 20px 40px -24px rgba(15,23,42,.45)',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              margin: '0 auto 24px',
-              borderRadius: '50%',
-              background: '#dcfce7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 6L9 17L4 12" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Check Your Email</h1>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.5' }}>
-            We've sent a verification link to <strong>{formData.email}</strong>. Please check your email and click the link to verify your account.
-          </p>
-          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #e2e8f0' }}>
-            <Link
-              to="/login"
-              style={{
-                color: '#3b82f6',
-                textDecoration: 'none',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}
-            >
-              Return to login
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center">Check your email</CardTitle>
+            <CardDescription className="text-center">
+              We've sent a verification link to {formData.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Link to="/login">
+              <Button variant="outline">Back to login</Button>
             </Link>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', background: '#f8fafc', padding: '16px' }}>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          width: '100%',
-          maxWidth: 400,
-          background: '#fff',
-          padding: '32px',
-          borderRadius: '16px',
-          boxShadow: '0 20px 40px -24px rgba(15,23,42,.45)',
-          display: 'grid',
-          gap: '16px',
-        }}
-      >
-        <div>
-          <h1 style={{ marginBottom: 8, fontSize: '24px' }}>Create Account</h1>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
-            Sign up for Meta Chat Platform
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
+          <CardDescription>Sign up for Meta Chat Platform</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="company" className="text-sm font-medium text-foreground">
+                Company Name
+              </label>
+              <Input
+                id="company"
+                value={formData.company}
+                onChange={(e) => handleChange('company', e.target.value)}
+                placeholder="Your Company"
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontWeight: 500, fontSize: '14px' }}>Company Name</span>
-          <input
-            type="text"
-            value={formData.company}
-            onChange={(e) => handleChange('company', e.target.value)}
-            placeholder="Your Company"
-            autoComplete="organization"
-            disabled={isSubmitting}
-            style={{
-              font: 'inherit',
-              fontSize: '16px',
-              borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              padding: '10px 12px',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              opacity: isSubmitting ? 0.6 : 1,
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-          />
-        </label>
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                placeholder="you@company.com"
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontWeight: 500, fontSize: '14px' }}>Email</span>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            placeholder="you@company.com"
-            autoComplete="email"
-            disabled={isSubmitting}
-            style={{
-              font: 'inherit',
-              fontSize: '16px',
-              borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              padding: '10px 12px',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              opacity: isSubmitting ? 0.6 : 1,
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-          />
-        </label>
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => handleChange('password', e.target.value)}
+                placeholder="At least 8 characters"
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontWeight: 500, fontSize: '14px' }}>Password</span>
-          <input
-            type="password"
-            value={formData.password}
-            onChange={(e) => handleChange('password', e.target.value)}
-            placeholder="At least 8 characters"
-            autoComplete="new-password"
-            disabled={isSubmitting}
-            style={{
-              font: 'inherit',
-              fontSize: '16px',
-              borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              padding: '10px 12px',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              opacity: isSubmitting ? 0.6 : 1,
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-          />
-        </label>
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+                Confirm Password
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleChange('confirmPassword', e.target.value)}
+                placeholder="Re-enter your password"
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <label style={{ display: 'grid', gap: 8 }}>
-          <span style={{ fontWeight: 500, fontSize: '14px' }}>Confirm Password</span>
-          <input
-            type="password"
-            value={formData.confirmPassword}
-            onChange={(e) => handleChange('confirmPassword', e.target.value)}
-            placeholder="Re-enter your password"
-            autoComplete="new-password"
-            disabled={isSubmitting}
-            style={{
-              font: 'inherit',
-              fontSize: '16px',
-              borderRadius: 8,
-              border: '1px solid #cbd5e1',
-              padding: '10px 12px',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              opacity: isSubmitting ? 0.6 : 1,
-            }}
-            onFocus={(e) => (e.target.style.borderColor = '#3b82f6')}
-            onBlur={(e) => (e.target.style.borderColor = '#cbd5e1')}
-          />
-        </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.terms}
+                onChange={(e) => handleChange('terms', e.target.checked)}
+                disabled={isSubmitting}
+                className="mt-0.5"
+              />
+              <span className="text-sm text-muted-foreground">
+                I accept the terms and conditions
+              </span>
+            </label>
 
-        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={formData.terms}
-            onChange={(e) => handleChange('terms', e.target.checked)}
-            disabled={isSubmitting}
-            style={{
-              marginTop: 2,
-              cursor: 'pointer',
-              opacity: isSubmitting ? 0.6 : 1,
-            }}
-          />
-          <span style={{ fontSize: '14px', color: '#64748b' }}>
-            I accept the terms and conditions
-          </span>
-        </label>
+            {error && (
+              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">
+                {error}
+              </div>
+            )}
 
-        {error && (
-          <div
-            style={{
-              color: '#dc2626',
-              background: '#fee2e2',
-              padding: '10px 12px',
-              borderRadius: 8,
-              fontSize: '14px',
-            }}
-          >
-            {error}
-          </div>
-        )}
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating account...' : 'Create account'}
+            </Button>
 
-        <button
-          className="primary-button"
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            marginTop: '8px',
-            padding: '12px',
-            fontSize: '14px',
-            fontWeight: 500,
-            opacity: isSubmitting ? 0.6 : 1,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {isSubmitting ? 'Creating account...' : 'Create account'}
-        </button>
-
-        <p style={{ margin: 0, marginTop: '8px', color: '#94a3b8', fontSize: '13px', textAlign: 'center' }}>
-          Already have an account?{' '}
-          <Link
-            to="/login"
-            style={{
-              color: '#3b82f6',
-              textDecoration: 'none',
-              fontWeight: 500,
-            }}
-          >
-            Sign in
-          </Link>
-        </p>
-      </form>
+            <p className="text-center text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <Link to="/login" className="text-primary font-medium hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
