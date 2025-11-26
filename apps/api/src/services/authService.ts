@@ -330,7 +330,7 @@ export async function resetPassword(
     }
 
     if (resetToken.expiresAt < new Date()) {
-      throw new Error('Reset token has expired');
+      throw new Error('Invalid or expired reset token');
     }
 
     // Hash new password
