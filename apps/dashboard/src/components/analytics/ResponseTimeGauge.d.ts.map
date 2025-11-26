@@ -1,1 +1,0 @@
-{"version":3,"file":"ResponseTimeGauge.d.ts","sourceRoot":"","sources":["ResponseTimeGauge.tsx"],"names":[],"mappings":"AAEA,MAAM,WAAW,sBAAsB;IACrC,WAAW,EAAE,MAAM,CAAC;IACpB,OAAO,CAAC,EAAE,MAAM,CAAC;CAClB;AAED,wBAAgB,iBAAiB,CAAC,EAAE,WAAW,EAAE,OAAW,EAAE,EAAE,sBAAsB,2CAwErF"}
