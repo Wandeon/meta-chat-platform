@@ -37,5 +37,24 @@
       "delete": "Izbriši",
       "confirmDelete": "Jeste li sigurni da želite izbrisati ovaj dokument?"
     }
+  },
+  "testing": {
+    "title": "Testirajte Svoj Chatbot",
+    "subtitle": "Razgovarajte da vidite kako reagira",
+    "selectTenant": "Odaberite stanara za početak testiranja",
+    "startConversation": "Započni razgovor",
+    "typeMessage": "Upišite poruku da testirate kako vaš chatbot reagira",
+    "tryExample": "Pokušajte pitati o sadržaju iz vaše Baze Znanja!",
+    "placeholder": "Upišite vašu poruku...",
+    "send": "Pošalji",
+    "newConversation": "Započni Novi Razgovor",
+    "metadata": {
+      "title": "Info o Odgovoru",
+      "model": "Model",
+      "latency": "Kašnjenje",
+      "tokens": "Tokeni",
+      "ragEnabled": "RAG Omogućen",
+      "mcpEnabled": "MCP Omogućen"
+    }
   }
 }

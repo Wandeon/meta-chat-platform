@@ -37,5 +37,24 @@
       "delete": "Löschen",
       "confirmDelete": "Möchten Sie dieses Dokument wirklich löschen?"
     }
+  },
+  "testing": {
+    "title": "Testen Sie Ihren Chatbot",
+    "subtitle": "Führen Sie ein Gespräch, um zu sehen, wie er antwortet",
+    "selectTenant": "Wählen Sie einen Mieter aus, um mit dem Testen zu beginnen",
+    "startConversation": "Gespräch beginnen",
+    "typeMessage": "Geben Sie eine Nachricht ein, um zu testen, wie Ihr Chatbot antwortet",
+    "tryExample": "Versuchen Sie, nach Inhalten aus Ihrer Wissensbasis zu fragen!",
+    "placeholder": "Geben Sie Ihre Nachricht ein...",
+    "send": "Senden",
+    "newConversation": "Neues Gespräch Beginnen",
+    "metadata": {
+      "title": "Antwort-Info",
+      "model": "Modell",
+      "latency": "Latenz",
+      "tokens": "Token",
+      "ragEnabled": "RAG Aktiviert",
+      "mcpEnabled": "MCP Aktiviert"
+    }
   }
 }

@@ -37,5 +37,24 @@
       "delete": "Delete",
       "confirmDelete": "Are you sure you want to delete this document?"
     }
+  },
+  "testing": {
+    "title": "Test Your Chatbot",
+    "subtitle": "Have a conversation to see how it responds",
+    "selectTenant": "Select a tenant to start testing",
+    "startConversation": "Start a conversation",
+    "typeMessage": "Type a message to test how your chatbot responds",
+    "tryExample": "Try asking about content from your Knowledge Base!",
+    "placeholder": "Type your message...",
+    "send": "Send",
+    "newConversation": "Start New Conversation",
+    "metadata": {
+      "title": "Response Info",
+      "model": "Model",
+      "latency": "Latency",
+      "tokens": "Tokens",
+      "ragEnabled": "RAG Enabled",
+      "mcpEnabled": "MCP Enabled"
+    }
   }
 }
