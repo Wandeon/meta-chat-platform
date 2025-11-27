@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import supertest from "supertest";
 
 describe("Auth API Integration Tests", () => {
@@ -6,27 +6,30 @@ describe("Auth API Integration Tests", () => {
   const apiUrl = process.env.API_URL || "http://localhost:3000";
   const testEmail = `test-${Math.random().toString(36).substring(7)}@example.com`;
   const testPassword = "TestPassword123!";
-  let authToken: string;
 
   beforeAll(() => {
     request = supertest(apiUrl);
   });
 
   describe("POST /api/auth/signup", () => {
-    it("should create a new user account", async () => {
+    it("should create a new user account and request email verification", async () => {
       const response = await request
         .post("/api/auth/signup")
         .send({
           email: testEmail,
           password: testPassword,
           name: "Test User",
+          companyName: "Test Company",
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty("user");
-      expect(response.body).toHaveProperty("token");
-      expect(response.body.user.email).toBe(testEmail);
-      authToken = response.body.token;
+      expect(response.body).toHaveProperty("success", true);
+      expect(response.body).toHaveProperty(
+        "message",
+        "Account created successfully. Please check your email to verify your address."
+      );
+      expect(response.body.data.email).toBe(testEmail);
+      expect(response.body.data.name).toBe("Test User");
     });
 
     it("should reject duplicate email", async () => {
@@ -36,6 +39,7 @@ describe("Auth API Integration Tests", () => {
           email: testEmail,
           password: testPassword,
           name: "Duplicate User",
+          companyName: "Test Company",
         })
         .expect(409);
 
@@ -49,6 +53,7 @@ describe("Auth API Integration Tests", () => {
           email: "invalid-email",
           password: testPassword,
           name: "Test User",
+          companyName: "Test Company",
         })
         .expect(400);
 
@@ -62,6 +67,7 @@ describe("Auth API Integration Tests", () => {
           email: `weak-${Math.random().toString(36).substring(7)}@example.com`,
           password: "weak",
           name: "Test User",
+          companyName: "Test Company",
         })
         .expect(400);
 
@@ -81,18 +87,20 @@ describe("Auth API Integration Tests", () => {
   });
 
   describe("POST /api/auth/login", () => {
-    it("should login with valid credentials", async () => {
+    it("should block login until email is verified", async () => {
       const response = await request
         .post("/api/auth/login")
         .send({
           email: testEmail,
           password: testPassword,
         })
-        .expect(200);
+        .expect(403);
 
-      expect(response.body).toHaveProperty("user");
-      expect(response.body).toHaveProperty("token");
-      expect(response.body.user.email).toBe(testEmail);
+      expect(response.body).toHaveProperty(
+        "error",
+        "Please verify your email address before logging in"
+      );
+      expect(response.body).not.toHaveProperty("token");
     });
 
     it("should reject invalid email", async () => {
