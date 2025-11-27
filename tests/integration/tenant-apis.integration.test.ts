@@ -2,8 +2,29 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { getIntegrationTestContext } from './setup/environment';
 import { generateApiKey, hashSecret } from '@meta-chat/shared';
+import { generateToken } from '../../apps/api/src/utils/jwt';
+import tenantRouter from '../../apps/api/src/routes/tenants';
 
-const appPromise = import('../../apps/api/src/server').then((module) => module.default);
+process.env.ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET ?? 'test-admin-jwt-secret';
+const appPromise = import('../../apps/api/src/server').then(async (module) => {
+  const { app } = await module.createApp();
+
+  app.use('/api/tenants', tenantRouter);
+
+  app.use((error: any, _req: any, res: any, _next: any) => {
+    const status = error.status ?? 500;
+    res.status(status).json({
+      success: false,
+      error: {
+        message: error.message ?? 'Internal Server Error',
+        code: error.code ?? (status === 500 ? 'internal_error' : 'error'),
+        details: error.errors ?? error.details,
+      },
+    });
+  });
+
+  return app;
+});
 
 describe('Tenant security API', () => {
   it('creates and rotates tenant API keys using admin privileges', async () => {
@@ -72,5 +93,40 @@ describe('Tenant security API', () => {
     const updatedKey = await prisma.tenantApiKey.findUnique({ where: { id: createdKey!.id } });
     expect(updatedKey?.rotationTokenHash).toBeNull();
     expect(updatedKey?.lastFour).toBe(confirmResponse.body.lastFour);
+  });
+
+  it('denies access to other tenants for tenant-scoped users', async () => {
+    const app = await appPromise;
+    const { prisma } = getIntegrationTestContext();
+
+    const [tenantA, tenantB] = await prisma.$transaction([
+      prisma.tenant.create({
+        data: {
+          name: 'Tenant A',
+          settings: {},
+        },
+      }),
+      prisma.tenant.create({
+        data: {
+          name: 'Tenant B',
+          settings: {},
+        },
+      }),
+    ]);
+
+    const token = generateToken({
+      userId: 'user-a',
+      tenantId: tenantA.id,
+      email: 'user-a@example.com',
+    });
+
+    const response = await request(app)
+      .get(`/api/tenants/${tenantB.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+
+    expect(response.body.success).toBe(false);
+    expect(String(response.body.error?.message ?? response.body.error)).toMatch(/access denied/i);
+    expect(response.body.data).toBeUndefined();
   });
 });
