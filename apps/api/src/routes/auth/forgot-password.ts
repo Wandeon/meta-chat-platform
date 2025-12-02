@@ -5,7 +5,7 @@ import { requestPasswordReset } from '../../services/authService';
 const router = Router();
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().trim().email('Invalid email address').transform((value) => value.toLowerCase()),
 });
 
 /**
@@ -13,35 +13,26 @@ const forgotPasswordSchema = z.object({
  * Request password reset email
  */
 router.post('/forgot-password', async (req: Request, res: Response) => {
+  const validationResult = forgotPasswordSchema.safeParse(req.body);
+  const responseBody = {
+    success: true,
+    message: 'If an account exists with this email, you will receive a password reset link.',
+  };
+
+  if (!validationResult.success) {
+    console.warn('Invalid forgot password request payload', validationResult.error.flatten());
+    return res.status(200).json(responseBody);
+  }
+
   try {
-    const validationResult = forgotPasswordSchema.safeParse(req.body);
-    if (!validationResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: validationResult.error.issues.map((err: any) => ({
-          field: err.path.join('.'),
-          message: err.message,
-        })),
-      });
-    }
-
     const { email } = validationResult.data;
-
     await requestPasswordReset(email);
-
-    // Always return success to prevent email enumeration
-    res.status(200).json({
-      success: true,
-      message: 'If an account exists with this email, you will receive a password reset link.',
-    });
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'An error occurred. Please try again.',
-    });
   }
+
+  // Always return success to prevent email enumeration
+  res.status(200).json(responseBody);
 });
 
 export default router;

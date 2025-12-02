@@ -274,8 +274,9 @@ export async function resendVerificationEmail(email: string): Promise<boolean> {
  * Generate password reset token and send email
  */
 export async function requestPasswordReset(email: string): Promise<boolean> {
+  const normalizedEmail = email.trim().toLowerCase();
   const user = await prisma.tenantUser.findUnique({
-    where: { email },
+    where: { email: normalizedEmail },
   });
 
   // Always return true to prevent email enumeration
